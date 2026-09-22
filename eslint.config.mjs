@@ -28,6 +28,11 @@ export default [
         parser: tseslint.parser,
       },
       globals: {
+        Blob: 'readonly',
+        URL: 'readonly',
+        TextDecoder: 'readonly',
+        TextEncoder: 'readonly',
+        document: 'readonly',
         DragEvent: 'readonly',
         Event: 'readonly',
         File: 'readonly',
@@ -44,6 +49,7 @@ export default [
     languageOptions: {
       globals: {
         AbortController: 'readonly',
+        TextDecoder: 'readonly',
         DOMException: 'readonly',
         URL: 'readonly',
         console: 'readonly',

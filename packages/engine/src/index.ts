@@ -7,3 +7,7 @@ export * from './types.js';
 export * from './pdf/merge.js';
 export * from './pdf/read.js';
 export * from './pdf/create.js';
+export * from './conversion/registry.js';
+export * from './conversion/convert.js';
+export * from './conversion/pdf-text.js';
+export * from './conversion/images.js';

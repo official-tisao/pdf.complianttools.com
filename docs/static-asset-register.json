@@ -3,14 +3,14 @@
     "source": "Created in-repository for the PDF toolkit shell",
     "license": "CC0-1.0",
     "licenseUrl": "https://creativecommons.org/public-domain/cc0/",
-    "sha256": "1ee40e71aea90a307ff41d430aae0bb6c1c4ea3319ada8bc2ddb4fcb02006c27",
+    "sha256": "23bedf00317275d2e8f820253637c5dff9b09f78915c49e173d995258e430a27",
     "checked": "2026-09-22"
   },
   "apps/web/static/robots.txt": {
     "source": "Created in-repository for the static web shell",
     "license": "CC0-1.0",
     "licenseUrl": "https://creativecommons.org/public-domain/cc0/",
-    "sha256": "16ceb5ee3e0dc13aa9adf31a3ebbe45a1d965b8c2b9f72eaf84e5911e140ed95",
+    "sha256": "1cbdbc6504be7abe1267d01d7f565bfcfe5851ba3f6a3754d1d61c8f8a2c6aa3",
     "checked": "2026-09-22"
   }
 }
