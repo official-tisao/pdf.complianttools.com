@@ -8,7 +8,7 @@
     pageNumber: number;
     selected?: boolean;
     label?: string;
-    onclick?: () => void;
+    onclick?: (event: MouseEvent) => void;
   } = $props();
 </script>
 
