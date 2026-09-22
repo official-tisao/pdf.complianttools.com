@@ -80,21 +80,38 @@ test('pipeline yields progress and a single final result', async () => {
 
 test('memory governor refuses a 2,000-page projection with a remedy', () => {
   const recipe = parseRecipe({ version: 'r1', steps: [{ op: 'compress', options: {} }] });
-  assert.throws(() => compile(recipe, { pageCount: 2000, byteLength: 1024, encrypted: false, hasText: false }), (error) => error.details.kind === 'memory-limit-exceeded' && error.details.remedy.includes('Split'));
+  assert.throws(
+    () => compile(recipe, { pageCount: 2000, byteLength: 1024, encrypted: false, hasText: false }),
+    (error) =>
+      error.details.kind === 'memory-limit-exceeded' && error.details.remedy.includes('Split'),
+  );
 });
 
 test('merge options select files and ranges without changing the source bytes', async () => {
   const source = await bytes('two-page.pdf');
-  const merged = await mergePdfBuffers([source, source], { fileOrder: [1, 0], pageRangePerFile: { '0': '2', '1': '1' }, insertBlankBetween: true });
+  const merged = await mergePdfBuffers([source, source], {
+    fileOrder: [1, 0],
+    pageRangePerFile: { 0: '2', 1: '1' },
+    insertBlankBetween: true,
+  });
   assert.equal(await pages(merged), 3);
-  assert.equal((await pages(source)), 2);
+  assert.equal(await pages(source), 2);
 });
 
 test('proxy preview is one-page and compression prediction is bounded', async () => {
   const source = await bytes('twenty-page.pdf');
   const proxy = await createPdfProxy(source, 7);
   assert.equal(proxy.pageCount, 1);
-  const frame = await previewProxy(source, async (_bytes, pageNumber, scale = 1) => ({ pageNumber, width: Math.round(100 * scale), height: Math.round(140 * scale), pixels: new Uint8Array(Math.round(100 * scale) * Math.round(140 * scale) * 4) }), 7);
+  const frame = await previewProxy(
+    source,
+    async (_bytes, pageNumber, scale = 1) => ({
+      pageNumber,
+      width: Math.round(100 * scale),
+      height: Math.round(140 * scale),
+      pixels: new Uint8Array(Math.round(100 * scale) * Math.round(140 * scale) * 4),
+    }),
+    7,
+  );
   assert.equal(frame.pageNumber, 1);
   assert.ok(predictCompressedSize(20_000_000, { preset: 'balanced' }) < 20_000_000);
 });

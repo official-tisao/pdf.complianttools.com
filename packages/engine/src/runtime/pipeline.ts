@@ -59,7 +59,10 @@ export async function* run(
         remedy: 'Configure the bundled pdfium renderer in the browser worker, then retry.',
       });
     } else if (step.op === 'pdfa') {
-      pdfaProfile = (step.options.conformanceLevel as '1b' | '2b' | '3b' | undefined) ?? (step.options.profile as '1b' | '2b' | '3b' | undefined) ?? '2b';
+      pdfaProfile =
+        (step.options.conformanceLevel as '1b' | '2b' | '3b' | undefined) ??
+        (step.options.profile as '1b' | '2b' | '3b' | undefined) ??
+        '2b';
     } else {
       outputs = await applyGraphStep(graph, step, inputs);
       if (outputs && index !== plan.recipe.steps.length - 1) {

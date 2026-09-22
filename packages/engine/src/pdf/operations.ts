@@ -305,7 +305,12 @@ export async function addBatesNumbering(
 
 export async function compressPdf(
   bytes: Uint8Array,
-  options: { preset?: string; quality?: number; imageQuality?: number; stripMetadata?: boolean } = {},
+  options: {
+    preset?: string;
+    quality?: number;
+    imageQuality?: number;
+    stripMetadata?: boolean;
+  } = {},
 ): Promise<Uint8Array> {
   const document = await load(bytes, 'compress the PDF');
   if (options.stripMetadata) {
@@ -326,7 +331,14 @@ export function predictCompressedSize(
 ): number {
   const preset = options.preset ?? 'balanced';
   const quality = options.imageQuality ?? options.quality ?? 75;
-  const factor = preset === 'extreme' ? 0.42 : preset === 'high-quality' ? 0.82 : preset === 'custom' ? 0.35 + quality / 160 : 0.62;
+  const factor =
+    preset === 'extreme'
+      ? 0.42
+      : preset === 'high-quality'
+        ? 0.82
+        : preset === 'custom'
+          ? 0.35 + quality / 160
+          : 0.62;
   return Math.max(1, Math.round(byteLength * Math.min(1, factor)));
 }
 
@@ -464,10 +476,7 @@ export type PdfProxy = {
 };
 
 /** Build a one-page proxy so live controls never need to materialise the full document. */
-export async function createPdfProxy(
-  bytes: Uint8Array,
-  pageNumber = 1,
-): Promise<PdfProxy> {
+export async function createPdfProxy(bytes: Uint8Array, pageNumber = 1): Promise<PdfProxy> {
   const source = await load(bytes, 'create the preview proxy');
   if (pageNumber < 1 || pageNumber > source.getPageCount())
     throw new PdfEngineError({
@@ -518,7 +527,10 @@ async function rgbaToPng(frame: RenderedPage): Promise<Uint8Array> {
   for (let row = 0; row < frame.height; row += 1) {
     const target = row * (frame.width * 4 + 1);
     scanlines[target] = 0;
-    scanlines.set(frame.pixels.subarray(row * frame.width * 4, (row + 1) * frame.width * 4), target + 1);
+    scanlines.set(
+      frame.pixels.subarray(row * frame.width * 4, (row + 1) * frame.width * 4),
+      target + 1,
+    );
   }
   const stream = new CompressionStream('deflate');
   const writer = stream.writable.getWriter();
@@ -532,10 +544,18 @@ async function rgbaToPng(frame: RenderedPage): Promise<Uint8Array> {
   header[8] = 8;
   header[9] = 6;
   const signature = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
-  const chunks = [signature, pngChunk('IHDR', header), pngChunk('IDAT', compressed), pngChunk('IEND', new Uint8Array())];
+  const chunks = [
+    signature,
+    pngChunk('IHDR', header),
+    pngChunk('IDAT', compressed),
+    pngChunk('IEND', new Uint8Array()),
+  ];
   const output = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.length, 0));
   let offset = 0;
-  for (const chunk of chunks) { output.set(chunk, offset); offset += chunk.length; }
+  for (const chunk of chunks) {
+    output.set(chunk, offset);
+    offset += chunk.length;
+  }
   return output;
 }
 
