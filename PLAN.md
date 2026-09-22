@@ -701,7 +701,7 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 #### P7-03 · Invoice creator + e-invoice (T38–T39)
 - [ ] Visual builder, saved templates in IndexedDB
 - [ ] PDF ↔ structured XML (UBL/ZUGFeRD-style) embedding, validated against the schema
-- **Spec:** README §4.5, §5.6 · **Done when:** STCC for each; e-invoice XML validates against its
+- **Spec:** README §4.5, §5.3 · **Done when:** STCC for each; e-invoice XML validates against its
   published schema
 
 #### P7-04 · Scan to PDF, local (T40)
