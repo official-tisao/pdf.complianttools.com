@@ -131,5 +131,5 @@ Use centred compositions for high-level promises and two-column compositions for
   `saas-template/home-03.mhtml` demonstrate the landing-page variants.
 - The remaining saved `.mhtml`/`.htm` pages under `saas-template/` provide the supporting marketing,
   account, pricing, integration, and content layouts.
-- The adjacent `saas-template/integration_files/` directory contains the referenced images, SVGs, and
+- The adjacent `saas-template/integration_files/` directory contains the referenced images, Scalable vector graphics (SVGs), and
   other physical design assets.
