@@ -448,10 +448,27 @@ export type StructureReport = {
   hasJavaScript: boolean;
   objectCount: number;
   encrypted: boolean;
+  fonts: readonly {
+    name: string;
+    embedded: 'yes' | 'no' | 'unknown';
+  }[];
+  tagTree: readonly {
+    role: string;
+    children: readonly string[];
+  }[];
 };
 export async function inspectStructure(bytes: Uint8Array): Promise<StructureReport> {
   const document = await load(bytes, 'inspect the PDF');
   const source = new TextDecoder('latin1').decode(bytes);
+  const fonts = [
+    ...source.matchAll(/\/FontName\s*\/([^\s/]+)([\s\S]{0,600}?)(?=\/FontName|endobj)/gu),
+  ].map((match) => ({
+    name: match[1] ?? 'Unknown font',
+    embedded: /\/FontFile(?:2|3)?\b/u.test(match[2] ?? '') ? ('yes' as const) : ('no' as const),
+  }));
+  const tagTree = [...source.matchAll(/\/S\s*\/([A-Za-z0-9-]+)([\s\S]{0,160}?)(?=endobj)/gu)]
+    .filter((match) => /\/StructParent|\/K\b/u.test(match[2] ?? ''))
+    .map((match) => ({ role: match[1] ?? 'Unknown', children: [] as string[] }));
   return {
     pageCount: document.getPageCount(),
     byteLength: bytes.byteLength,
@@ -459,6 +476,8 @@ export async function inspectStructure(bytes: Uint8Array): Promise<StructureRepo
     hasJavaScript: /\/JavaScript|\/JS\b/u.test(source),
     objectCount: (source.match(/\n\d+\s+\d+\s+obj\b/gu) ?? []).length,
     encrypted: /\/Encrypt\b/u.test(source),
+    fonts,
+    tagTree,
   };
 }
 

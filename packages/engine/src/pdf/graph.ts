@@ -437,6 +437,9 @@ export async function applyGraphStep(
     case 'inspect-structure':
     case 'render':
     case 'inspect':
+    case 'view':
+    case 'compare':
+    case 'ocr':
       break;
   }
   return undefined;

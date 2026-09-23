@@ -105,6 +105,15 @@ export const operationSchemas = {
     strip: z.boolean().default(false),
   }),
   'inspect-structure': z.object({}),
+  view: z.object({}),
+  compare: z.object({}),
+  ocr: z.object({
+    language: z.array(z.string()).optional(),
+    outputMode: z.enum(['invisible-text-layer', 'searchable-pdf', 'plain-text-export']).optional(),
+    dpi: z.number().int().min(72).max(600).optional(),
+    deskew: z.boolean().optional(),
+    pageRange: z.array(z.number().int().positive()).optional(),
+  }),
   render: z.object({
     page: z.number().int().positive().default(1),
     scale: z.number().positive().default(1),

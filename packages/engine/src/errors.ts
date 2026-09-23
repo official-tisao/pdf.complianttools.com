@@ -5,6 +5,14 @@ export type EngineError =
   | { kind: 'font-not-embedded-cannot-edit-text'; remedy: string }
   | { kind: 'target-size-unreachable'; achieved: number; remedy: string }
   | { kind: 'ai-provider-unreachable'; providerId: string; remedy: string }
+  | { kind: 'renderer-unavailable'; feature: string; remedy: string }
+  | {
+      kind: 'ocr-model-unavailable';
+      language: string;
+      modelBytes?: number;
+      remedy: string;
+    }
+  | { kind: 'ocr-runtime-unavailable'; remedy: string }
   | {
       kind: 'unsupported-format';
       format: string;
