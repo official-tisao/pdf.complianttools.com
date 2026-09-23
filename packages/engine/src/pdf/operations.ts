@@ -462,12 +462,12 @@ export async function inspectStructure(bytes: Uint8Array): Promise<StructureRepo
   };
 }
 
-export type RenderedPage = { pixels: Uint8Array; width: number; height: number };
+export type RenderedRasterPage = { pixels: Uint8Array; width: number; height: number };
 export type PageRenderer = (
   bytes: Uint8Array,
   pageNumber: number,
   scale?: number,
-) => Promise<RenderedPage>;
+) => Promise<RenderedRasterPage>;
 
 export type PdfProxy = {
   bytes: Uint8Array;
@@ -495,7 +495,7 @@ export async function previewProxy(
   renderer: PageRenderer,
   pageNumber = 1,
   maxWidth = 1280,
-): Promise<RenderedPage> {
+): Promise<RenderedRasterPage> {
   const proxy = await createPdfProxy(bytes, pageNumber);
   const first = await renderer(proxy.bytes, 1, 1);
   const scale = first.width > maxWidth ? maxWidth / first.width : 1;
@@ -522,7 +522,7 @@ function pngChunk(name: string, data: Uint8Array): Uint8Array {
   return output;
 }
 
-async function rgbaToPng(frame: RenderedPage): Promise<Uint8Array> {
+async function rgbaToPng(frame: RenderedRasterPage): Promise<Uint8Array> {
   const scanlines = new Uint8Array(frame.height * (frame.width * 4 + 1));
   for (let row = 0; row < frame.height; row += 1) {
     const target = row * (frame.width * 4 + 1);
@@ -583,7 +583,7 @@ export async function preview(
   renderer: PageRenderer,
   pageNumber = 1,
   scale = 1,
-): Promise<RenderedPage> {
+): Promise<RenderedRasterPage> {
   const document = await load(bytes, 'preview the PDF');
   if (pageNumber < 1 || pageNumber > document.getPageCount())
     throw new PdfEngineError({

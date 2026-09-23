@@ -17,10 +17,10 @@ export type EngineError =
       direction: 'to-pdf' | 'from-pdf';
       cause: string;
       remedy: string;
-    };
+    }
   | { kind: 'memory-limit-exceeded'; projectedBytes: number; maxBytes: number; remedy: string }
   | { kind: 'cancelled'; remedy: string }
-  | { kind: 'invalid-operation'; operation: string; remedy: string }
+  | { kind: 'invalid-operation'; operation: string; remedy: string };
 
 export class PdfEngineError extends Error {
   readonly details: EngineError;
