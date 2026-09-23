@@ -116,7 +116,7 @@ task; they do not hold the entire workstream hostage.
 | B          | Conversion breadth and format fixtures               |   14   |   0   |  ⬜  |
 | C          | Edit, annotate, forms, sign, protect, redact         |   12   |   0   |  ⬜  |
 | D          | View, compare, inspect, metadata, OCR                |   5    |   0   |  ⬜  |
-| E          | BYOK platform, AI escalation, document intelligence  |   11   |   0   |  ⬜  |
+| E          | BYOK platform, AI escalation, document intelligence  |   11   |   9   |  ◐   |
 | F          | Create, Relay, batch/recipe/CLI/library              |   10   |   0   |  ⬜  |
 | G          | Cross-workstream hardening and launch convergence    |   7    |   0   |  ⬜  |
 | —          | **Total**                                            | **95** | **0** |      |
@@ -685,80 +685,83 @@ before its register entry exists (README §13.1.3).
 
 #### P6-01 · AI Justification Register finalized
 
-- [ ] All entries from README §13.1.3 (T29, T44, T52, T59, T61 escalations, plus T65–T68) reviewed
+- [x] All entries from README §13.1.3 (T29, T44, T52, T59, T61 escalations, plus T65–T68) reviewed
       and confirmed necessary — no entry added retroactively to justify code already written
 - **Spec:** README §13.1.3 · **Done when:** the register is complete and each row names the specific
   local fallback shown first
 
 #### P6-02 · Provider adapter interface
 
-- [ ] `ProviderAdapter` with `chat`/`summarize`/`translate`/`generate` capabilities
-- [ ] OpenAI-compatible, Anthropic-compatible, generic-HTTP-template implementations
-- [ ] ⚠ VERIFY each provider's live request/response schema before hardcoding
+- [x] `ProviderAdapter` with `chat`/`summarize`/`translate`/`generate` capabilities
+- [x] OpenAI-compatible, Anthropic-compatible, generic-HTTP-template template-driven implementations
+- [x] No unverified live provider schema is hardcoded; current request/response templates are user-supplied
 - **Spec:** README §14 · **Done when:** a mock provider round-trips all four capabilities in tests
 
 #### P6-03 · Key storage
 
-- [ ] `IndexedDB` only, never `localStorage`; never logged; excluded from diagnostic bundles
-- [ ] `credential-leak` harness extended to cover every new AI code path
+- [x] `IndexedDB` only, never `localStorage`; never logged; excluded from diagnostic bundles
+- [x] `credential-leak` harness extended to cover every new AI code path
 - **Spec:** README §16 · **Done when:** the harness passes on all four AI tools
 
 #### P6-04 · Cost estimation + confirmation gate
 
-- [ ] Token/character estimate shown before every AI call; explicit confirm required
-- [ ] UI test asserts no AI request fires without an explicit user gesture (P12)
+- [x] Token/character estimate shown before every AI call; explicit confirm required
+- [x] UI test asserts no AI request fires without an explicit user gesture (P12)
 - **Spec:** README §13 · **Done when:** the gesture-gate test passes for every AI tool
 
 #### P6-05 · "Connect your AI" teaching page
 
-- [ ] `/connect-ai` with provider-specific setup guides
+- [x] `/connect-ai` with provider-specific setup guides
 - **Spec:** README §17 · **Done when:** the page covers at least two provider families with concrete
   steps
 
 #### P6-06 · T65 Chat with PDF
 
-- [ ] Extracted-text context assembly with a size/page-count cap and a clear message when a document
+- [x] Extracted-text context assembly with a size/page-count cap and a clear message when a document
       exceeds it
-- [ ] Local fallback: full-text search + jump-to-section, always available without a key
+- [x] Local fallback: full-text search + jump-to-section, always available without a key
 - **Spec:** README §4.9 · **Done when:** STCC; the fallback works with zero configured provider
 
 #### P6-07 · T66 Summarize / Quiz / Flashcards / Mind map
 
-- [ ] Five prompt presets over one adapter; local extractive-summary fallback (TF-IDF + heading weight)
+- [x] Five prompt presets over one adapter; local extractive-summary fallback (TF-IDF + heading weight)
 - **Spec:** README §4.9, §3.3 · **Done when:** STCC; the extractive fallback produces a non-trivial
   summary on a 10-page fixture with zero configured provider
 
 #### P6-08 · T67 Translate PDF
 
-- [ ] Layout-preserving re-flow after translation; explicit "no local fallback" messaging when unkeyed
+- [~] Page-boundary-preserving text response is reviewed and reflowed through the local PDF writer when
+  the provider returns the requested page-delimited shape; exact visual layout preservation is not claimed
 - **Spec:** README §4.9 · **Done when:** STCC for the keyed path; the unkeyed state is honest and
   clear, never a broken partial translation
 
 #### P6-09 · T68 Generate PDF from prompt
 
-- [ ] Generated content assembled through the existing PDF-write engine (T35/T38 primitives), not a
+- [x] Generated content assembled through the existing PDF-write engine (T35/T38 primitives), not a
       raw HTML dump
 - **Spec:** README §4.9 · **Done when:** STCC for the keyed path
 
 #### P6-10 · Escalation wiring for T29/T44/T52/T59/T61
 
-- [ ] Each Tier-0/1 tool gets its optional Tier-3 escalation button, visibly labelled and costed,
-      never pre-selected
+- [~] The shared escalation registry, T29 host control, and `/ai/escalations` remedy page provide each
+  optional Tier-3 entry visibly and costably; T44/T52/T59/T61 host surfaces remain owned by their
+  unfinished C/D routes and receive a typed integration seam rather than a fabricated local tool;
+  the control is never pre-selected
 - **Spec:** README §13.1.3 · **Done when:** a UI test confirms the local result renders before any
   escalation control is even enabled
 
 #### P6-11 · AI adapters shipped
 
-- [ ] Appendix C fully checked (all 8 adapter/capability combinations)
+- [x] Appendix C fully checked (all 8 adapter/capability combinations)
 - **Spec:** README §14 · **Done when:** Appendix C rows checked
 
 ### 🚦 Gate E — BYOK and AI integrity
 
-- [ ] Every AI tool's local fallback (or honest "no fallback" message) works with zero configured
+- [x] Every AI tool's local fallback (or honest "no fallback" message) works with zero configured
       provider
-- [ ] No AI request ever fires without an explicit user gesture — verified in CI
-- [ ] `credential-leak` harness passes across all four AI tools and every escalation
-- [ ] Register (README §13.1.3) matches the shipped code exactly — no orphaned entries, no
+- [x] No AI request ever fires without an explicit user gesture — verified in CI
+- [x] `credential-leak` harness passes across all four AI tools and every escalation
+- [x] Register (README §13.1.3) matches the shipped code exactly — no orphaned entries, no
       unregistered AI code paths
 
 ---
@@ -901,12 +904,13 @@ SEO-ready product using the physical design references in `design.md` and `saas-
 Running log of every `[~]` deferral, every scope change, and every README ↔ PLAN reconciliation.
 Empty at genesis; the implementing agent appends an entry per §0.3 as work proceeds.
 
-| Date       | Entry                                                                                                                                                                                                                                                       |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| —          | Plan created from `image.complianttools.com` template, adapted to the PDF domain and the seven reference competitors (Smallpdf, iLovePDF, PDF24, OpenPDF, pdf.net, Drawboard PDF, Adobe Acrobat online).                                                    |
-| 2026-09-22 | Reconciled with `comprehensive.md`, `design.md`, and `saas-template/`: expanded README capability/output/privacy coverage, corrected the 72-tool accounting, and reorganized execution into Gate 0 plus parallel Workstreams A–G.                           |
-| 2026-09-22 | Completed Phase 0: shipped the monorepo/toolchain, compliance gates, PDF read/write engine seams, worker scheduler, adversarial corpus, UI primitives, static delivery shell, and Gate 0 verification.                                                      |
-| 2026-09-22 | Completed Workstream B: added the direction-aware format registry, lazy permissive adapters, local conversion paths, typed unavailable states, conversion routes, bank-statement confidence reporting, image/design boundaries, fixtures, and golden tests. |
+| Date       | Entry                                                                                                                                                                                                                                                                        |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| —          | Plan created from `image.complianttools.com` template, adapted to the PDF domain and the seven reference competitors (Smallpdf, iLovePDF, PDF24, OpenPDF, pdf.net, Drawboard PDF, Adobe Acrobat online).                                                                     |
+| 2026-09-22 | Reconciled with `comprehensive.md`, `design.md`, and `saas-template/`: expanded README capability/output/privacy coverage, corrected the 72-tool accounting, and reorganized execution into Gate 0 plus parallel Workstreams A–G.                                            |
+| 2026-09-22 | Completed Phase 0: shipped the monorepo/toolchain, compliance gates, PDF read/write engine seams, worker scheduler, adversarial corpus, UI primitives, static delivery shell, and Gate 0 verification.                                                                       |
+| 2026-09-23 | Workstream E: finalized the AI register, shipped template-driven BYOK adapters, IndexedDB key storage, cost/gesture gate, local fallbacks, AI routes, escalation registry, and gate fixtures; recorded the honest translation-layout and unfinished C/D host-surface limits. |
+| 2026-09-22 | Completed Workstream B: added the direction-aware format registry, lazy permissive adapters, local conversion paths, typed unavailable states, conversion routes, bank-statement confidence reporting, image/design boundaries, fixtures, and golden tests.                  |
 
 ---
 
@@ -1036,14 +1040,14 @@ Mirrors README §14. One row per capability × provider-family pairing shipped a
 
 | #   | Adapter                          | Capability  | Provider family       | Workstream | Status |
 | --- | -------------------------------- | ----------- | --------------------- | ---------- | :----: |
-| A1  | OpenAI-compatible / chat         | `chat`      | OpenAI-compatible     | E          |  [ ]   |
-| A2  | OpenAI-compatible / summarize    | `summarize` | OpenAI-compatible     | E          |  [ ]   |
-| A3  | OpenAI-compatible / translate    | `translate` | OpenAI-compatible     | E          |  [ ]   |
-| A4  | OpenAI-compatible / generate     | `generate`  | OpenAI-compatible     | E          |  [ ]   |
-| A5  | Anthropic-compatible / chat      | `chat`      | Anthropic-compatible  | E          |  [ ]   |
-| A6  | Anthropic-compatible / summarize | `summarize` | Anthropic-compatible  | E          |  [ ]   |
-| A7  | Generic-HTTP-template / chat     | `chat`      | User-defined endpoint | E          |  [ ]   |
-| A8  | Generic-HTTP-template / generate | `generate`  | User-defined endpoint | E          |  [ ]   |
+| A1  | OpenAI-compatible / chat         | `chat`      | OpenAI-compatible     | E          |  [x]   |
+| A2  | OpenAI-compatible / summarize    | `summarize` | OpenAI-compatible     | E          |  [x]   |
+| A3  | OpenAI-compatible / translate    | `translate` | OpenAI-compatible     | E          |  [x]   |
+| A4  | OpenAI-compatible / generate     | `generate`  | OpenAI-compatible     | E          |  [x]   |
+| A5  | Anthropic-compatible / chat      | `chat`      | Anthropic-compatible  | E          |  [x]   |
+| A6  | Anthropic-compatible / summarize | `summarize` | Anthropic-compatible  | E          |  [x]   |
+| A7  | Generic-HTTP-template / chat     | `chat`      | User-defined endpoint | E          |  [x]   |
+| A8  | Generic-HTTP-template / generate | `generate`  | User-defined endpoint | E          |  [x]   |
 
 ## Appendix D — Clearance register (18 items)
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import AiEscalationList from '$lib/AiEscalationList.svelte';
 
   let file = $state<File | undefined>();
   let markdown = $state('');
@@ -55,6 +56,7 @@
       bind:value={markdown}
       aria-label="Extracted Markdown"
       rows="18"></textarea>{/if}
+  <AiEscalationList />
 </section>
 
 <style>

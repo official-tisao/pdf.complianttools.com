@@ -125,8 +125,27 @@ export function validateStep(step: Step): Step {
 }
 
 export function parseRecipe(input: unknown): Recipe {
+  assertNoCredentials(input);
   const parsed = recipeSchema.parse(input);
   return { version: 'r1', steps: parsed.steps.map((step) => validateStep(step as Step)) };
+}
+
+function assertNoCredentials(value: unknown, path = 'recipe'): void {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => assertNoCredentials(item, `${path}[${index}]`));
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+  for (const [key, item] of Object.entries(value)) {
+    if (/api[_-]?key|secret|token|password|authorization|credential/iu.test(key))
+      throw new PdfEngineError({
+        kind: 'invalid-operation',
+        operation: 'recipe-credential',
+        remedy:
+          'Provider credentials cannot be stored in recipes. Save a provider connection in IndexedDB instead.',
+      });
+    assertNoCredentials(item, `${path}.${key}`);
+  }
 }
 
 // Keep a safety margin below typical tab limits so a 2,000-page synthetic input is refused

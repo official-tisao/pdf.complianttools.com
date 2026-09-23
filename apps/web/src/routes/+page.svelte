@@ -20,6 +20,7 @@
   <p class="lede">Merge, organize, convert, sign, and inspect documents without uploading them.</p>
   <div class="actions">
     <Button><a href="/merge">Start with Merge PDF</a></Button>
+    <Button variant="secondary"><a href="/ai/chat-with-pdf">Explore local-first AI</a></Button>
     <Button variant="secondary"><a href="/#tools">Browse tools</a></Button>
   </div>
   <FileDrop onchange={acceptFiles} />
