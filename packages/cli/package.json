@@ -1,0 +1,22 @@
+{
+  "name": "@pdf-complianttools/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "pdf-tools": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"fs.rmSync('dist',{recursive:true,force:true})\"",
+    "lint": "eslint src --max-warnings=0",
+    "test": "node --test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@pdf-complianttools/engine": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.30"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@pdf-complianttools/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tokens.css": "./src/tokens.css",
+    "./Button.svelte": "./src/Button.svelte",
+    "./FileDrop.svelte": "./src/FileDrop.svelte",
+    "./PageThumb.svelte": "./src/PageThumb.svelte",
+    "./Slider.svelte": "./src/Slider.svelte"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --outDir dist --declaration --emitDeclarationOnly",
+    "clean": "node -e \"fs.rmSync('dist',{recursive:true,force:true})\"",
+    "lint": "eslint src --max-warnings=0",
+    "test": "node --test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "svelte": "5.57.1"
+  }
+}

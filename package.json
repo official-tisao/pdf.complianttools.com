@@ -1,0 +1,55 @@
+{
+  "name": "pdf.complianttools.com",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local-first PDF toolkit monorepo",
+  "packageManager": "pnpm@9.15.5",
+  "engines": {
+    "node": ">=22.22.0 <23"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "clean": "turbo run clean",
+    "dev": "turbo run dev --parallel",
+    "format": "prettier --write \"apps/**/*.{js,mjs,ts,svelte,css,json,yml,yaml}\" \"packages/**/*.{js,mjs,ts,svelte,css,json,yml,yaml}\" \"scripts/**/*.{js,mjs,ts,json,yml,yaml}\" \"docs/**/*.{md,json}\" \"*.{json,mjs,ts,yml,yaml,css}\"",
+    "format:check": "prettier --check \"apps/**/*.{js,mjs,ts,svelte,css,json,yml,yaml}\" \"packages/**/*.{js,mjs,ts,svelte,css,json,yml,yaml}\" \"scripts/**/*.{js,mjs,ts,json,yml,yaml}\" \"docs/**/*.{md,json}\" \"*.{json,mjs,ts,yml,yaml,css}\"",
+    "lint": "eslint .",
+    "prepare": "simple-git-hooks",
+    "test": "turbo run test && pnpm test:unit",
+    "test:e2e": "playwright test",
+    "test:unit": "node --test scripts/*.test.mjs packages/engine/test/*.test.mjs",
+    "typecheck": "turbo run typecheck",
+    "verify:assets": "node scripts/verify-assets.mjs",
+    "verify:licenses": "node scripts/verify-licenses.mjs",
+    "verify:plan-sync": "node scripts/check-plan-sync.mjs",
+    "verify:source-safety": "node scripts/source-safety.mjs",
+    "verify:trademarks": "node scripts/verify-trademarks.mjs",
+    "verify": "pnpm format:check && pnpm lint && pnpm verify:source-safety && pnpm typecheck && pnpm test && pnpm verify:licenses && pnpm verify:assets && pnpm verify:trademarks && pnpm verify:plan-sync"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
+    "eslint": "10.11.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-svelte": "3.23.0",
+    "license-checker-rseidelsohn": "4.2.11",
+    "lint-staged": "16.2.7",
+    "pdf-lib": "1.17.1",
+    "prettier": "3.9.8",
+    "prettier-plugin-svelte": "4.1.1",
+    "simple-git-hooks": "2.14.0",
+    "svelte": "5.57.1",
+    "turbo": "2.11.2",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.1"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm exec lint-staged"
+  },
+  "lint-staged": {
+    "*.{js,mjs,ts,svelte}": "eslint --max-warnings=0",
+    "*.{json,md,yml,yaml,css}": "prettier --check"
+  }
+}

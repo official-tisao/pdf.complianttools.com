@@ -1,0 +1,42 @@
+# Third-party licenses
+
+Generated from the locked dependency graph.
+
+- @commitlint/cli@21.2.3 — MIT — https://github.com/conventional-changelog/commitlint
+- @commitlint/config-conventional@21.2.3 — MIT — https://github.com/conventional-changelog/commitlint
+- @eslint-community/eslint-utils@4.10.1 — MIT — https://github.com/eslint-community/eslint-utils
+- @eslint-community/regexpp@4.12.2 — MIT — https://github.com/eslint-community/regexpp
+- @eslint/config-array@0.23.5 — Apache-2.0 — https://github.com/eslint/rewrite
+- @eslint/config-helpers@0.7.0 — Apache-2.0 — https://github.com/eslint/rewrite
+- @eslint/core@1.2.1 — Apache-2.0 — https://github.com/eslint/rewrite
+- @eslint/js@10.0.1 — MIT — https://github.com/eslint/eslint
+- @eslint/object-schema@3.0.5 — Apache-2.0 — https://github.com/eslint/rewrite
+- @eslint/plugin-kit@0.7.3 — Apache-2.0 — https://github.com/eslint/rewrite
+- @playwright/test@1.63.0 — Apache-2.0 — https://github.com/microsoft/playwright
+- @typescript-eslint/eslint-plugin@8.70.1 — MIT — https://github.com/typescript-eslint/typescript-eslint
+- @typescript-eslint/parser@8.70.1 — MIT — https://github.com/typescript-eslint/typescript-eslint
+- @typescript-eslint/project-service@8.70.1 — MIT — https://github.com/typescript-eslint/typescript-eslint
+- @typescript-eslint/scope-manager@8.70.1 — MIT — https://github.com/typescript-eslint/typescript-eslint
+- @typescript-eslint/tsconfig-utils@8.70.1 — MIT — https://github.com/typescript-eslint/typescript-eslint
+- @typescript-eslint/type-utils@8.70.1 — MIT — https://github.com/typescript-eslint/typescript-eslint
+- @typescript-eslint/types@8.70.1 — MIT — https://github.com/typescript-eslint/typescript-eslint
+- @typescript-eslint/typescript-estree@8.70.1 — MIT — https://github.com/typescript-eslint/typescript-eslint
+- @typescript-eslint/utils@8.70.1 — MIT — https://github.com/typescript-eslint/typescript-eslint
+- @typescript-eslint/visitor-keys@8.70.1 — MIT — https://github.com/typescript-eslint/typescript-eslint
+- eslint-config-prettier@10.1.8 — MIT — https://github.com/prettier/eslint-config-prettier
+- eslint-plugin-svelte@3.23.0 — MIT — https://github.com/sveltejs/eslint-plugin-svelte
+- eslint-scope@9.1.2 — BSD-2-Clause — https://github.com/eslint/js
+- eslint-visitor-keys@5.0.1 — Apache-2.0 — https://github.com/eslint/js
+- eslint@10.11.0 — MIT — https://github.com/eslint/eslint
+- license-checker-rseidelsohn@4.2.11 — BSD-3-Clause — https://github.com/RSeidelsohn/license-checker-rseidelsohn
+- lint-staged@16.2.7 — MIT — https://github.com/lint-staged/lint-staged
+- pdf-lib@1.17.1 — MIT — https://github.com/Hopding/pdf-lib
+- pdf.complianttools.com@0.1.0 — UNLICENSED — registry metadata
+- prettier-plugin-svelte@4.1.1 — MIT — https://github.com/sveltejs/prettier-plugin-svelte
+- prettier@3.9.8 — MIT — https://github.com/prettier/prettier
+- simple-git-hooks@2.14.0 — MIT — https://github.com/toplenboren/simple-git-hooks
+- svelte-eslint-parser@1.8.1 — MIT — https://github.com/sveltejs/svelte-eslint-parser
+- svelte@5.57.1 — MIT — https://github.com/sveltejs/svelte
+- turbo@2.11.2 — MIT — https://github.com/vercel/turborepo
+- typescript-eslint@8.70.1 — MIT — https://github.com/typescript-eslint/typescript-eslint
+- typescript@5.9.3 — Apache-2.0 — https://github.com/microsoft/TypeScript

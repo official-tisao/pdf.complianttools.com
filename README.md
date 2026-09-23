@@ -322,10 +322,10 @@ no key, offline-capable · `◐` = local primary path with an optional, explicit
 | # | Tool | Route | Mode | Notes |
 | --- | --- | --- | --- | --- |
 | T35 | Blank / Templated PDF Creator | `/create-pdf` | Local | Create from supplied content/files or a blank page; page size/orientation presets, grid/lined/dot templates, and reusable local templates |
-| T36 | Webpage (URL) → PDF | `/webpage-to-pdf` | Local (Relay) | Requires the user-run Relay (§15); never a hosted capture service |
+| T36 | Webpage (URL) → PDF | `/webpage-to-pdf` | Relay | Requires the user-run Relay (§15); never a hosted capture service |
 | T37 | QR Code Generator | `/qr-code` | Local | Encodes URL/text/vCard; export as PDF, PNG, or SVG |
 | T38 | Invoice Creator | `/invoice-creator` | Local | Visual builder + line items, tax, totals, customer/vendor fields, and saved templates in IndexedDB |
-| T39 | Electronic Invoice (e-invoice) | `/e-invoice` | Local | Create PDF invoices, convert PDF invoices to structured XML, and convert XML e-invoices to PDF; UBL/ZUGFeRD-style embedding per §5.6 |
+| T39 | Electronic Invoice (e-invoice) | `/e-invoice` | Local | Create PDF invoices, convert PDF invoices to structured XML, and convert XML e-invoices to PDF; UBL/ZUGFeRD-style embedding per §5.3 |
 | T40 | Scan to PDF | `/scan-to-pdf` | Local | Camera capture via `getUserMedia`, perspective deskew, multi-page assembly |
 | T41 | Job-Application / Form-Pack Builder | `/document-pack-builder` | Local | Merge a cover letter + resume + attachments into one ordered PDF with a generated table of contents |
 
