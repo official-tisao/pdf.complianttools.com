@@ -9,3 +9,5 @@ export type UiToken =
   | '--color-hairline'
   | '--radius-panel'
   | '--radius-pill';
+export { default as OptionPanel } from './OptionPanel.svelte';
+export { default as PageGrid } from './PageGrid.svelte';

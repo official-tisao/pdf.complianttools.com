@@ -21,18 +21,34 @@ export class WorkerPool {
     if (signal?.aborted)
       return Promise.reject(new DOMException('The task was aborted.', 'AbortError'));
     const controller = new AbortController();
-    const onAbort = () => controller.abort(signal?.reason);
+    let settled = false;
+    let rejectPromise: ((reason?: unknown) => void) | undefined;
+    const onAbort = () => {
+      controller.abort(signal?.reason);
+      settled = true;
+      rejectPromise?.(new DOMException('The task was aborted.', 'AbortError'));
+    };
     signal?.addEventListener('abort', onAbort, { once: true });
     return new Promise<T>((resolve, reject) => {
+      rejectPromise = reject;
       this.#queue.push({
-        task: async (taskSignal) => task(taskSignal),
+        task: async (taskSignal) => {
+          if (taskSignal.aborted) throw new DOMException('The task was aborted.', 'AbortError');
+          return task(taskSignal);
+        },
         resolve: (value) => {
           signal?.removeEventListener('abort', onAbort);
-          resolve(value as T);
+          if (!settled) {
+            settled = true;
+            resolve(value as T);
+          }
         },
         reject: (reason) => {
           signal?.removeEventListener('abort', onAbort);
-          reject(reason);
+          if (!settled) {
+            settled = true;
+            reject(reason);
+          }
         },
         controller,
       });
