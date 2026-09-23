@@ -15,12 +15,12 @@ build.
 | D05 | `@embedpdf/pdfium` 2.15.1      | Adopted with verification record | npm metadata reports MIT; wrapper package remains isolated behind an adapter |
 | D06 | pdf-lib 1.17.1                 | Adopted                          | MIT; pinned and used for write-path Phase 0 proof                            |
 | D07 | jsPDF 4.2.1                    | Adopted                          | MIT; pinned for future from-scratch document creation                        |
-| D08 | docx                           | Reserved                         | MIT; conversion workstream only                                              |
-| D09 | mammoth                        | Reserved                         | MIT; conversion workstream only                                              |
-| D10 | exceljs                        | Reserved                         | MIT; conversion workstream only                                              |
-| D11 | pptxgenjs                      | Reserved                         | MIT; conversion workstream only                                              |
-| D12 | jszip                          | Reserved                         | MIT; conversion workstream only                                              |
-| D13 | fflate                         | Reserved                         | MIT; conversion workstream only                                              |
+| D08 | docx                           | Adopted                          | MIT; lazy-loaded for DOCX writing                                            |
+| D09 | mammoth                        | Adopted                          | MIT; lazy-loaded for DOCX structure reading                                  |
+| D10 | exceljs                        | Adopted                          | MIT; lazy-loaded for XLSX read/write                                         |
+| D11 | pptxgenjs                      | Adopted                          | MIT; lazy-loaded for PPTX writing                                            |
+| D12 | jszip                          | Adopted                          | MIT-compatible archive seam; conversion uses local ZIP parsing               |
+| D13 | fflate                         | Adopted                          | MIT; local ZIP/ODF/EPUB/PNG helpers                                          |
 | D14 | Tesseract.js and models        | Reserved                         | Apache-2.0 library; models must be separately registered before shipping     |
 | D15 | Legacy Office readers          | Build ourselves                  | OLE2/CFB is publicly documented; no copyleft reader dependency               |
 | D16 | Root-certificate trust lists   | Excluded from bundle             | Verify against browser/OS trust or a user-supplied CA bundle                 |

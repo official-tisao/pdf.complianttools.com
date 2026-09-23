@@ -1,0 +1,3 @@
+name,value,notes
+local,true,"stays on device"
+licensed,true,"permissive dependencies"

@@ -29,3 +29,17 @@ the existing `design.md` / `saas-template/` references.
   or specification change.
 - Preserve the existing branch and commit discipline: related changes are grouped, phase work is
   pushed only to its own phase branch, and the current branch receives only the shared fix/base work.
+
+## Phase B assumptions recorded at implementation time
+
+- Office and archive adapters are lazy-loaded; the UI never offers a registry entry whose direction
+  is marked unavailable. Adapters over 2 MB require an explicit download confirmation.
+- Legacy binary Office support is intentionally best-effort and text-stream based. No claim is made
+  that DOC/XLS/PPT formatting round-trips; users are directed to DOCX/XLSX/PPTX exports when the
+  compound file has no readable stream.
+- HTML conversion accepts pasted/file bytes only. URL capture remains a Relay-gated operation and
+  is never inferred from an HTML input.
+- Multi-page TIFF decoding, INDD, CBR, and PDF raster export without an injected local pdfium
+  renderer are typed unavailable capabilities rather than placeholder implementations.
+- Bank-statement confidence is a synthetic-fixture measurement aid, not a financial accuracy
+  guarantee; the route requires user verification before using the generated workbook.
