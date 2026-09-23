@@ -12,5 +12,8 @@
   },
   "devDependencies": {
     "@types/node": "22.15.30"
+  },
+  "dependencies": {
+    "playwright": "1.63.0"
   }
 }

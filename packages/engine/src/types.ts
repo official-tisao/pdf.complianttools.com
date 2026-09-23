@@ -1,3 +1,5 @@
+import type { EngineError } from './errors.js';
+
 export type OpId =
   | 'merge'
   | 'split'
@@ -21,7 +23,12 @@ export type OpId =
   | 'metadata'
   | 'inspect-structure'
   | 'render'
-  | 'inspect';
+  | 'inspect'
+  | 'create-pdf'
+  | 'qr-code'
+  | 'invoice'
+  | 'document-pack'
+  | 'scan-to-pdf';
 
 export type ConversionDirection = 'to-pdf' | 'from-pdf';
 
@@ -178,6 +185,74 @@ export type Result = {
   mimeType: 'application/pdf';
   outputs?: readonly Uint8Array[];
   report?: unknown;
+};
+
+export type PagePreset = {
+  size: 'a4' | 'letter' | 'legal';
+  orientation: 'portrait' | 'landscape';
+};
+
+export type PdfTemplate = 'blank' | 'grid' | 'lined' | 'dot';
+
+export type CreatePdfOptions = {
+  preset?: PagePreset;
+  template?: PdfTemplate;
+  pages?: readonly { title?: string; lines?: readonly string[] }[];
+  margin?: number;
+};
+
+export type QrPayload =
+  | { kind: 'text' | 'url'; value: string }
+  | { kind: 'vcard'; name: string; phone?: string; email?: string; organization?: string };
+
+export type QrRender = {
+  modules: readonly boolean[][];
+  version: number;
+  svg: string;
+  png: Uint8Array;
+  pdf: Uint8Array;
+};
+
+export type InvoiceLine = {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  taxRate?: number;
+};
+
+export type InvoiceData = {
+  invoiceNumber: string;
+  issueDate: string;
+  dueDate?: string;
+  currency: string;
+  supplier: { name: string; address?: string; taxId?: string };
+  customer: { name: string; address?: string; taxId?: string };
+  lines: readonly InvoiceLine[];
+  notes?: string;
+};
+
+export type InvoiceResult = {
+  pdf: Uint8Array;
+  xml: string;
+  totals: { net: number; tax: number; gross: number };
+};
+
+export type BatchItemStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+
+export type BatchItemResult = {
+  index: number;
+  status: BatchItemStatus;
+  attempts: number;
+  output?: Uint8Array;
+  error?: EngineError;
+};
+
+export type BatchOptions = {
+  concurrency?: number;
+  maxRetries?: number;
+  maxMemoryBytes?: number;
+  signal?: AbortSignal;
+  onItem?: (item: BatchItemResult) => void;
 };
 
 export type MemoryPlan = {

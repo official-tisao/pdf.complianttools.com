@@ -110,6 +110,30 @@ export const operationSchemas = {
     scale: z.number().positive().default(1),
   }),
   inspect: z.object({}),
+  'create-pdf': z.object({
+    preset: z
+      .object({
+        size: z.enum(['a4', 'letter', 'legal']).default('a4'),
+        orientation: z.enum(['portrait', 'landscape']).default('portrait'),
+      })
+      .default({ size: 'a4', orientation: 'portrait' }),
+    template: z.enum(['blank', 'grid', 'lined', 'dot']).default('blank'),
+    pages: z
+      .array(z.object({ title: z.string().optional(), lines: z.array(z.string()).optional() }))
+      .optional(),
+    margin: z.number().min(0).default(48),
+  }),
+  'qr-code': z.object({
+    kind: z.enum(['text', 'url', 'vcard']),
+    value: z.string().optional(),
+    name: z.string().optional(),
+    phone: z.string().optional(),
+    email: z.string().optional(),
+    organization: z.string().optional(),
+  }),
+  invoice: z.object({ invoice: z.record(z.string(), z.unknown()) }),
+  'document-pack': z.object({ title: z.string().default('Document pack') }),
+  'scan-to-pdf': z.object({ dpi: z.number().int().min(72).max(600).default(150) }),
 } satisfies Record<OpId, z.ZodTypeAny>;
 
 const stepSchema = z.object({
@@ -125,8 +149,60 @@ export function validateStep(step: Step): Step {
 }
 
 export function parseRecipe(input: unknown): Recipe {
+  assertDocumentFree(input);
   const parsed = recipeSchema.parse(input);
-  return { version: 'r1', steps: parsed.steps.map((step) => validateStep(step as Step)) };
+  const recipe = {
+    version: 'r1' as const,
+    steps: parsed.steps.map((step) => validateStep(step as Step)),
+  };
+  assertDocumentFree(recipe);
+  return recipe;
+}
+
+/** Recipes are shareable parameters only; binary document payloads never belong in them. */
+export function assertDocumentFree(value: unknown, path = 'recipe'): void {
+  if (value instanceof Uint8Array || value instanceof ArrayBuffer)
+    throw new PdfEngineError({
+      kind: 'invalid-operation',
+      operation: 'recipe',
+      remedy: `The shared recipe contains document bytes at ${path}. Remove the file data and share only operation parameters.`,
+    });
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => assertDocumentFree(entry, `${path}[${index}]`));
+    return;
+  }
+  if (value && typeof value === 'object') {
+    for (const [key, entry] of Object.entries(value)) {
+      if (/^(?:bytes|documentBytes|fileData|inputData)$/iu.test(key))
+        throw new PdfEngineError({
+          kind: 'invalid-operation',
+          operation: 'recipe',
+          remedy: `The shared recipe contains document data in ${path}.${key}. Share the recipe without input files.`,
+        });
+      assertDocumentFree(entry, `${path}.${key}`);
+    }
+  }
+}
+
+const operationDescriptions: Partial<Record<OpId, string>> = {
+  merge: 'Merge the selected PDFs',
+  split: 'Split the PDF into outputs',
+  compress: 'Compress the PDF',
+  'create-pdf': 'Create a new PDF from the selected template',
+  'qr-code': 'Generate a QR code',
+  invoice: 'Create an invoice PDF',
+  'document-pack': 'Build a document pack with a table of contents',
+  'scan-to-pdf': 'Assemble captured pages into a PDF',
+  bates: 'Add Bates numbering',
+  metadata: 'Edit document metadata',
+};
+
+export function describeRecipe(recipe: Recipe): string {
+  const parsed = parseRecipe(recipe);
+  if (parsed.steps.length === 0) return 'No operations selected.';
+  return parsed.steps
+    .map((step, index) => `${index + 1}. ${operationDescriptions[step.op] ?? step.op}`)
+    .join(' → ');
 }
 
 // Keep a safety margin below typical tab limits so a 2,000-page synthetic input is refused

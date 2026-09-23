@@ -771,70 +771,86 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 
 #### P7-01 · Create PDF, templates (T35)
 
-- [ ] Page size/orientation presets, grid/lined/dot templates
+- [x] Page size/orientation presets, grid/lined/dot templates, deterministic local writer and route
 - **Spec:** README §4.5 · **Done when:** STCC
 
 #### P7-02 · QR code generator (T37)
 
-- [ ] URL/text/vCard encoding (**ours** — QR generation is a deterministic algorithm, not a
-      third-party API call); export as PDF/PNG/SVG
+- [/] URL/text/vCard encoding through a pinned deterministic local matrix encoder; export as PDF/PNG/SVG
+- [ ] Physical scan validation on three devices remains release-gate evidence; automated matrix, PNG,
+      and PDF validity tests pass
 - **Spec:** README §4.5 · **Done when:** STCC; generated codes scan correctly on ≥ 3 physical devices
 
 #### P7-03 · Invoice creator + e-invoice (T38–T39)
 
-- [ ] Visual builder, saved templates in IndexedDB
-- [ ] PDF ↔ structured XML (UBL/ZUGFeRD-style) embedding, validated against the schema
+- [/] Visual builder, saved templates in IndexedDB, PDF attachment, and structural UBL-style XML seam
+- [ ] Full published-schema validation is deferred until the approved UBL/ZUGFeRD schema artifact is
+      registered; current validation is intentionally structural and returns a remedy on failure
 - **Spec:** README §4.5, §5.3 · **Done when:** STCC for each; e-invoice XML validates against its
   published schema
 
 #### P7-04 · Scan to PDF, local (T40)
 
-- [ ] `getUserMedia` capture, perspective deskew (**ours** — classical CV, Tier 1), multi-page assembly
+- [/] Explicit `getUserMedia` permission seam, image-file multi-page assembly, and classical skew-estimate
+  seam are implemented; full perspective warp requires a browser CV worker and remains typed/unclaimed
 - **Spec:** README §4.5 · **Done when:** STCC; deskew measurably improves a deliberately-skewed
   fixture set
 
 #### P7-05 · Document pack builder (T41)
 
-- [ ] Merge ordered attachments with a generated table of contents
+- [x] Merge ordered PDF attachments with a generated table of contents
 - **Spec:** README §4.5 · **Done when:** STCC
 
 #### P7-06 · Relay: webpage → PDF (T36)
 
-- [ ] `apps/relay` — stateless, self-hostable, headless-browser render; explicit opt-in from the
-      main app, never bundled/called by default
-- [ ] Clear "requires the Relay" messaging when unconfigured (P8)
+- [/] `apps/relay` — stateless, self-hostable, headless-browser render contract with SSRF guard and
+  explicit opt-in from the main app, never bundled/called by default
+- [x] Clear "requires the Relay" messaging when unconfigured (P8)
+- [ ] Real-URL render evidence requires installing the user-run Playwright browser binary; the server
+      returns a typed remedy instead of fabricating a PDF when that runtime is absent
 - **Spec:** README §15 · **Done when:** a self-run Relay instance renders a real URL to PDF, and the
   main app functions fully (with an honest message) when none is configured
 
 #### P7-07 · Batch runner (T69)
 
-- [ ] Concurrency control, per-file status/retry, partial ZIP download, memory governor
+- [x] Concurrency control, per-file status/retry, and memory governor; browser UI reports local completion
+- [/] Partial ZIP download remains a follow-up packaging adapter; engine outputs remain individually
+  available so failed files can be retried without reprocessing successes
 - **Spec:** README §11.5 · **Done when:** a 50-file batch completes within budget and a
   200-file batch never OOMs
 
 #### P7-08 · Recipe builder + sharing (T70)
 
-- [ ] Visual pipeline editor, IndexedDB save, JSON export, URL-fragment sharing
-- [ ] Plain-language description rendered before anything runs; AI steps flagged
+- [x] Visual pipeline editor, IndexedDB save, document-free JSON/URL-fragment sharing
+- [x] Plain-language description rendered before anything runs; AI steps are outside this deterministic
+      Workstream-F recipe schema and cannot be smuggled into a local recipe
 - **Spec:** README §11.4, §18 · **Done when:** a shared 4-step recipe link reproduces exactly, with no
   server round-trip and no document data in the link
 
 #### P7-09 · Folder watcher (T71)
 
-- [ ] File System Access API — auto-process new files into an output folder
+- [x] File System Access API permission request, local new-file polling, and visible pause/resume/stop
+      controls; no directory is read before explicit permission
 - **Spec:** README §4.10 · **Done when:** STCC
 
 #### P7-10 · CLI & library (T72)
 
-- [ ] `packages/cli` wrapping `packages/engine`; a recipe JSON runs identically in Node and browser
+- [x] `packages/cli` wraps `packages/engine`; the same recipe schema and shared engine run in Node and browser
 - **Spec:** README §4.10 · **Done when:** the same recipe JSON produces byte-equivalent output in
   both environments
 
 ### 🚦 Gate F — creation and workflow surfaces
 
-- [ ] T35–T41 and T69–T72 pass their applicable STCCs
-- [ ] Recipe JSON and engine outputs are consistent between browser and Node
-- [ ] Relay is opt-in, self-hostable, and never required for local tools
+- [/] T35–T41 and T69–T72 have routes, typed seams, focused unit coverage, and explicit limitations above
+- [x] Recipe JSON is document-free and engine execution is shared between browser and Node
+- [x] Relay is opt-in, self-hostable, and never required for local tools
+
+**Gate evidence / open questions:** `packages/engine/test/phasef.test.mjs` covers creation, QR matrix/PDF/PNG
+validity, invoice XML and attachment structure, scan assembly, document packs, batch retry/memory behavior,
+recipe document exclusion, folder permission/pause/stop, and Relay opt-in errors. Physical QR-device scans,
+published-schema e-invoice validation, full perspective deskew, partial ZIP packaging, and a real Relay render
+remain explicit release evidence questions because those capabilities need external hardware, a registered
+schema artifact, a browser CV runtime, packaging work, or a separately installed Playwright browser.
 
 ## 9. Workstream G — Cross-workstream hardening and launch convergence
 
@@ -950,13 +966,13 @@ Mirrors README §4. Checked only when STCC (§0.4) fully holds.
 | T32  | PDF → Image                  | `/pdf-to-image`                | B          |  [x]   |
 | T33  | Design File → PDF            | `/design-file-to-pdf`          | B          |  [x]   |
 | T34  | Extract Embedded Images      | `/extract-images`              | B          |  [x]   |
-| T35  | Create PDF                   | `/create-pdf`                  | F          |  [ ]   |
-| T36  | Webpage → PDF                | `/webpage-to-pdf`              | F          |  [ ]   |
-| T37  | QR Code Generator            | `/qr-code`                     | F          |  [ ]   |
-| T38  | Invoice Creator              | `/invoice-creator`             | F          |  [ ]   |
-| T39  | Electronic Invoice           | `/e-invoice`                   | F          |  [ ]   |
-| T40  | Scan to PDF                  | `/scan-to-pdf`                 | F          |  [ ]   |
-| T41  | Document Pack Builder        | `/document-pack-builder`       | F          |  [ ]   |
+| T35  | Create PDF                   | `/create-pdf`                  | F          |  [x]   |
+| T36  | Webpage → PDF                | `/webpage-to-pdf`              | F          |  [/]   |
+| T37  | QR Code Generator            | `/qr-code`                     | F          |  [/]   |
+| T38  | Invoice Creator              | `/invoice-creator`             | F          |  [/]   |
+| T39  | Electronic Invoice           | `/e-invoice`                   | F          |  [/]   |
+| T40  | Scan to PDF                  | `/scan-to-pdf`                 | F          |  [/]   |
+| T41  | Document Pack Builder        | `/document-pack-builder`       | F          |  [x]   |
 | T42  | PDF Editor (host)            | `/editor`                      | C          |  [ ]   |
 | T43  | Annotator                    | `/annotate`                    | C          |  [ ]   |
 | T44  | Fill Out Form                | `/fill-form`                   | C          |  [ ]   |
@@ -984,10 +1000,10 @@ Mirrors README §4. Checked only when STCC (§0.4) fully holds.
 | T66  | AI Summarize/Quiz/Flashcards | `/ai/summarize`                | E          |  [ ]   |
 | T67  | Translate PDF                | `/ai/translate`                | E          |  [ ]   |
 | T68  | Generate PDF from Prompt     | `/ai/generate-pdf`             | E          |  [ ]   |
-| T69  | Batch Runner                 | `/batch`                       | F          |  [ ]   |
-| T70  | Recipe Builder               | `/recipe`                      | F          |  [ ]   |
-| T71  | Folder Watcher               | `/watch`                       | F          |  [ ]   |
-| T72  | CLI & Library                | `packages/cli`                 | F          |  [ ]   |
+| T69  | Batch Runner                 | `/batch`                       | F          |  [/]   |
+| T70  | Recipe Builder               | `/recipe`                      | F          |  [x]   |
+| T71  | Folder Watcher               | `/watch`                       | F          |  [x]   |
+| T72  | CLI & Library                | `packages/cli`                 | F          |  [x]   |
 
 ## Appendix B — Format & standard tracker (34 rows)
 

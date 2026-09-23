@@ -2,6 +2,10 @@ import { PdfEngineError } from '../errors.js';
 import { pdfaReport, repairPdf } from '../pdf/operations.js';
 import { applyGraphStep, MutationGraph, splitGraph } from '../pdf/graph.js';
 import type { Plan, Progress, Result, RunOptions, SplitOptions } from '../types.js';
+import { createTemplatedPdf } from '../create.js';
+import { generateQr } from '../qr.js';
+import { createInvoicePdf } from '../invoice.js';
+import { buildDocumentPack } from '../workflows.js';
 
 function cancelled(): PdfEngineError {
   return new PdfEngineError({
@@ -42,6 +46,25 @@ export async function* run(
 
   let seed = inputs[0];
   const firstStep = plan.recipe.steps[0];
+  if (firstStep?.op === 'create-pdf') seed = createTemplatedPdf(firstStep.options as never);
+  if (firstStep?.op === 'qr-code') {
+    const qr = await generateQr(firstStep.options as never);
+    seed = qr.pdf;
+  }
+  if (firstStep?.op === 'invoice') {
+    const invoiceResult = await createInvoicePdf((firstStep.options as { invoice: never }).invoice);
+    seed = invoiceResult.pdf;
+  }
+  if (firstStep?.op === 'document-pack') {
+    const title = String(firstStep.options.title ?? 'Document pack');
+    const packed = await buildDocumentPack(
+      title,
+      inputs.map((bytes, index) => ({ name: `Attachment ${index + 1}.pdf`, bytes })),
+    );
+    yield emit(options.onProgress, 1, total, 'Completed document-pack.');
+    yield { kind: 'result', bytes: packed, mimeType: 'application/pdf' };
+    return;
+  }
   if (firstStep?.op === 'repair') seed = await repairPdf(seed);
   const graph = await MutationGraph.fromInputs([seed]);
   let outputs: readonly Uint8Array[] | undefined;
@@ -50,8 +73,20 @@ export async function* run(
 
   for (const [index, step] of plan.recipe.steps.entries()) {
     check(options.signal);
-    if (step.op === 'repair') {
+    if (
+      step.op === 'repair' ||
+      step.op === 'create-pdf' ||
+      step.op === 'qr-code' ||
+      step.op === 'invoice'
+    ) {
       // Recovery is isolated before the graph is opened; subsequent mutations share the graph.
+      if (index > 0 && step.op !== 'repair')
+        throw new PdfEngineError({
+          kind: 'invalid-operation',
+          operation: step.op,
+          remedy:
+            'Creation steps must be the first step in a recipe; subsequent steps can mutate the created PDF.',
+        });
     } else if (step.op === 'rasterize') {
       throw new PdfEngineError({
         kind: 'unsupported-feature',

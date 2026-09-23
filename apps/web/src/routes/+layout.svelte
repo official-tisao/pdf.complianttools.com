@@ -16,6 +16,8 @@
     <a href="/merge">Merge</a>
     <a href="/convert">Convert</a>
     <a href="/pdf-to-markdown">PDF to Markdown</a>
+    <a href="/recipe">Recipes</a>
+    <a href="/batch">Batch</a>
     <a href="/#tools">Tools</a>
   </nav>
   <span class="mode" aria-label="Processing mode">Local-first</span>
