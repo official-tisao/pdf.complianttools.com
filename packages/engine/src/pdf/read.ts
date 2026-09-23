@@ -4,7 +4,7 @@ import { runInModuleWorker } from '../runtime/module-worker.js';
 
 export async function inspectWithPdfJs(bytes: Uint8Array): Promise<DocMeta> {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  const loadingTask = pdfjs.getDocument({ data: bytes });
+  const loadingTask = pdfjs.getDocument({ data: bytes.slice() });
   const document = await loadingTask.promise;
   const pageCount = document.numPages;
   const firstPage = pageCount > 0 ? await document.getPage(1) : undefined;
@@ -65,7 +65,7 @@ export async function getPdfJsPageDimensions(
   pageNumber = 1,
 ): Promise<{ width: number; height: number }> {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  const loadingTask = pdfjs.getDocument({ data: bytes });
+  const loadingTask = pdfjs.getDocument({ data: bytes.slice() });
   const document = await loadingTask.promise;
   const page = await document.getPage(pageNumber);
   const viewport = page.getViewport({ scale: 1 });

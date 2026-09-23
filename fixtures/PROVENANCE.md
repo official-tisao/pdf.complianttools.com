@@ -10,3 +10,12 @@ security boundaries, and parser behavior without importing copyrighted or sensit
 
 Regenerate valid PDFs with `node scripts/generate-fixtures.mjs`. Never add a real customer document to
 this directory.
+
+## Workstream C additions
+
+- `adversarial/malformed-acroform.pdf` — hand-authored malformed AcroForm field tree; expected
+  behavior is a typed corrupt-structure outcome, never recursive traversal.
+- `adversarial/self-referential-annotation.pdf` — hand-authored self-referential annotation/page
+  objects; expected behavior is a typed corrupt-structure outcome.
+- `adversarial/oversized-signature.pdf` — hand-authored signature widget with intentionally
+  unreasonable coordinates; expected behavior is a typed unsupported/corrupt outcome with a remedy.
