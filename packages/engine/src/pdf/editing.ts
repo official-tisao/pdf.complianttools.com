@@ -983,11 +983,21 @@ export async function unlockPdf(): Promise<never> {
 
 export async function verifyDigitalSignatures(bytes: Uint8Array): Promise<SignatureVerification> {
   const source = new TextDecoder('latin1').decode(bytes);
-  const matches = [...source.matchAll(/\/ByteRange\s*\[([^\]]+)\]/gu)];
-  if (matches.length === 0)
+  const byteRanges: string[] = [];
+  for (let cursor = 0; cursor < source.length; ) {
+    const marker = source.indexOf('/ByteRange', cursor);
+    if (marker === -1) break;
+    const open = source.indexOf('[', marker + '/ByteRange'.length);
+    if (open === -1) break;
+    const close = source.indexOf(']', open + 1);
+    if (close === -1) break;
+    byteRanges.push(source.slice(open + 1, close));
+    cursor = close + 1;
+  }
+  if (byteRanges.length === 0)
     return { status: 'unsigned', signatures: [], remedy: 'No PDF signature ByteRange was found.' };
-  const signatures = matches.map((match) => ({
-    byteRange: (match[1] ?? '').trim().split(/\s+/u).map(Number),
+  const signatures = byteRanges.map((range) => ({
+    byteRange: range.trim().split(/\s+/u).map(Number),
     cmsPresent: /\/Contents\s*<[da-f]+>/iu.test(source),
   }));
   const malformed = signatures.some(
