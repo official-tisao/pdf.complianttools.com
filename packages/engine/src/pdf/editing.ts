@@ -984,7 +984,7 @@ export async function unlockPdf(): Promise<never> {
 export async function verifyDigitalSignatures(bytes: Uint8Array): Promise<SignatureVerification> {
   const source = new TextDecoder('latin1').decode(bytes);
   const byteRanges: string[] = [];
-  for (let cursor = 0; cursor < source.length; ) {
+  for (let cursor = 0; cursor < source.length;) {
     const marker = source.indexOf('/ByteRange', cursor);
     if (marker === -1) break;
     const open = source.indexOf('[', marker + '/ByteRange'.length);
