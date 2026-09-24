@@ -1,7 +1,7 @@
 # Open questions and working defaults
 
-This note records decisions that could reasonably require product-owner input while Phase A and
-Phase B are implemented. None of these questions blocks the current work. The defaults below follow
+This note records decisions that could reasonably require product-owner input while Phases A–F are
+implemented. None of these questions blocks the current work. The defaults below follow
 the repository specification, local-first browser constraints, permissive licensing requirements, and
 the existing `design.md` / `saas-template/` references.
 
@@ -18,6 +18,14 @@ the existing `design.md` / `saas-template/` references.
 | Which visual details take precedence when references differ? | `design.md` is the written contract; physical files under `saas-template/` are the implementation reference for spacing, shell, and responsive behavior.                                                                             | When a design review explicitly supersedes either reference.     |
 | Which Workstream A operations need a renderer at runtime?    | Mutation, organize, compression, metadata, structure inspection, and PDF/A reporting stay local in the engine; rasterize/preview accept a caller-supplied local pdfium-compatible renderer and never fall back to a network service. | When the browser worker renderer is wired into the final route.  |
 | How are imported PDF outlines handled by the first writer?   | Page bytes and order are preserved; bookmark strategy is schema-visible, while full outline-tree authoring remains a follow-up until the permissive writer API is verified.                                                          | Before the final document-navigation workstream gate.            |
+| How should editor mutations preserve document safety?        | Every edit runs through the existing single-graph pipeline, records a reversible recipe step where possible, and exports a fresh document; original input bytes remain immutable.                                                    | Before adding collaborative or cloud editing.                    |
+| What should signature and redaction claim?                   | Local signing supports drawing/placement and package preparation only; redaction must remove underlying content and emit verification evidence. No “secure” claim is made without fixture proof.                                     | Before legal/security review of Workstream C.                    |
+| How should OCR behave without a model download?              | Text extraction and searchable-PDF output remain local-first; OCR reports model size and language before download, requires an explicit gesture, and returns a typed unavailable state when no model is installed.                   | When the model catalog and accuracy corpus are approved.         |
+| What is the viewer’s source of truth?                        | pdf.js supplies local parsing/text/search; pdfium is an injected rendering seam for pixel comparisons and raster output. Viewer state is URL/recipe-shareable but never includes document bytes.                                     | When a production renderer is bundled and benchmarked.           |
+| Which AI operations may leave the browser?                   | Workstream E is BYOK and gesture-gated. Keys stay in IndexedDB, are never logged or sent to the local engine, and no provider is enabled until the user configures it.                                                               | During provider/security review.                                 |
+| What happens when AI is not configured?                      | Every AI tool has a deterministic local fallback where feasible; otherwise the UI explains that no local fallback exists and does not issue a request.                                                                               | Before enabling each AI route.                                   |
+| Should Relay be required for creation or batch tools?        | No. Creation, recipes, batch execution, folder watching, and CLI/library stay local; Relay is an explicit opt-in only for webpage rendering and other inherently remote inputs.                                                      | When deployment requirements are finalized.                      |
+| What does “complete” mean for branch F tooling?              | Browser and Node paths share typed recipes and engine operations; folder watching is opt-in, bounded, and never uploads files implicitly.                                                                                            | Before publishing the CLI package.                               |
 
 ## Defaults applied without waiting
 
@@ -43,3 +51,21 @@ the existing `design.md` / `saas-template/` references.
   renderer are typed unavailable capabilities rather than placeholder implementations.
 - Bank-statement confidence is a synthetic-fixture measurement aid, not a financial accuracy
   guarantee; the route requires user verification before using the generated workbook.
+
+## Phase C–F defaults applied without waiting
+
+- Workstream C uses local, deterministic PDF mutation and typed capability boundaries. Unsupported
+  writer operations surface a remedy instead of silently flattening or calling a remote service.
+- Redaction is treated as content removal, not a visual overlay. A result is downloadable only after
+  the verification path confirms the target text/objects are absent from the relevant content and
+  metadata surfaces.
+- Workstream D keeps viewer/search/metadata/OCR data local by default. OCR model downloads are
+  disclosed, user-triggered, cacheable, and removable; no model is fetched during page load.
+- Workstream E implements provider-neutral BYOK seams first. Provider adapters remain optional,
+  consent-gated, cost-estimated, and excluded from local-only flows; credentials never enter recipes,
+  logs, diagnostics, URLs, or document bytes.
+- Workstream F treats Relay as opt-in and keeps create/batch/recipe/CLI operations deterministic and
+  runnable without a server. File-system watching requires explicit directory permission and a
+  visible pause/stop control.
+- All four phase branches start from the updated `origin/master` merge, are pushed independently,
+  and may be reviewed or merged in any order after their tests and gate evidence pass.
