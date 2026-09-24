@@ -2,6 +2,20 @@ import { PDFDocument, StandardFonts, degrees } from 'pdf-lib';
 import { PdfEngineError } from '../errors.js';
 import type { MergeOptions, SplitOptions, Step } from '../types.js';
 import { resolvePageNumbers } from './operations.js';
+import {
+  addAnnotation,
+  addHeadersFooters,
+  addImageToPdf,
+  addPageNumbers,
+  addTextToPdf,
+  addWatermark,
+  createFormPdf,
+  editTextRun,
+  fillFormPdf,
+  overlayPdf,
+  redactPdf,
+  signPdf,
+} from './editing.js';
 
 type SaveOptions = Parameters<PDFDocument['save']>[0];
 
@@ -363,6 +377,9 @@ export async function applyGraphStep(
   inputs: readonly Uint8Array[],
 ): Promise<readonly Uint8Array[] | undefined> {
   const values = step.options;
+  async function replaceFromBytes(bytes: Uint8Array): Promise<void> {
+    graph.replace(await load(bytes, `apply ${step.op}`));
+  }
   switch (step.op) {
     case 'merge':
       await graph.merge(inputs, values);
@@ -441,6 +458,103 @@ export async function applyGraphStep(
     case 'compare':
     case 'ocr':
       break;
+    case 'editor':
+      if (!values.find || values.replace === undefined)
+        throw new PdfEngineError({
+          kind: 'invalid-operation',
+          operation: 'editor',
+          remedy:
+            'Provide the text to find and its replacement, or use the editor host to add a text box.',
+        });
+      await replaceFromBytes(
+        await editTextRun(await graph.save(), {
+          page: Number(values.page ?? 1),
+          find: String(values.find),
+          replace: String(values.replace),
+          ...(values.text
+            ? {
+                fallback: {
+                  page: Number(values.page ?? 1),
+                  text: String(values.text),
+                  x: Number(values.x ?? 72),
+                  y: Number(values.y ?? 72),
+                  size: Number(values.size ?? 12),
+                },
+              }
+            : {}),
+          capability: {
+            embedded: Boolean(values.fontEmbedded),
+            subsettable: Boolean(values.subsettable),
+          },
+        }),
+      );
+      break;
+    case 'annotate':
+      await replaceFromBytes(await addAnnotation(await graph.save(), values as never));
+      break;
+    case 'add-text':
+      await replaceFromBytes(await addTextToPdf(await graph.save(), values as never));
+      break;
+    case 'add-image':
+      if (!inputs[1])
+        throw new PdfEngineError({
+          kind: 'invalid-operation',
+          operation: 'add-image',
+          remedy: 'Provide the PDF followed by a PNG or JPEG image input.',
+        });
+      await replaceFromBytes(await addImageToPdf(await graph.save(), inputs[1], values as never));
+      break;
+    case 'headers-footers':
+      await replaceFromBytes(await addHeadersFooters(await graph.save(), values as never));
+      break;
+    case 'page-numbers':
+      await replaceFromBytes(await addPageNumbers(await graph.save(), values as never));
+      break;
+    case 'watermark':
+      if (!values.text)
+        throw new PdfEngineError({
+          kind: 'invalid-operation',
+          operation: 'watermark',
+          remedy: 'Provide watermark text or use the direct image watermark API.',
+        });
+      await replaceFromBytes(await addWatermark(await graph.save(), values as never));
+      break;
+    case 'overlay':
+      if (!inputs[1])
+        throw new PdfEngineError({
+          kind: 'invalid-operation',
+          operation: 'overlay',
+          remedy: 'Provide a base PDF followed by the overlay PDF.',
+        });
+      await replaceFromBytes(await overlayPdf(await graph.save(), inputs[1], values as never));
+      break;
+    case 'create-form':
+      await replaceFromBytes(
+        await createFormPdf(await graph.save(), (values.fields ?? []) as never),
+      );
+      break;
+    case 'fill-form':
+      await replaceFromBytes(await fillFormPdf(await graph.save(), (values.values ?? {}) as never));
+      break;
+    case 'sign':
+      await replaceFromBytes(await signPdf(await graph.save(), values as never));
+      break;
+    case 'redact':
+      await replaceFromBytes((await redactPdf(await graph.save(), values as never)).bytes);
+      break;
+    case 'accessibility-audit':
+    case 'signature-background':
+    case 'request-signature':
+    case 'protect':
+    case 'unlock':
+    case 'password-generator':
+    case 'verify-signature':
+      throw new PdfEngineError({
+        kind: 'unsupported-feature',
+        feature: `${step.op} is a read-side or non-PDF-output capability`,
+        remedy:
+          'Call the typed direct API from the route so its report or non-PDF output is preserved.',
+      });
   }
   return undefined;
 }

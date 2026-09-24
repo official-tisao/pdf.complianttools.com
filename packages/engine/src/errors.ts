@@ -28,7 +28,10 @@ export type EngineError =
     }
   | { kind: 'memory-limit-exceeded'; projectedBytes: number; maxBytes: number; remedy: string }
   | { kind: 'cancelled'; remedy: string }
-  | { kind: 'invalid-operation'; operation: string; remedy: string };
+  | { kind: 'invalid-operation'; operation: string; remedy: string }
+  | { kind: 'redaction-verification-failed'; findings: readonly string[]; remedy: string }
+  | { kind: 'credential-required'; channel: string; remedy: string }
+  | { kind: 'signature-unverified'; reason: string; remedy: string };
 
 export class PdfEngineError extends Error {
   readonly details: EngineError;

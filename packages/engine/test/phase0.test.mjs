@@ -70,7 +70,7 @@ test('adversarial corpus produces typed outcomes without active-content executio
   const adversarialDir = new URL('../../../fixtures/adversarial/', import.meta.url);
   const names = (await readdir(adversarialDir)).filter((name) => name.endsWith('.pdf'));
 
-  assert.equal(names.length, 9);
+  assert.equal(names.length, 12);
   for (const name of names) {
     const result = await classifyPdfInput(
       new Uint8Array(await readFile(new URL(name, adversarialDir))),
