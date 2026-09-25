@@ -3,6 +3,7 @@ import type { ConversionOptions } from '../types.js';
 
 export type PdfTextPage = {
   readonly pageNumber: number;
+  readonly text: string;
   readonly lines: readonly string[];
 };
 
@@ -37,7 +38,7 @@ export async function extractPdfTextPages(bytes: Uint8Array): Promise<readonly P
         if (y !== undefined) previousY = y;
       }
       if (current.trim()) lines.push(current.trimEnd());
-      pages.push({ pageNumber, lines });
+      pages.push({ pageNumber, text: lines.join(' '), lines });
     }
   } finally {
     await loadingTask.destroy();

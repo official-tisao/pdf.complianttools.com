@@ -22,6 +22,9 @@ export type OpId =
   | 'inspect-structure'
   | 'render'
   | 'inspect'
+  | 'view'
+  | 'compare'
+  | 'ocr'
   | 'editor'
   | 'annotate'
   | 'add-text'
@@ -211,6 +214,30 @@ export type PreviewFrame = {
   width: number;
   height: number;
   pixels: Uint8Array;
+};
+
+export type PdfDateFields = {
+  readonly creationDate?: Date;
+  readonly modificationDate?: Date;
+};
+
+export type PdfMetadata = PdfDateFields & {
+  readonly title: string;
+  readonly author: string;
+  readonly subject: string;
+  readonly keywords: readonly string[];
+  readonly creator: string;
+  readonly producer: string;
+  readonly customXmp: Readonly<Record<string, string>>;
+};
+
+export type OcrModelDescriptor = {
+  readonly language: string;
+  readonly label: string;
+  readonly modelBytes: number;
+  readonly modelLicense: 'Apache-2.0';
+  readonly status: 'not-installed' | 'installed' | 'unavailable';
+  readonly source: 'user-supplied-local-model';
 };
 
 export type PageRect = Readonly<{ x: number; y: number; width: number; height: number }>;
