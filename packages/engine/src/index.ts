@@ -14,6 +14,7 @@ export * from './conversion/pdf-text.js';
 export * from './conversion/images.js';
 export * from './pdf/operations.js';
 export * from './pdf/graph.js';
+export * from './ai/index.js';
 export * from './pdf/metadata.js';
 export * from './pdf/compare.js';
 export * from './ocr/index.js';
