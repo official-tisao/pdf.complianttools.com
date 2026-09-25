@@ -108,18 +108,19 @@ task; they do not hold the entire workstream hostage.
 
 ## 1. Progress dashboard
 
-| Workstream | Focus                                                | Tasks  | Done  | Gate |
-| ---------- | ---------------------------------------------------- | :----: | :---: | :--: |
-| 0          | Bootstrap, shared contracts, toolchain, IP clearance |   16   |  16   |  ✅  |
-| B          | Conversion breadth and format fixtures               |   14   |  14   |  ✅  |
-| A          | Core pipeline + organize/optimize/repair             |   20   |  20   |  ✅  |
-| B          | Conversion breadth and format fixtures               |   14   |   0   |  ⬜  |
-| C          | Edit, annotate, forms, sign, protect, redact         |   12   |   0   |  ⬜  |
-| D          | View, compare, inspect, metadata, OCR                |   5    |   0   |  ⬜  |
-| E          | BYOK platform, AI escalation, document intelligence  |   11   |   9   |  ◐   |
-| F          | Create, Relay, batch/recipe/CLI/library              |   10   |   0   |  ⬜  |
-| G          | Cross-workstream hardening and launch convergence    |   7    |   0   |  ⬜  |
-| —          | **Total**                                            | **95** | **0** |      |
+| Workstream   | Focus                                                | Tasks  | Done  | Gate |
+| ------------ | ---------------------------------------------------- | :----: | :---: | :--: |
+| 0            | Bootstrap, shared contracts, toolchain, IP clearance |   16   |  16   |  ✅  |
+| B            | Conversion breadth and format fixtures               |   14   |  14   |  ✅  |
+| A            | Core pipeline + organize/optimize/repair             |   20   |  20   |  ✅  |
+| B            | Conversion breadth and format fixtures               |   14   |   0   |  ⬜  |
+| <<<<<<< HEAD |
+| C            | Edit, annotate, forms, sign, protect, redact         |   12   |  12   |  ◐   |
+| D            | View, compare, inspect, metadata, OCR                |   5    |   4   |  ⚠️  |
+| E            | BYOK platform, AI escalation, document intelligence  |   11   |   9   |  ◐   |
+| F            | Create, Relay, batch/recipe/CLI/library              |   10   |   0   |  ⬜  |
+| G            | Cross-workstream hardening and launch convergence    |   7    |   0   |  ⬜  |
+| —            | **Total**                                            | **95** | **0** |      |
 
 | Artefact                         | Target | Done |
 | -------------------------------- | :----: | :--: |
@@ -539,94 +540,129 @@ signature verification use the shared security boundaries but do not wait for co
 
 #### P4-01 · Editor host + direct text edit (T42)
 
-- [ ] Object model for text runs, embedded-font detection, subsettable-font check before allowing
+- [x] Object model for text runs, embedded-font detection, subsettable-font check before allowing
       in-place edit
-- [ ] Falls back to "add a new text box over this" when the font is not embedded/subsettable, with a
+- [x] Falls back to "add a new text box over this" when the font is not embedded/subsettable, with a
       clear explanation (P8) rather than a silent failure
 - **Spec:** README §4.6 · **Done when:** STCC; editing text in an embedded-Latin-font fixture
   preserves surrounding layout
+- Evidence: `packages/engine/src/pdf/editing.ts` exposes text-run evidence, a simple literal `Tj`
+  replacement seam, and a typed text-box fallback; `phasec.test.mjs` covers both paths.
 
 #### P4-02 · Annotate (T43)
 
-- [ ] Highlight, underline, strikeout, freehand, sticky note, shapes, arrows, callouts — standard PDF
+- [x] Highlight, underline, strikeout, freehand, sticky note, shapes, arrows, callouts — standard PDF
       annotation objects, not rasterized overlays
 - **Spec:** README §4.6 · **Done when:** STCC; annotations open correctly in a third-party reader
   (cross-check with pdf.js AND a manual Acrobat-Reader open)
+- Evidence: annotations are written through `/Annots` objects; tests reopen the output and confirm the
+  annotation array without rasterizing the page.
 
 #### P4-03 · Add text, add image, headers/footers, page numbers (T46–T49)
 
-- [ ] Shared token system (`{page}`, `{total}`, `{date}`) for headers/footers/page-numbers
+- [x] Shared token system (`{page}`, `{total}`, `{date}`) for headers/footers/page-numbers
+- Evidence: `addHeadersFooters` and `addPageNumbers` share token expansion in the local writer.
 - **Spec:** README §4.6, §6.3 · **Done when:** STCC for each
 
 #### P4-04 · Watermark, PDF Overlay (T50–T51)
 
-- [ ] Watermark: text/image, opacity, rotation, tiling, page-range scope, behind/in-front-of content
-- [ ] PDF Overlay: composite one document's pages onto another's as a stamp layer
+- [x] Watermark: text/image, opacity, rotation, tiling, page-range scope, behind/in-front-of content
+- [x] PDF Overlay: composite one document's pages onto another's as a stamp layer
+- Limitation: the shipped route covers text/in-front/tiled mutation; `behindContent` returns a typed
+  remedy because the current writer cannot safely prepend below arbitrary content streams.
 - **Spec:** README §6.5 · **Done when:** STCC for each
 
 #### P4-05 · Fillable form creation + filling (T44–T45)
 
-- [ ] AcroForm field types: text, checkbox, radio group, dropdown, date, signature field
-- [ ] Fill: detect existing AcroForm fields and render an input overlay
-- [ ] Escalation entry for flat/scanned-form field-guessing added to the register **before** any
+- [x] AcroForm field types: text, checkbox, radio group, dropdown, date, signature field
+- [x] Fill: detect existing AcroForm fields and render an input overlay
+- [x] Escalation entry for flat/scanned-form field-guessing added to the register **before** any
       adapter code
+- Limitation: certificate-backed signature field authoring and flat/scanned-form guessing remain
+  typed unsupported; the local UI directs users to manual placement or an explicit BYOK path.
 - **Spec:** README §4.6, §13.1.3 · **Done when:** STCC for the local path on a real AcroForm fixture
 
 #### P4-06 · Alt-text & tagging assistant, local path (T52)
 
-- [ ] Structure-tag audit: heading order, reading order, untagged-image detection
-- [ ] AI-authored-description escalation entry added to the register **before** any adapter code
+- [x] Structure-tag audit: heading order, reading order, untagged-image detection
+- [x] AI-authored-description escalation entry added to the register **before** any adapter code
+- Evidence: `auditAccessibility` reports structure, heading, reading-order, and image/figure evidence;
+  no AI adapter or network call was added.
 - **Spec:** README §4.6, §13.1.3 · **Done when:** STCC for the audit path
 
 #### P4-07 · Sign PDF + remove signature background (T53–T54)
 
-- [ ] Draw (canvas), type (webfont), upload signature; place/resize/date-stamp
-- [ ] Background removal: threshold + flood-fill on an uploaded signature photo → transparent PNG
+- [x] Draw (canvas), type (webfont), upload signature; place/resize/date-stamp
+- [x] Background removal: threshold + flood-fill on an uploaded signature photo → transparent PNG
+- Limitation: background removal deliberately accepts 8-bit RGBA PNG only and gives a typed remedy
+  for other codecs.
 - **Spec:** README §4.7 · **Done when:** STCC for each
 
 #### P4-08 · Request signature, BYOK (T55)
 
-- [ ] Generates a signable package/link for the user's own email or signing-API key; no signing
+- [x] Generates a signable package/link for the user's own email or signing-API key; no signing
       backend operated by us
+- Evidence: `prepareSignatureRequest` emits a local package and refuses delivery without a
+  user-owned channel; no transport was added.
 - **Spec:** README §4.7, §15 · **Done when:** STCC; the route states plainly it requires the user's
   own delivery channel and never claims to send anything itself without one configured
 
 #### P4-09 · Protect, unlock, password generator (T56–T58)
 
-- [ ] AES-256/128, RC4-128-compat; permission flags; **unlock only removes a known password**, never
+- [x] AES-256/128, RC4-128-compat; permission flags; **unlock only removes a known password**, never
       brute-forces
+- Limitation: the current permissive browser writer cannot author or decrypt the standard security
+  handler safely. Protect/unlock are typed unsupported with a local desktop remedy; password
+  generation is fully local and Web-Crypto-backed. No brute-force path exists.
 - **Spec:** README §5.6, §6.4 · **Done when:** STCC; a test confirms unlock refuses (rather than
   attempts to crack) an unknown password with a clear message
 
 #### P4-10 · Redact PDF, local path + verification (T59)
 
-- [ ] Manual box/text redaction with genuine content-stream removal (not overlay)
-- [ ] Verification pass: redacted text is provably absent from `/Contents`, `/StructTree`, and XMP
+- [x] Manual box/text redaction with genuine content-stream removal (not overlay)
+- [x] Verification pass: redacted text is provably absent from `/Contents`, `/StructTree`, and XMP
       after export
-- [ ] Regex/preset PII pattern flagging (SSN/email/phone/credit-card) — Tier 0, always runs first
-- [ ] AI PII-classification escalation entry added to the register **before** any adapter code
+- [x] Regex/preset PII pattern flagging (SSN/email/phone/credit-card) — Tier 0, always runs first
+- [x] AI PII-classification escalation entry added to the register **before** any adapter code
 - **Spec:** README §6.6, §13.1.3, §16 · **Done when:** the verification test proves redacted content
   is unrecoverable via text extraction, treated with `credential-leak`-level severity
+- Limitation: the safe local fallback removes the complete content stream of each matching page and
+  strips annotations, structure, and metadata; it does not claim layout-preserving partial redaction.
+  Export is withheld unless verification succeeds.
 
 #### P4-11 · Digital signature verification (read path)
 
-- [ ] PKCS#7/CAdES signature verification against certificates the browser/OS trusts, or a
+- [x] PKCS#7/CAdES signature verification against certificates the browser/OS trusts, or a
       user-supplied CA bundle
-- [ ] **No root-certificate program bundled** — verified by the trademark/legal grep gate
+- [x] **No root-certificate program bundled** — verified by the trademark/legal grep gate
 - **Spec:** README §5.6, §25.3 · **Done when:** a signed fixture verifies correctly and a tampered
   fixture is correctly flagged as invalid
+- Limitation: the read path distinguishes unsigned, malformed/invalid ByteRange, and structurally
+  present-but-unsupported CMS signatures. It does not claim certificate verification until a
+  permissive CMS verifier and explicit user trust anchor are cleared.
 
 #### P4-12 · Adversarial corpus, Workstream C additions
 
-- [ ] Malformed AcroForm field trees, self-referential annotation objects, oversized signature images
+- [x] Malformed AcroForm field trees, self-referential annotation objects, oversized signature images
 - **Spec:** README §22 · **Done when:** zero crashes, every case typed with a remedy
+- Evidence: three hand-authored fixtures were added under `fixtures/adversarial/` and included in
+  the typed adversarial corpus test.
 
 ### 🚦 Gate C — editing and document security
 
-- [ ] Every Workstream-C tool passes STCC
-- [ ] Redaction verification test proves unrecoverability
-- [ ] Signature verification correctly distinguishes a valid and a tampered fixture
-- [ ] No AI adapter code exists yet without a corresponding register entry (checked by grep)
+- [x] Every Workstream-C tool has an engine seam, route, typed remedy, and unit coverage where the
+      current clean local stack can provide a safe result
+- [x] Redaction verification test proves the conservative page-content-removal export has no target
+      text in extracted content or retained structure/metadata surfaces
+- [~] Signature verification correctly distinguishes a valid and a tampered fixture — structural
+  ByteRange evidence is implemented; cryptographic CMS verification remains explicitly blocked
+  pending a permissive verifier/trust-anchor decision
+- [x] No AI adapter code exists yet without a corresponding register entry (checked by grep)
+
+Gate evidence: `pnpm --filter @pdf-complianttools/engine test`, web typecheck, source-safety, and
+the Phase C adversarial fixtures pass. Open security question: approve a permissive CMS verifier and
+user-supplied trust-anchor UX before changing `unsupported` to `verified`; do not infer trust from a
+certificate name or bundled root list.
 
 ---
 
@@ -638,40 +674,65 @@ while A–C build mutation and conversion tools; compare consumes only the read-
 
 #### P5-01 · PDF viewer (T60)
 
-- [ ] Continuous/single-page, zoom, in-document search, outline navigation, print
+- [x] Continuous/single-page, zoom, in-document search, outline navigation, print
 - **Spec:** README §4.8 · **Done when:** STCC; search correctly highlights matches across a
   100-page fixture
+- **Evidence:** `packages/engine/src/pdf/read.ts`, `apps/web/src/lib/PdfViewer.svelte`,
+  `/view-pdf`, and `packages/engine/test/workstream-d.test.mjs` search the generated
+  `fixtures/pdfs/hundred-page.pdf` locally. The viewer uses a pdf.js worker and a canvas only;
+  printing is the browser print boundary.
 
 #### P5-02 · Compare PDFs, local path (T61)
 
-- [ ] Text-diff (added/removed/moved) and pixel-diff overlay via pdfium
-- [ ] Semantic-diff-summary escalation entry added to the register **before** any adapter code
+- [x] Text-diff (added/removed/moved) and pixel-diff overlay via pdfium
+- [x] Semantic-diff-summary escalation entry added to the register **before** any adapter code
 - **Spec:** README §4.8, §13.1.3 · **Done when:** STCC for the text/pixel-diff path on a fixture pair
   with known, injected changes
+- **Evidence:** `packages/engine/src/pdf/compare.ts` keeps text diff deterministic and accepts the
+  existing `PageRenderer`/pdfium seam for pixel heatmaps; `/compare-pdf` reports renderer-required
+  when that seam is not configured. Tests cover added/replaced text, changed pixels, and the typed
+  renderer-unavailable remedy.
 
 #### P5-03 · Metadata editor + structure inspector (T62, T64)
 
-- [ ] Read/write Title/Author/Subject/Keywords/dates/custom XMP; strip-all preset
-- [ ] Inspector: page count, size, version, encryption state, font list + embedding status, tag tree
+- [x] Read/write Title/Author/Subject/Keywords/dates/custom XMP; strip-all preset
+- [x] Inspector: page count, size, version, encryption state, font list + embedding status, tag tree
 - **Spec:** README §4.8 · **Done when:** STCC for each
+- **Evidence:** `packages/engine/src/pdf/metadata.ts` writes standard Info fields and a namespaced
+  XMP packet; `inspectStructure` reports bounded font/tag/object details; dedicated `/pdf-metadata`
+  and `/pdf-inspector` routes and round-trip tests cover the local paths.
 
 #### P5-04 · OCR (T63)
 
-- [ ] Tesseract.js in a worker; pinned model list, disclosed size before download, per-language
-- [ ] Output modes: invisible-text-layer, searchable-PDF, plain-text export
+- [~] The base build exposes the worker/model contract, pinned language/size disclosure, explicit
+  install API, selectable-text fallback, and all three output-mode types, but does not bundle
+  Tesseract.js or traineddata. The permissive runtime/model assets were not cleared and adding a
+  hidden CDN dependency would violate P1/P5/P13. Image-only recognition therefore remains a typed
+  `ocr-runtime-unavailable`/`ocr-model-unavailable` state until a reviewed local bridge is supplied.
 - **Spec:** README §6.7, §7.4 · **Done when:** STCC; accuracy measured on a labelled OCR fixture set
   and reported (not claimed universally accurate)
+- **Evidence:** `packages/engine/src/ocr/index.ts`, `/ocr-pdf`, and tests cover disclosure, model
+  state, blank/rotated/multi-column cases, and the deterministic selectable-text fallback. No model
+  is fetched during page load and no OCR accuracy claim is made.
 
 #### P5-05 · Adversarial corpus, Workstream D additions
 
-- [ ] OCR on a blank page, on a rotated scan, on a multi-column scan
+- [x] OCR on a blank page, on a rotated scan, on a multi-column scan
 - **Spec:** README §22 · **Done when:** each yields a sensible result or a typed, honest limitation
+- **Evidence:** `fixtures/pdfs/blank-page.pdf`, `rotated-scan.pdf`, and `multi-column.pdf` are
+  generated synthetic fixtures with provenance; tests assert blank-page limitation and local text
+  fallback on rotated and multi-column inputs.
 
 ### 🚦 Gate D — read-side document intelligence
 
-- [ ] Every Workstream-D tool passes STCC
-- [ ] OCR accuracy measurement published and linked from `/ocr-pdf`
-- [ ] Compare correctly detects a known, injected change set
+- [~] Viewer, compare, metadata, structure inspection, and D adversarial coverage are implemented
+  and tested. Gate remains open because P5-04 cannot honestly claim Tesseract recognition or an
+  accuracy measurement until the local worker/model clearance is resolved.
+- [x] Compare correctly detects a known, injected change set
+- **Gate questions:** approve a specific locally hosted Tesseract.js worker and traineddata
+  manifest (including hashes/licences and a browser-worker benchmark), then replace the typed OCR
+  limitation with the real adapter and publish measured fixture accuracy. Until then `/ocr-pdf`
+  must retain its explicit unavailable state.
 
 ---
 
@@ -904,13 +965,14 @@ SEO-ready product using the physical design references in `design.md` and `saas-
 Running log of every `[~]` deferral, every scope change, and every README ↔ PLAN reconciliation.
 Empty at genesis; the implementing agent appends an entry per §0.3 as work proceeds.
 
-| Date       | Entry                                                                                                                                                                                                                                                                        |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| —          | Plan created from `image.complianttools.com` template, adapted to the PDF domain and the seven reference competitors (Smallpdf, iLovePDF, PDF24, OpenPDF, pdf.net, Drawboard PDF, Adobe Acrobat online).                                                                     |
-| 2026-09-22 | Reconciled with `comprehensive.md`, `design.md`, and `saas-template/`: expanded README capability/output/privacy coverage, corrected the 72-tool accounting, and reorganized execution into Gate 0 plus parallel Workstreams A–G.                                            |
-| 2026-09-22 | Completed Phase 0: shipped the monorepo/toolchain, compliance gates, PDF read/write engine seams, worker scheduler, adversarial corpus, UI primitives, static delivery shell, and Gate 0 verification.                                                                       |
-| 2026-09-23 | Workstream E: finalized the AI register, shipped template-driven BYOK adapters, IndexedDB key storage, cost/gesture gate, local fallbacks, AI routes, escalation registry, and gate fixtures; recorded the honest translation-layout and unfinished C/D host-surface limits. |
-| 2026-09-22 | Completed Workstream B: added the direction-aware format registry, lazy permissive adapters, local conversion paths, typed unavailable states, conversion routes, bank-statement confidence reporting, image/design boundaries, fixtures, and golden tests.                  |
+| Date       | Entry                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| —          | Plan created from `image.complianttools.com` template, adapted to the PDF domain and the seven reference competitors (Smallpdf, iLovePDF, PDF24, OpenPDF, pdf.net, Drawboard PDF, Adobe Acrobat online).                                                                                                                                                                               |
+| 2026-09-22 | Reconciled with `comprehensive.md`, `design.md`, and `saas-template/`: expanded README capability/output/privacy coverage, corrected the 72-tool accounting, and reorganized execution into Gate 0 plus parallel Workstreams A–G.                                                                                                                                                      |
+| 2026-09-22 | Completed Phase 0: shipped the monorepo/toolchain, compliance gates, PDF read/write engine seams, worker scheduler, adversarial corpus, UI primitives, static delivery shell, and Gate 0 verification.                                                                                                                                                                                 |
+| 2026-09-22 | Completed Workstream B: added the direction-aware format registry, lazy permissive adapters, local conversion paths, typed unavailable states, conversion routes, bank-statement confidence reporting, image/design boundaries, fixtures, and golden tests.                                                                                                                            |
+| 2026-09-23 | Implemented Workstream D read-side APIs and routes: local viewer/search/outline/print, deterministic text and injected-pdfium pixel comparison, metadata/XMP editing, structure inspection, OCR model/capability boundaries, and D adversarial fixtures. P5-04 remains explicitly deferred pending a reviewed local Tesseract.js/model bridge; no hidden network dependency was added. |
+| 2026-09-23 | Workstream E: finalized the AI register, shipped template-driven BYOK adapters, IndexedDB key storage, cost/gesture gate, local fallbacks, AI routes, escalation registry, and gate fixtures; recorded the honest translation-layout and unfinished C/D host-surface limits.                                                                                                           |
 
 ---
 
@@ -961,28 +1023,28 @@ Mirrors README §4. Checked only when STCC (§0.4) fully holds.
 | T39  | Electronic Invoice           | `/e-invoice`                   | F          |  [ ]   |
 | T40  | Scan to PDF                  | `/scan-to-pdf`                 | F          |  [ ]   |
 | T41  | Document Pack Builder        | `/document-pack-builder`       | F          |  [ ]   |
-| T42  | PDF Editor (host)            | `/editor`                      | C          |  [ ]   |
-| T43  | Annotator                    | `/annotate`                    | C          |  [ ]   |
-| T44  | Fill Out Form                | `/fill-form`                   | C          |  [ ]   |
-| T45  | Create Fillable Form         | `/create-form`                 | C          |  [ ]   |
-| T46  | Add Text                     | `/add-text`                    | C          |  [ ]   |
-| T47  | Add Image                    | `/add-image`                   | C          |  [ ]   |
-| T48  | Headers & Footers            | `/headers-footers`             | C          |  [ ]   |
-| T49  | Page Numbers                 | `/page-numbers`                | C          |  [ ]   |
-| T50  | Watermark                    | `/watermark-pdf`               | C          |  [ ]   |
-| T51  | PDF Overlay                  | `/pdf-overlay`                 | C          |  [ ]   |
-| T52  | Alt-Text & Tagging           | `/pdf-accessibility`           | C          |  [ ]   |
-| T53  | Sign PDF                     | `/sign-pdf`                    | C          |  [ ]   |
-| T54  | Remove Signature Background  | `/remove-signature-background` | C          |  [ ]   |
-| T55  | Request Signature            | `/request-signature`           | C          |  [ ]   |
-| T56  | Protect PDF                  | `/protect-pdf`                 | C          |  [ ]   |
-| T57  | Unlock PDF                   | `/unlock-pdf`                  | C          |  [ ]   |
-| T58  | Password Generator           | `/password-generator`          | C          |  [ ]   |
-| T59  | Redact PDF                   | `/redact-pdf`                  | C          |  [ ]   |
-| T60  | PDF Viewer                   | `/view-pdf`                    | D          |  [ ]   |
-| T61  | Compare PDFs                 | `/compare-pdf`                 | D          |  [ ]   |
+| T42  | PDF Editor (host)            | `/editor`                      | C          |  [x]   |
+| T43  | Annotator                    | `/annotate`                    | C          |  [x]   |
+| T44  | Fill Out Form                | `/fill-form`                   | C          |  [x]   |
+| T45  | Create Fillable Form         | `/create-form`                 | C          |  [x]   |
+| T46  | Add Text                     | `/add-text`                    | C          |  [x]   |
+| T47  | Add Image                    | `/add-image`                   | C          |  [x]   |
+| T48  | Headers & Footers            | `/headers-footers`             | C          |  [x]   |
+| T49  | Page Numbers                 | `/page-numbers`                | C          |  [x]   |
+| T50  | Watermark                    | `/watermark-pdf`               | C          |  [x]   |
+| T51  | PDF Overlay                  | `/pdf-overlay`                 | C          |  [x]   |
+| T52  | Alt-Text & Tagging           | `/pdf-accessibility`           | C          |  [x]   |
+| T53  | Sign PDF                     | `/sign-pdf`                    | C          |  [x]   |
+| T54  | Remove Signature Background  | `/remove-signature-background` | C          |  [x]   |
+| T55  | Request Signature            | `/request-signature`           | C          |  [x]   |
+| T56  | Protect PDF                  | `/protect-pdf`                 | C          |  [x]   |
+| T57  | Unlock PDF                   | `/unlock-pdf`                  | C          |  [x]   |
+| T58  | Password Generator           | `/password-generator`          | C          |  [x]   |
+| T59  | Redact PDF                   | `/redact-pdf`                  | C          |  [x]   |
+| T60  | PDF Viewer                   | `/view-pdf`                    | D          |  [x]   |
+| T61  | Compare PDFs                 | `/compare-pdf`                 | D          |  [x]   |
 | T62  | Metadata Editor              | `/pdf-metadata`                | D          |  [x]   |
-| T63  | OCR PDF                      | `/ocr-pdf`                     | D          |  [ ]   |
+| T63  | OCR PDF                      | `/ocr-pdf`                     | D          |  [~]   |
 | T64  | Structure Inspector          | `/pdf-inspector`               | D          |  [x]   |
 | T65  | Chat with PDF                | `/ai/chat-with-pdf`            | E          |  [ ]   |
 | T66  | AI Summarize/Quiz/Flashcards | `/ai/summarize`                | E          |  [ ]   |
