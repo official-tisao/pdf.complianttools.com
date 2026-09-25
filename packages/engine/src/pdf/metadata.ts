@@ -33,18 +33,43 @@ function xmpPacket(values: Readonly<Record<string, string>>): string {
   return `<?xpacket begin="&#xFEFF;" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/" xmlns:ct="https://pdf.complianttools.com/xmp/1.0/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description>${fields}</rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`;
 }
 
+function unescapeXml(value: string): string {
+  return value
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&apos;', "'")
+    .replaceAll('&amp;', '&');
+}
+
 function readCustomXmp(bytes: Uint8Array): Record<string, string> {
   const source = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-  const packet = source.match(/<x:xmpmeta[\s\S]*?<\/x:xmpmeta>/u)?.[0];
-  if (!packet) return {};
+  const packetStart = source.indexOf('<x:xmpmeta');
+  if (packetStart < 0) return {};
+  const packetEnd = source.indexOf('</x:xmpmeta>', packetStart);
+  if (packetEnd < 0) return {};
+  const packet = source.slice(packetStart, packetEnd + '</x:xmpmeta>'.length);
   const values: Record<string, string> = {};
-  for (const match of packet.matchAll(/<ct:([A-Za-z][\w.-]*)>([\s\S]*?)<\/ct:\1>/gu)) {
-    const key = match[1];
-    if (key)
-      values[key] = match[2]!
-        .replaceAll('&amp;', '&')
-        .replaceAll('&lt;', '<')
-        .replaceAll('&gt;', '>');
+  let cursor = 0;
+  while (cursor < packet.length) {
+    const openTag = packet.indexOf('<ct:', cursor);
+    if (openTag < 0) break;
+    const keyStart = openTag + 4;
+    const keyEnd = packet.indexOf('>', keyStart);
+    if (keyEnd < 0) break;
+    const key = packet.slice(keyStart, keyEnd);
+    if (!/^[A-Za-z][\w.-]*$/u.test(key)) {
+      cursor = keyEnd + 1;
+      continue;
+    }
+    const closeTag = `</ct:${key}>`;
+    const valueEnd = packet.indexOf(closeTag, keyEnd + 1);
+    if (valueEnd < 0) {
+      cursor = keyEnd + 1;
+      continue;
+    }
+    values[key] = unescapeXml(packet.slice(keyEnd + 1, valueEnd));
+    cursor = valueEnd + closeTag.length;
   }
   return values;
 }

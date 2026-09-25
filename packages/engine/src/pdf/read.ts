@@ -19,6 +19,8 @@ export type PdfSearchMatch = {
 
 export async function inspectWithPdfJs(bytes: Uint8Array): Promise<DocMeta> {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  // pdf.js may transfer/detach its input buffer while destroying the worker. Keep the
+  // engine's immutable source bytes usable for the subsequent mutation graph and CLI parity.
   const loadingTask = pdfjs.getDocument({ data: bytes.slice() });
   const document = await loadingTask.promise;
   const pageCount = document.numPages;
