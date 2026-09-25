@@ -1,6 +1,21 @@
 import type { DocMeta } from '../types.js';
 import type { EngineError } from '../errors.js';
 import { runInModuleWorker } from '../runtime/module-worker.js';
+import { extractPdfTextPages } from '../conversion/pdf-text.js';
+
+export type PdfOutlineItem = {
+  readonly title: string;
+  readonly pageNumber?: number;
+  readonly url?: string;
+  readonly items: readonly PdfOutlineItem[];
+};
+
+export type PdfSearchMatch = {
+  readonly pageNumber: number;
+  readonly index: number;
+  readonly length: number;
+  readonly context: string;
+};
 
 export async function inspectWithPdfJs(bytes: Uint8Array): Promise<DocMeta> {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
@@ -73,6 +88,85 @@ export async function getPdfJsPageDimensions(
   const viewport = page.getViewport({ scale: 1 });
   await loadingTask.destroy();
   return { width: Math.ceil(viewport.width), height: Math.ceil(viewport.height) };
+}
+
+/** Find case-insensitive selectable-text matches without modifying the source PDF. */
+export async function searchPdfText(
+  bytes: Uint8Array,
+  query: string,
+): Promise<readonly PdfSearchMatch[]> {
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  if (!normalizedQuery) return [];
+  const pages = await extractPdfTextPages(bytes);
+  const matches: PdfSearchMatch[] = [];
+  for (const page of pages) {
+    const haystack = page.text.toLocaleLowerCase();
+    let index = haystack.indexOf(normalizedQuery);
+    while (index >= 0) {
+      matches.push({
+        pageNumber: page.pageNumber,
+        index,
+        length: normalizedQuery.length,
+        context: page.text.slice(Math.max(0, index - 40), index + normalizedQuery.length + 40),
+      });
+      index = haystack.indexOf(normalizedQuery, index + normalizedQuery.length);
+    }
+  }
+  return matches;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+async function resolveOutlineDestination(
+  document: {
+    getPageIndex: (ref: unknown) => Promise<number>;
+    getDestination: (name: string) => Promise<unknown>;
+  },
+  destination: unknown,
+): Promise<number | undefined> {
+  const resolved =
+    typeof destination === 'string' ? await document.getDestination(destination) : destination;
+  if (!Array.isArray(resolved) || resolved.length === 0) return undefined;
+  try {
+    const pageIndex = await document.getPageIndex(resolved[0]);
+    return pageIndex + 1;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Read outline entries and resolve their destinations to one-based page numbers. */
+export async function getPdfOutline(bytes: Uint8Array): Promise<readonly PdfOutlineItem[]> {
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const loadingTask = pdfjs.getDocument({ data: bytes.slice() });
+  const document = await loadingTask.promise;
+  try {
+    const outline = (await document.getOutline()) as unknown;
+    const visit = async (items: unknown): Promise<readonly PdfOutlineItem[]> => {
+      if (!Array.isArray(items)) return [];
+      return Promise.all(
+        items.map(async (item) => {
+          const record = asRecord(item);
+          const pageNumber = await resolveOutlineDestination(
+            document as unknown as Parameters<typeof resolveOutlineDestination>[0],
+            record.dest,
+          );
+          const result: PdfOutlineItem = {
+            title: typeof record.title === 'string' ? record.title : 'Untitled section',
+            items: await visit(record.items),
+            ...(pageNumber !== undefined ? { pageNumber } : {}),
+            ...(typeof record.url === 'string' ? { url: record.url } : {}),
+          };
+          return result;
+        }),
+      );
+    };
+    return visit(outline);
+  } finally {
+    await loadingTask.destroy();
+  }
 }
 
 export function inspectPdfInModuleWorker(

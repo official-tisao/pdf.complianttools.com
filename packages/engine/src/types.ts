@@ -28,7 +28,29 @@ export type OpId =
   | 'qr-code'
   | 'invoice'
   | 'document-pack'
-  | 'scan-to-pdf';
+  | 'scan-to-pdf'
+  | 'view'
+  | 'compare'
+  | 'ocr'
+  | 'editor'
+  | 'annotate'
+  | 'add-text'
+  | 'add-image'
+  | 'headers-footers'
+  | 'page-numbers'
+  | 'watermark'
+  | 'overlay'
+  | 'create-form'
+  | 'fill-form'
+  | 'accessibility-audit'
+  | 'sign'
+  | 'signature-background'
+  | 'request-signature'
+  | 'protect'
+  | 'unlock'
+  | 'password-generator'
+  | 'redact'
+  | 'verify-signature';
 
 export type ConversionDirection = 'to-pdf' | 'from-pdf';
 
@@ -268,3 +290,50 @@ export type PreviewFrame = {
   height: number;
   pixels: Uint8Array;
 };
+
+export type PdfDateFields = {
+  readonly creationDate?: Date;
+  readonly modificationDate?: Date;
+};
+
+export type PdfMetadata = PdfDateFields & {
+  readonly title: string;
+  readonly author: string;
+  readonly subject: string;
+  readonly keywords: readonly string[];
+  readonly creator: string;
+  readonly producer: string;
+  readonly customXmp: Readonly<Record<string, string>>;
+};
+
+export type OcrModelDescriptor = {
+  readonly language: string;
+  readonly label: string;
+  readonly modelBytes: number;
+  readonly modelLicense: 'Apache-2.0';
+  readonly status: 'not-installed' | 'installed' | 'unavailable';
+  readonly source: 'user-supplied-local-model';
+};
+
+export type PageRect = Readonly<{ x: number; y: number; width: number; height: number }>;
+
+export type PdfColor = Readonly<{ r: number; g: number; b: number }>;
+
+export type TextRun = Readonly<{
+  page: number;
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fontName?: string;
+  embedded: boolean;
+  subsettable: boolean;
+}>;
+
+export type TextEditCapability = Readonly<{
+  canEditInPlace: boolean;
+  reason?:
+    'font-not-embedded' | 'font-not-subsettable' | 'text-run-not-found' | 'unsupported-parser';
+  remedy: string;
+}>;

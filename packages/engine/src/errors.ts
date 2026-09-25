@@ -5,6 +5,14 @@ export type EngineError =
   | { kind: 'font-not-embedded-cannot-edit-text'; remedy: string }
   | { kind: 'target-size-unreachable'; achieved: number; remedy: string }
   | { kind: 'ai-provider-unreachable'; providerId: string; remedy: string }
+  | { kind: 'renderer-unavailable'; feature: string; remedy: string }
+  | {
+      kind: 'ocr-model-unavailable';
+      language: string;
+      modelBytes?: number;
+      remedy: string;
+    }
+  | { kind: 'ocr-runtime-unavailable'; remedy: string }
   | {
       kind: 'unsupported-format';
       format: string;
@@ -24,7 +32,10 @@ export type EngineError =
   | { kind: 'permission-denied'; resource: string; remedy: string }
   | { kind: 'relay-not-configured'; remedy: string }
   | { kind: 'relay-failed'; endpoint: string; cause: string; remedy: string }
-  | { kind: 'watcher-stopped'; remedy: string };
+  | { kind: 'watcher-stopped'; remedy: string }
+  | { kind: 'redaction-verification-failed'; findings: readonly string[]; remedy: string }
+  | { kind: 'credential-required'; channel: string; remedy: string }
+  | { kind: 'signature-unverified'; reason: string; remedy: string };
 
 export class PdfEngineError extends Error {
   readonly details: EngineError;

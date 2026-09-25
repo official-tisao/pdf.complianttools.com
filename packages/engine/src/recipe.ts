@@ -105,6 +105,15 @@ export const operationSchemas = {
     strip: z.boolean().default(false),
   }),
   'inspect-structure': z.object({}),
+  view: z.object({}),
+  compare: z.object({}),
+  ocr: z.object({
+    language: z.array(z.string()).optional(),
+    outputMode: z.enum(['invisible-text-layer', 'searchable-pdf', 'plain-text-export']).optional(),
+    dpi: z.number().int().min(72).max(600).optional(),
+    deskew: z.boolean().optional(),
+    pageRange: z.array(z.number().int().positive()).optional(),
+  }),
   render: z.object({
     page: z.number().int().positive().default(1),
     scale: z.number().positive().default(1),
@@ -134,6 +143,147 @@ export const operationSchemas = {
   invoice: z.object({ invoice: z.record(z.string(), z.unknown()) }),
   'document-pack': z.object({ title: z.string().default('Document pack') }),
   'scan-to-pdf': z.object({ dpi: z.number().int().min(72).max(600).default(150) }),
+  editor: z.object({
+    find: z.string().min(1).optional(),
+    replace: z.string().optional(),
+    text: z.string().optional(),
+    page: z.number().int().positive().default(1),
+    x: z.number().nonnegative().default(72),
+    y: z.number().nonnegative().default(72),
+    size: z.number().positive().default(12),
+    fontEmbedded: z.boolean().default(false),
+    subsettable: z.boolean().default(false),
+  }),
+  annotate: z.object({
+    page: z.number().int().positive().default(1),
+    kind: z
+      .enum([
+        'highlight',
+        'underline',
+        'strikeout',
+        'freehand',
+        'sticky-note',
+        'square',
+        'circle',
+        'arrow',
+        'callout',
+      ])
+      .default('highlight'),
+    rect: z.object({
+      x: z.number(),
+      y: z.number(),
+      width: z.number().nonnegative(),
+      height: z.number().nonnegative(),
+    }),
+    color: z
+      .object({
+        r: z.number().min(0).max(1),
+        g: z.number().min(0).max(1),
+        b: z.number().min(0).max(1),
+      })
+      .optional(),
+    contents: z.string().optional(),
+    opacity: z.number().min(0).max(1).default(0.35),
+  }),
+  'add-text': z.object({
+    page: z.number().int().positive().default(1),
+    text: z.string().min(1),
+    x: z.number().nonnegative().default(72),
+    y: z.number().nonnegative().default(72),
+    size: z.number().positive().default(12),
+    color: z
+      .object({
+        r: z.number().min(0).max(1),
+        g: z.number().min(0).max(1),
+        b: z.number().min(0).max(1),
+      })
+      .optional(),
+  }),
+  'add-image': z.object({
+    page: z.number().int().positive().default(1),
+    x: z.number().nonnegative().default(72),
+    y: z.number().nonnegative().default(72),
+    width: z.number().positive(),
+    height: z.number().positive(),
+    opacity: z.number().min(0).max(1).default(1),
+  }),
+  'headers-footers': z.object({
+    header: z.string().optional(),
+    footer: z.string().optional(),
+    size: z.number().positive().default(9),
+    margin: z.number().nonnegative().default(24),
+  }),
+  'page-numbers': z.object({
+    format: z.enum(['1', 'page-of-total', 'roman']).default('1'),
+    start: z.number().int().min(0).default(1),
+    skipFirst: z.number().int().min(0).default(0),
+    position: z
+      .enum(['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'])
+      .default('bottom-center'),
+    size: z.number().positive().default(10),
+  }),
+  watermark: z.object({
+    text: z.string().optional(),
+    opacity: z.number().min(0).max(1).default(0.25),
+    rotation: z.number().default(45),
+    tiled: z.boolean().default(false),
+    behindContent: z.boolean().default(false),
+    size: z.number().positive().default(48),
+  }),
+  overlay: z.object({
+    page: z.number().int().positive().default(1),
+    opacity: z.number().min(0).max(1).default(1),
+  }),
+  'create-form': z.object({
+    fields: z.array(
+      z.object({
+        name: z.string().min(1),
+        type: z.enum(['text', 'checkbox', 'radio', 'dropdown', 'date', 'signature']),
+        page: z.number().int().positive().default(1),
+        x: z.number().nonnegative().default(72),
+        y: z.number().nonnegative().default(72),
+        width: z.number().positive().default(180),
+        height: z.number().positive().default(24),
+        options: z.array(z.string()).optional(),
+      }),
+    ),
+  }),
+  'fill-form': z.object({
+    values: z.record(z.string(), z.union([z.string(), z.boolean(), z.array(z.string())])),
+  }),
+  'accessibility-audit': z.object({}),
+  sign: z.object({
+    page: z.number().int().positive().default(1),
+    text: z.string().optional(),
+    x: z.number().nonnegative().default(72),
+    y: z.number().nonnegative().default(72),
+    width: z.number().positive().default(160),
+    height: z.number().positive().default(48),
+    dateStamp: z.boolean().default(false),
+  }),
+  'signature-background': z.object({ threshold: z.number().int().min(0).max(255).default(32) }),
+  'request-signature': z.object({
+    recipients: z.array(z.string().email()).min(1),
+    message: z.string().default('Please review and sign this document.'),
+  }),
+  protect: z.object({
+    userPassword: z.string().min(1),
+    ownerPassword: z.string().min(1),
+    encryptionAlgorithm: z.enum(['AES-256', 'AES-128', 'RC4-128']).default('AES-256'),
+  }),
+  unlock: z.object({ password: z.string().min(1) }),
+  'password-generator': z.object({
+    length: z.number().int().min(12).max(256).default(24),
+    symbols: z.boolean().default(true),
+  }),
+  redact: z.object({
+    method: z.enum(['manual-box', 'text-search-match']).default('manual-box'),
+    page: z.number().int().positive().optional(),
+    searchPattern: z.string().optional(),
+    presetPattern: z.enum(['ssn', 'email', 'phone', 'credit-card']).optional(),
+    removeMetadataOnRedact: z.boolean().default(true),
+  }),
+  'verify-signature': z.object({}),
 } satisfies Record<OpId, z.ZodTypeAny>;
 
 const stepSchema = z.object({
@@ -149,6 +299,7 @@ export function validateStep(step: Step): Step {
 }
 
 export function parseRecipe(input: unknown): Recipe {
+  assertNoCredentials(input);
   assertDocumentFree(input);
   const parsed = recipeSchema.parse(input);
   const recipe = {
@@ -203,6 +354,24 @@ export function describeRecipe(recipe: Recipe): string {
   return parsed.steps
     .map((step, index) => `${index + 1}. ${operationDescriptions[step.op] ?? step.op}`)
     .join(' → ');
+}
+
+function assertNoCredentials(value: unknown, path = 'recipe'): void {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => assertNoCredentials(item, `${path}[${index}]`));
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+  for (const [key, item] of Object.entries(value)) {
+    if (/api[_-]?key|secret|token|password|authorization|credential/iu.test(key))
+      throw new PdfEngineError({
+        kind: 'invalid-operation',
+        operation: 'recipe-credential',
+        remedy:
+          'Provider credentials cannot be stored in recipes. Save a provider connection in IndexedDB instead.',
+      });
+    assertNoCredentials(item, `${path}.${key}`);
+  }
 }
 
 // Keep a safety margin below typical tab limits so a 2,000-page synthetic input is refused

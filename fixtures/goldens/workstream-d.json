@@ -1,0 +1,18 @@
+{
+  "viewerSearch": {
+    "fixture": "hundred-page.pdf",
+    "query": "fixture",
+    "matches": 100
+  },
+  "compare": {
+    "before": "one-page.pdf",
+    "after": "two-page.pdf",
+    "textChangesAtLeast": 1,
+    "pixelRenderer": "injected-pdfium"
+  },
+  "ocrAdversarial": {
+    "blank-page.pdf": "typed-image-only-limitation",
+    "rotated-scan.pdf": "selectable-text-fallback",
+    "multi-column.pdf": "selectable-text-fallback"
+  }
+}

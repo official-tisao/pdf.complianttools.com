@@ -16,6 +16,7 @@
     "@pdf-complianttools/ui": "workspace:*",
     "@sveltejs/adapter-static": "3.0.10",
     "@sveltejs/kit": "2.70.3",
+    "pdfjs-dist": "6.3.289",
     "svelte": "5.57.1"
   },
   "devDependencies": {
