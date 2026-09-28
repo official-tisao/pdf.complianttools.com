@@ -108,25 +108,23 @@ task; they do not hold the entire workstream hostage.
 
 ## 1. Progress dashboard
 
-| Workstream   | Focus                                                | Tasks  | Done  | Gate |
-| ------------ | ---------------------------------------------------- | :----: | :---: | :--: |
-| 0            | Bootstrap, shared contracts, toolchain, IP clearance |   16   |  16   |  ✅  |
-| B            | Conversion breadth and format fixtures               |   14   |  14   |  ✅  |
-| A            | Core pipeline + organize/optimize/repair             |   20   |  20   |  ✅  |
-| B            | Conversion breadth and format fixtures               |   14   |   0   |  ⬜  |
-| <<<<<<< HEAD |
-| C            | Edit, annotate, forms, sign, protect, redact         |   12   |  12   |  ◐   |
-| D            | View, compare, inspect, metadata, OCR                |   5    |   4   |  ⚠️  |
-| E            | BYOK platform, AI escalation, document intelligence  |   11   |   9   |  ◐   |
-| F            | Create, Relay, batch/recipe/CLI/library              |   10   |   0   |  ⬜  |
-| G            | Cross-workstream hardening and launch convergence    |   7    |   0   |  ⬜  |
-| —            | **Total**                                            | **95** | **0** |      |
+| Workstream | Focus                                                | Tasks  |  Done  | Gate |
+| ---------- | ---------------------------------------------------- | :----: | :----: | :--: |
+| 0          | Bootstrap, shared contracts, toolchain, IP clearance |   16   |   16   |  ✅  |
+| A          | Core pipeline + organize/optimize/repair             |   20   |   20   |  ✅  |
+| B          | Conversion breadth and format fixtures               |   14   |   14   |  ✅  |
+| C          | Edit, annotate, forms, sign, protect, redact         |   12   |   12   |  ◐   |
+| D          | View, compare, inspect, metadata, OCR                |   5    |   4    |  ⚠️  |
+| E          | BYOK platform, AI escalation, document intelligence  |   11   |   9    |  ◐   |
+| F          | Create, Relay, batch/recipe/CLI/library              |   10   |   4    |  ◐   |
+| G          | Cross-workstream hardening and launch convergence    |   7    |   0    |  ⬜  |
+| —          | **Total**                                            | **95** | **79** |      |
 
 | Artefact                         | Target | Done |
 | -------------------------------- | :----: | :--: |
-| Tools (Appendix A)               |   72   |  0   |
-| Formats & standards (Appendix B) |   34   |  0   |
-| AI adapters (Appendix C)         |   8    |  0   |
+| Tools (Appendix A)               |   72   |  61  |
+| Formats & standards (Appendix B) |   34   |  25  |
+| AI adapters (Appendix C)         |   8    |  8   |
 | Clearance items (Appendix D)     |   18   |  0   |
 | Prerendered pages                |  ~250  |  0   |
 
@@ -893,8 +891,10 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 
 #### P7-09 · Folder watcher (T71)
 
-- [x] File System Access API permission request, local new-file polling, and visible pause/resume/stop
-      controls; no directory is read before explicit permission
+- [/] File System Access API permission request, local new-file polling, visible pause/resume/stop
+  controls, and an `onFile` callback seam; no directory is read before explicit permission
+- [ ] Auto-processing new files into an output folder is not implemented; the current route only
+      reports detected files and still needs a processor/output-folder adapter
 - **Spec:** README §4.10 · **Done when:** STCC
 
 #### P7-10 · CLI & library (T72)
@@ -911,10 +911,11 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 
 **Gate evidence / open questions:** `packages/engine/test/phasef.test.mjs` covers creation, QR matrix/PDF/PNG
 validity, invoice XML and attachment structure, scan assembly, document packs, batch retry/memory behavior,
-recipe document exclusion, folder permission/pause/stop, and Relay opt-in errors. Physical QR-device scans,
-published-schema e-invoice validation, full perspective deskew, partial ZIP packaging, and a real Relay render
-remain explicit release evidence questions because those capabilities need external hardware, a registered
-schema artifact, a browser CV runtime, packaging work, or a separately installed Playwright browser.
+recipe document exclusion, folder permission/pause/stop/callback behavior, and Relay opt-in errors. Physical
+QR-device scans, published-schema e-invoice validation, full perspective deskew, partial ZIP packaging, a real
+Relay render, and T71's processor/output-folder flow remain explicit release evidence questions because those
+capabilities need external hardware, a registered schema artifact, a browser CV runtime, packaging work, a
+separately installed Playwright browser, or the missing watcher adapter.
 
 ## 9. Workstream G — Cross-workstream hardening and launch convergence
 
@@ -989,6 +990,7 @@ Empty at genesis; the implementing agent appends an entry per §0.3 as work proc
 | 2026-09-22 | Completed Workstream B: added the direction-aware format registry, lazy permissive adapters, local conversion paths, typed unavailable states, conversion routes, bank-statement confidence reporting, image/design boundaries, fixtures, and golden tests.                                                                                                                            |
 | 2026-09-23 | Implemented Workstream D read-side APIs and routes: local viewer/search/outline/print, deterministic text and injected-pdfium pixel comparison, metadata/XMP editing, structure inspection, OCR model/capability boundaries, and D adversarial fixtures. P5-04 remains explicitly deferred pending a reviewed local Tesseract.js/model bridge; no hidden network dependency was added. |
 | 2026-09-23 | Workstream E: finalized the AI register, shipped template-driven BYOK adapters, IndexedDB key storage, cost/gesture gate, local fallbacks, AI routes, escalation registry, and gate fixtures; recorded the honest translation-layout and unfinished C/D host-surface limits.                                                                                                           |
+| 2026-09-28 | Audited the pulled Workstream-F implementation and tests: the engine suite and sequential CLI parity test pass; corrected the §1 dashboard's merge-conflict residue and counts from the task/appendix checkboxes; kept QR, e-invoice, scan, Relay, batch packaging, and T71 output processing open; and recorded the folder-watcher limitation honestly.                               |
 
 ---
 
@@ -1068,7 +1070,7 @@ Mirrors README §4. Checked only when STCC (§0.4) fully holds.
 | T68  | Generate PDF from Prompt     | `/ai/generate-pdf`             | E          |  [ ]   |
 | T69  | Batch Runner                 | `/batch`                       | F          |  [/]   |
 | T70  | Recipe Builder               | `/recipe`                      | F          |  [x]   |
-| T71  | Folder Watcher               | `/watch`                       | F          |  [x]   |
+| T71  | Folder Watcher               | `/watch`                       | F          |  [/]   |
 | T72  | CLI & Library                | `packages/cli`                 | F          |  [x]   |
 
 ## Appendix B — Format & standard tracker (34 rows)
