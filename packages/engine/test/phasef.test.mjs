@@ -134,7 +134,7 @@ test('folder watcher requires explicit permission and exposes pause/stop', async
 test('P7-07 ZIP adapter packs completed batch entries without breaking outputs', async () => {
   const { zipBatchResults } = await import('../src/batch/zip.ts');
   const results = [
-    { index: 0, status: 'completed', attempts: 1 },
+    { index: 0, status: 'succeeded', attempts: 1 },
     { index: 1, status: 'failed', attempts: 2 },
   ];
   const { zipBuffer, manifest } = await zipBatchResults(results, { includeFailed: true });
