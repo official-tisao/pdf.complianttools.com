@@ -8,3 +8,4 @@ playwright-report
 test-results
 saas-template
 pnpm-lock.yaml
+apps/web/static/ocr-runtime/**

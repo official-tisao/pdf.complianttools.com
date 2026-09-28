@@ -79,7 +79,7 @@
   {#if available}
     <FileDrop
       {accept}
-      onchange={selectFiles}
+      onfiles={selectFiles}
       label={`Drop a file here or choose ${format.toUpperCase()} input`}
     />
     <div class="toolbar">

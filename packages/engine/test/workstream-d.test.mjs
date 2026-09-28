@@ -86,7 +86,7 @@ test('structure report includes font and tag arrays and never executes active co
 test('OCR reports model/runtime capability and keeps selectable-text fallback local', async () => {
   const capability = await getOcrCapability('eng');
   assert.equal(capability.state, 'runtime-not-configured');
-  assert.equal(OCR_MODELS[0].source, 'user-supplied-local-model');
+  assert.equal(OCR_MODELS[0].source, 'pinned-browser-direct');
   const fallback = await ocrFallback(await bytes('one-page.pdf'));
   assert.equal(fallback.fallback, 'pdf-text-extraction');
   assert.match(new TextDecoder().decode(fallback.bytes), /Phase 0 fixture/u);

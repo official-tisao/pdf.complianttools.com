@@ -1,4 +1,25 @@
 {
+  "apps/web/static/ocr-runtime/v7.0.0/tesseract-core-lstm.wasm": {
+    "source": "Pinned tesseract.js-core runtime asset at commit acffef2b66eb44a31df297e11d905f4b39001068",
+    "license": "Apache-2.0",
+    "licenseUrl": "https://github.com/naptha/tesseract.js-core/blob/acffef2b66eb44a31df297e11d905f4b39001068/LICENSE",
+    "sha256": "66b17df6e20c5329a17ffa9c202a47eaa3e32500b253d4c7f38e7f2bc01457c3",
+    "checked": "2026-09-28"
+  },
+  "apps/web/static/ocr-runtime/v7.0.0/tesseract-core-lstm.wasm.js": {
+    "source": "Pinned tesseract.js-core runtime asset at commit acffef2b66eb44a31df297e11d905f4b39001068",
+    "license": "Apache-2.0",
+    "licenseUrl": "https://github.com/naptha/tesseract.js-core/blob/acffef2b66eb44a31df297e11d905f4b39001068/LICENSE",
+    "sha256": "eef5f8b2f8e20e150680b20adaec4a60babafee3adbe8a94583c81fee46e8680",
+    "checked": "2026-09-28"
+  },
+  "apps/web/static/ocr-runtime/v7.0.0/worker.min.js": {
+    "source": "Pinned tesseract.js worker asset at commit 42eae669e4b3a66429d8516f078912cc747a89df",
+    "license": "Apache-2.0",
+    "licenseUrl": "https://github.com/naptha/tesseract.js/blob/42eae669e4b3a66429d8516f078912cc747a89df/LICENSE",
+    "sha256": "576b7df7e3393e137e51849357c9adb53fe7ac1bb69bfa06cf3d61520f182c6d",
+    "checked": "2026-09-28"
+  },
   "apps/web/static/favicon.svg": {
     "source": "Created in-repository for the PDF toolkit shell",
     "license": "CC0-1.0",

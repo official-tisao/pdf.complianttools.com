@@ -1,8 +1,17 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import '@pdf-complianttools/ui/tokens.css';
   import { page } from '$app/state';
+  import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+  import workerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
   let { children } = $props();
+
+  pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+
+  onMount(() => {
+    document.documentElement.dataset.appHydrated = 'true';
+  });
 </script>
 
 <svelte:head>

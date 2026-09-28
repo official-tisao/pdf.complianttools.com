@@ -13,10 +13,11 @@ import type {
   PdfColor,
   RedactionOptions,
   RedactionVerification,
-  SignatureVerification,
   TextEditCapability,
   TextRun,
 } from './editing-types.js';
+
+export { verifyDigitalSignatures } from './signatures.js';
 
 function loadError(operation: string, error: unknown): never {
   if (error instanceof PdfEngineError) throw error;
@@ -979,42 +980,4 @@ export async function unlockPdf(): Promise<never> {
     remedy:
       'Known-password decryption is not available in the current permissive browser stack. Do not brute-force; decrypt with a trusted local PDF reader and retry.',
   });
-}
-
-export async function verifyDigitalSignatures(bytes: Uint8Array): Promise<SignatureVerification> {
-  const source = new TextDecoder('latin1').decode(bytes);
-  const byteRanges: string[] = [];
-  for (let cursor = 0; cursor < source.length;) {
-    const marker = source.indexOf('/ByteRange', cursor);
-    if (marker === -1) break;
-    const open = source.indexOf('[', marker + '/ByteRange'.length);
-    if (open === -1) break;
-    const close = source.indexOf(']', open + 1);
-    if (close === -1) break;
-    byteRanges.push(source.slice(open + 1, close));
-    cursor = close + 1;
-  }
-  if (byteRanges.length === 0)
-    return { status: 'unsigned', signatures: [], remedy: 'No PDF signature ByteRange was found.' };
-  const signatures = byteRanges.map((range) => ({
-    byteRange: range.trim().split(/\s+/u).map(Number),
-    cmsPresent: /\/Contents\s*<[da-f]+>/iu.test(source),
-  }));
-  const malformed = signatures.some(
-    (signature) =>
-      signature.byteRange.length !== 4 ||
-      signature.byteRange.some((value) => !Number.isSafeInteger(value) || value < 0),
-  );
-  if (malformed)
-    return {
-      status: 'invalid',
-      signatures,
-      remedy: 'The signature ByteRange is malformed and cannot be trusted.',
-    };
-  return {
-    status: 'unsupported',
-    signatures,
-    remedy:
-      'CMS/PKCS#7 certificate-chain verification needs a user-supplied trust anchor or a dedicated permissive verifier; no root-certificate program is bundled.',
-  };
 }

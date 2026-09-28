@@ -14,9 +14,15 @@ specific about what is and is not claimed.
 - `/ai/chat-with-pdf`, `/ai/summarize`, `/ai/translate`, `/ai/generate-pdf`, and `/ai/escalations` are
   visible routes. Local work is the first action; translation and prompt generation state the precise
   no-local-fallback remedy when unconfigured.
+- `apps/web/src/lib/AiEscalationControl.svelte` is wired into the T29, T44, T52, T59, and T61 host
+  surfaces. Its action is disabled until the local result exists, then prepares a costed plan only
+  after an explicit click and still requires the existing confirmation control before sending.
 - `packages/engine/test/workstream-e.test.mjs` covers the 10-page fallback fixture shape, all four
-  capabilities through a mock transport, the gate, URL/diagnostic credential controls, the eight
-  registry rows, and typed storage absence.
+  capabilities through a mock transport, the gesture gate, URL/diagnostic credential controls, the
+  eight registry rows, typed storage absence, strict translation response states, and local PDF
+  reflow with one output page per validated source page.
+- `tests/e2e/workstream-e.spec.ts` covers no-prefetch host controls, local-result-first unlocking
+  for T29/T44/T52/T59/T61, provider absence, and the no-external-request boundary.
 - `scripts/harnesses.test.mjs` covers URL credential leakage in addition to diagnostic leakage.
 
 ## Deliberate limits
@@ -24,11 +30,12 @@ specific about what is and is not claimed.
 - No provider's live request/response schema is hardcoded or verified by this repository. Connections
   are template-driven and must follow the provider's current documentation.
 - A translated response is only safe to reflow when it preserves the requested page-delimited shape;
-  malformed or unstructured output creates no PDF. The accepted text is reflowed through the local
-  writer for review, while exact visual layout fidelity is not claimed.
-- The current branch does not contain the unfinished C/D host implementations for T44, T52, T59, and
-  T61. Their shared typed escalation entries and remedy page are shipped; host-tool integration is
-  left to those workstreams rather than fabricated here.
+  unkeyed, malformed, out-of-order, duplicate, or incomplete output creates no PDF. The accepted
+  text is reflowed through the local writer for review, one output page per source page, while exact
+  visual layout fidelity is not claimed.
+- The five host integrations send only the already-rendered local result as escalation context. They
+  do not pretend to provide a missing C/D local implementation, and their optional provider result
+  is review-only until the host tool applies it explicitly.
 
 ## Gate commands
 

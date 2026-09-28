@@ -3,12 +3,12 @@
     accept = '.pdf,application/pdf',
     multiple = true,
     label = 'Drop PDF files here or choose files',
-    onchange,
+    onfiles,
   }: {
     accept?: string;
     multiple?: boolean;
     label?: string;
-    onchange?: (files: FileList | null) => void;
+    onfiles?: (files: FileList | null) => void;
   } = $props();
 
   let isDragging = $state(false);
@@ -16,7 +16,12 @@
   function handleDrop(event: DragEvent) {
     event.preventDefault();
     isDragging = false;
-    onchange?.(event.dataTransfer?.files ?? null);
+    onfiles?.(event.dataTransfer?.files ?? null);
+  }
+
+  function handleChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    onfiles?.(input.files);
   }
 </script>
 
@@ -34,12 +39,7 @@
 >
   <label>
     <span>{label}</span>
-    <input
-      type="file"
-      {accept}
-      {multiple}
-      onchange={(event) => onchange?.(event.currentTarget.files)}
-    />
+    <input type="file" {accept} {multiple} oninput={handleChange} onchange={handleChange} />
   </label>
 </div>
 

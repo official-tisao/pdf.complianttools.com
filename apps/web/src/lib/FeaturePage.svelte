@@ -1,5 +1,5 @@
 <script lang="ts">
-  /* global HTMLInputElement, HTMLSelectElement, location, navigator */
+  /* global HTMLSelectElement, location, navigator */
   import {
     assembleScans,
     buildDocumentPack,

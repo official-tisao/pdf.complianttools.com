@@ -17,7 +17,8 @@
     "@sveltejs/adapter-static": "3.0.10",
     "@sveltejs/kit": "2.70.3",
     "pdfjs-dist": "6.3.289",
-    "svelte": "5.57.1"
+    "svelte": "5.57.1",
+    "tesseract.js": "7.0.0"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "7.3.0",

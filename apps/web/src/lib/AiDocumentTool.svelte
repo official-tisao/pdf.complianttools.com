@@ -5,10 +5,10 @@
     createAiCallPlan,
     createDocumentContext,
     extractPdfTextPages,
-    parsePageDelimitedTranslation,
+    reflowTranslatedPages,
+    validatePageDelimitedTranslation,
     runLearningFallback,
     runLocalFallback,
-    textPagesToPdf,
     type AiCallPlan,
     type AiCapability,
     type AiDocumentContext,
@@ -125,27 +125,30 @@
         plan,
       );
       if (kind === 'translate') {
-        const translatedPages = parsePageDelimitedTranslation(
+        const translation = validatePageDelimitedTranslation(
           providerResult.text,
           context.pages.map((page) => page.pageNumber),
         );
-        if (!translatedPages) {
+        if (translation.status !== 'ok') {
           plan = undefined;
           result = undefined;
           translatedPdf = undefined;
           status =
-            'The provider response did not preserve the required page markers. No translated PDF was created.';
+            translation.status === 'unkeyed'
+              ? 'The provider returned an unkeyed translation. No translated PDF was created; the original remains unchanged.'
+              : translation.status === 'page-mismatch'
+                ? 'The provider returned the wrong page keys or order. No translated PDF was created; the original remains unchanged.'
+                : 'The provider returned malformed page sections. No translated PDF was created; the original remains unchanged.';
           return;
         }
-        translatedPdf = await textPagesToPdf(
-          translatedPages.map((page) => page.text.split(/\r?\n/)),
-          { pageSize: 'letter' },
-        );
+        translatedPdf = await reflowTranslatedPages(translation.pages);
         result = {
           capability,
           mode: 'local-fallback',
           title: 'Translated text — review before export',
-          text: translatedPages.map((page) => `Page ${page.pageNumber}\n${page.text}`).join('\n\n'),
+          text: translation.pages
+            .map((page) => `Page ${page.pageNumber}\n${page.text}`)
+            .join('\n\n'),
         };
         status =
           'Page-boundary-preserving text was reflowed through the local PDF writer. Review it before export.';
@@ -180,7 +183,7 @@
   <FileDrop
     accept=".pdf,application/pdf"
     multiple={false}
-    onchange={(list) => {
+    onfiles={(list) => {
       file = list?.[0];
       result = undefined;
       plan = undefined;

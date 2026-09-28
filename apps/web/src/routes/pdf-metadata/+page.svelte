@@ -72,7 +72,7 @@
     accept=".pdf,application/pdf"
     multiple={false}
     label="Choose a PDF to inspect"
-    onchange={selectFile}
+    onfiles={selectFile}
   />
   {#if metadata}
     <div class="editor">

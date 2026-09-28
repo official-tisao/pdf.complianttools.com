@@ -35,7 +35,7 @@
     accept=".pdf,application/pdf"
     multiple={false}
     label="Choose a PDF to inspect"
-    onchange={inspect}
+    onfiles={inspect}
   />
   {#if report}<div class="report">
       <dl>

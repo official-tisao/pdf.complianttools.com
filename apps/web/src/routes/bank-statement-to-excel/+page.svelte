@@ -48,7 +48,7 @@
   </p>
   <FileDrop
     accept=".pdf,.txt,.csv,application/pdf,text/plain,text/csv"
-    onchange={(list) => {
+    onfiles={(list) => {
       file = list?.[0];
     }}
   />

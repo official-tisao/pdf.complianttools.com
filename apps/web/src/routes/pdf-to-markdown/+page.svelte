@@ -1,23 +1,25 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
-  import AiEscalationList from '$lib/AiEscalationList.svelte';
+  import AiEscalationControl from '$lib/AiEscalationControl.svelte';
 
   let file = $state<File | undefined>();
   let markdown = $state('');
   let status = $state('');
-  let allowAi = $state(false);
+  let localReady = $state(false);
 
   async function extract() {
     if (!file) {
       status = 'Choose a PDF first.';
       return;
     }
+    localReady = false;
+    markdown = '';
     try {
       const engine = await import('@pdf-complianttools/engine');
       markdown = await engine.pdfToMarkdown(new Uint8Array(await file.arrayBuffer()));
       status = 'Local extraction complete. Structure is inferred and should be reviewed.';
-      if (allowAi) engine.requestPdfMarkdownEscalation({ allowAiEscalation: true });
+      localReady = true;
     } catch (error) {
       status = error instanceof Error ? error.message : 'PDF-to-Markdown failed.';
     }
@@ -41,14 +43,10 @@
   </p>
   <FileDrop
     accept=".pdf,application/pdf"
-    onchange={(list) => {
+    onfiles={(list) => {
       file = list?.[0];
     }}
   />
-  <label
-    ><input type="checkbox" bind:checked={allowAi} /> I explicitly want to enable the registered BYOK
-    escalation after reviewing local output.</label
-  >
   <Button onclick={extract}>Extract locally</Button>
   <p class="status" role="status">{status}</p>
   {#if markdown}<textarea
@@ -56,7 +54,7 @@
       bind:value={markdown}
       aria-label="Extracted Markdown"
       rows="18"></textarea>{/if}
-  <AiEscalationList />
+  <AiEscalationControl tool="T29" {localReady} localText={markdown} />
 </section>
 
 <style>
@@ -79,10 +77,6 @@
   .status {
     color: var(--color-muted);
     max-width: 720px;
-  }
-  label {
-    display: block;
-    margin: 24px 0;
   }
   .output {
     border: 1px solid var(--color-hairline);

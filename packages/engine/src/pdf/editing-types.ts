@@ -66,8 +66,13 @@ export type AccessibilityAudit = Readonly<{
   readingOrder: 'declared' | 'not-declared';
   warnings: readonly string[];
 }>;
+export type SignatureVerificationOptions = Readonly<{
+  /** DER-encoded certificates explicitly trusted for this verification call. */
+  trustAnchors?: readonly Uint8Array[];
+}>;
 export type SignatureVerification = Readonly<{
-  status: 'unsigned' | 'verified' | 'invalid' | 'unsupported';
+  status:
+    'unsigned' | 'verified' | 'invalid' | 'unsupported' | 'malformed-byte-range' | 'untrusted';
   signatures: readonly { byteRange: readonly number[]; cmsPresent: boolean }[];
   remedy: string;
 }>;

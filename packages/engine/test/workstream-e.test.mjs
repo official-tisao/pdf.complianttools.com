@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { PDFDocument } from 'pdf-lib';
 import {
   ADAPTER_REGISTRY_ROWS,
   AiError,
@@ -19,7 +20,9 @@ import {
   runLocalFallback,
   parseRecipe,
   parsePageDelimitedTranslation,
+  reflowTranslatedPages,
   sanitizeAiDiagnostic,
+  validatePageDelimitedTranslation,
 } from '../dist/index.js';
 
 const pages = Array.from({ length: 10 }, (_, index) => ({
@@ -154,6 +157,32 @@ test('translation accepts only ordered page-delimited output', () => {
   );
   assert.equal(parsePageDelimitedTranslation('unstructured output', [1, 2]), undefined);
   assert.equal(parsePageDelimitedTranslation('---PAGE 2---\nWrong order', [1]), undefined);
+});
+
+test('translation validation distinguishes unkeyed, malformed, and page-mismatch responses', () => {
+  assert.equal(validatePageDelimitedTranslation('plain translation', [1]).status, 'unkeyed');
+  assert.equal(
+    validatePageDelimitedTranslation('Provider preamble\n---PAGE 1---\nBonjour', [1]).status,
+    'malformed',
+  );
+  assert.equal(
+    validatePageDelimitedTranslation('---PAGE 1---\nBonjour\n---PAGE 1---\nEncore', [1, 2]).status,
+    'page-mismatch',
+  );
+  assert.equal(
+    validatePageDelimitedTranslation('---PAGE 1---\nBonjour\n---PAGE 2---\nAu revoir', [1, 2])
+      .status,
+    'ok',
+  );
+});
+
+test('validated translation pages reflow to one local writer page per source page', async () => {
+  const bytes = await reflowTranslatedPages([
+    { pageNumber: 1, text: 'Bonjour' },
+    { pageNumber: 2, text: 'Au revoir\nÀ bientôt' },
+  ]);
+  const document = await PDFDocument.load(bytes);
+  assert.equal(document.getPageCount(), 2);
 });
 
 test('storage absence is a typed unavailable state instead of a localStorage fallback', async () => {

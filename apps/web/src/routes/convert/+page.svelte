@@ -74,7 +74,7 @@
   </p>
 
   <div class="panel">
-    <FileDrop accept="*/*" onchange={selectFiles} />
+    <FileDrop accept="*/*" onfiles={selectFiles} />
     <label>
       Format
       <select bind:value={selectedFormat} aria-label="Input format">

@@ -2,19 +2,23 @@
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import { comparePdfs, type CompareReport } from '@pdf-complianttools/engine';
+  import AiEscalationControl from '$lib/AiEscalationControl.svelte';
 
   let before = $state<File>();
   let after = $state<File>();
   let report = $state<CompareReport>();
+  let localText = $state('');
   let status = $state('Choose the original and revised PDF locally.');
 
   function takeBefore(files: FileList | null) {
     before = files?.[0];
     report = undefined;
+    localText = '';
   }
   function takeAfter(files: FileList | null) {
     after = files?.[0];
     report = undefined;
+    localText = '';
   }
 
   async function compare() {
@@ -25,6 +29,14 @@
         new Uint8Array(await before.arrayBuffer()),
         new Uint8Array(await after.arrayBuffer()),
       );
+      localText = report.text.identical
+        ? 'No text changes were found in the local comparison.'
+        : report.text.changes
+            .map(
+              (change) =>
+                `${change.kind}: page ${change.pageNumber}, line ${change.lineNumber}: ${change.text}${change.counterpart ? ` (counterpart: ${change.counterpart})` : ''}`,
+            )
+            .join('\n');
       status = report.text.identical
         ? 'No text changes found.'
         : `${report.text.changes.length} text change${report.text.changes.length === 1 ? '' : 's'} found.`;
@@ -49,7 +61,7 @@
         accept=".pdf,application/pdf"
         multiple={false}
         label="Choose original PDF"
-        onchange={takeBefore}
+        onfiles={takeBefore}
       />{#if before}<p>{before.name}</p>{/if}
     </div>
     <div>
@@ -58,7 +70,7 @@
         accept=".pdf,application/pdf"
         multiple={false}
         label="Choose revised PDF"
-        onchange={takeAfter}
+        onfiles={takeAfter}
       />{#if after}<p>{after.name}</p>{/if}
     </div>
   </div>
@@ -97,6 +109,7 @@
         </ul>{/if}
     </section>
   {/if}
+  {#if report}<AiEscalationControl tool="T61" localReady={true} {localText} />{/if}
 </section>
 
 <style>

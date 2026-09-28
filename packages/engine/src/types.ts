@@ -312,7 +312,9 @@ export type OcrModelDescriptor = {
   readonly modelBytes: number;
   readonly modelLicense: 'Apache-2.0';
   readonly status: 'not-installed' | 'installed' | 'unavailable';
-  readonly source: 'user-supplied-local-model';
+  readonly source: 'pinned-browser-direct';
+  readonly sourceUrl: string;
+  readonly sha256: string;
 };
 
 export type PageRect = Readonly<{ x: number; y: number; width: number; height: number }>;

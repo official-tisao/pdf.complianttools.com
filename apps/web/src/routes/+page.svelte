@@ -23,7 +23,7 @@
     <Button variant="secondary"><a href="/ai/chat-with-pdf">Explore local-first AI</a></Button>
     <Button variant="secondary"><a href="/#tools">Browse tools</a></Button>
   </div>
-  <FileDrop onchange={acceptFiles} />
+  <FileDrop onfiles={acceptFiles} />
   {#if files.length > 0}
     <p class="status" role="status">
       {files.length} file{files.length === 1 ? '' : 's'} selected locally.

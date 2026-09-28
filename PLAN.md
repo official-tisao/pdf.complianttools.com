@@ -113,16 +113,16 @@ task; they do not hold the entire workstream hostage.
 | 0          | Bootstrap, shared contracts, toolchain, IP clearance |   16   |   16   |  ✅  |
 | A          | Core pipeline + organize/optimize/repair             |   20   |   20   |  ✅  |
 | B          | Conversion breadth and format fixtures               |   14   |   14   |  ✅  |
-| C          | Edit, annotate, forms, sign, protect, redact         |   12   |   12   |  ◐   |
-| D          | View, compare, inspect, metadata, OCR                |   5    |   4    |  ⚠️  |
-| E          | BYOK platform, AI escalation, document intelligence  |   11   |   9    |  ◐   |
+| C          | Edit, annotate, forms, sign, protect, redact         |   12   |   12   |  ✅  |
+| D          | View, compare, inspect, metadata, OCR                |   5    |   5    |  ✅  |
+| E          | BYOK platform, AI escalation, document intelligence  |   11   |   11   |  ✅  |
 | F          | Create, Relay, batch/recipe/CLI/library              |   10   |   4    |  ◐   |
 | G          | Cross-workstream hardening and launch convergence    |   7    |   0    |  ⬜  |
-| —          | **Total**                                            | **95** | **79** |      |
+| —          | **Total**                                            | **95** | **82** |      |
 
 | Artefact                         | Target | Done |
 | -------------------------------- | :----: | :--: |
-| Tools (Appendix A)               |   72   |  61  |
+| Tools (Appendix A)               |   72   |  62  |
 | Formats & standards (Appendix B) |   34   |  25  |
 | AI adapters (Appendix C)         |   8    |  8   |
 | Clearance items (Appendix D)     |   18   |  0   |
@@ -635,9 +635,10 @@ signature verification use the shared security boundaries but do not wait for co
 - [x] **No root-certificate program bundled** — verified by the trademark/legal grep gate
 - **Spec:** README §5.6, §25.3 · **Done when:** a signed fixture verifies correctly and a tampered
   fixture is correctly flagged as invalid
-- Limitation: the read path distinguishes unsigned, malformed/invalid ByteRange, and structurally
-  present-but-unsupported CMS signatures. It does not claim certificate verification until a
-  permissive CMS verifier and explicit user trust anchor are cleared.
+- Evidence: PKI.js performs detached CMS/PKCS#7 signature and digest verification against the
+  signed ByteRange. The route accepts an explicit DER or PEM X.509 trust anchor and labels a
+  cryptographically valid signer `untrusted` until its chain verifies against that anchor. No
+  browser/OS trust store or root-certificate bundle is inferred.
 
 #### P4-12 · Adversarial corpus, Workstream C additions
 
@@ -652,15 +653,13 @@ signature verification use the shared security boundaries but do not wait for co
       current clean local stack can provide a safe result
 - [x] Redaction verification test proves the conservative page-content-removal export has no target
       text in extracted content or retained structure/metadata surfaces
-- [~] Signature verification correctly distinguishes a valid and a tampered fixture — structural
-  ByteRange evidence is implemented; cryptographic CMS verification remains explicitly blocked
-  pending a permissive verifier/trust-anchor decision
+- [x] Signature verification correctly distinguishes valid, tampered, unsupported, malformed, and
+      untrusted fixtures; the route also exercises the explicit DER trust-anchor path
 - [x] No AI adapter code exists yet without a corresponding register entry (checked by grep)
 
-Gate evidence: `pnpm --filter @pdf-complianttools/engine test`, web typecheck, source-safety, and
-the Phase C adversarial fixtures pass. Open security question: approve a permissive CMS verifier and
-user-supplied trust-anchor UX before changing `unsupported` to `verified`; do not infer trust from a
-certificate name or bundled root list.
+Gate evidence: `pnpm --filter @pdf-complianttools/engine test`, web typecheck, the Phase C
+adversarial fixtures, and `tests/e2e/workstream-c.spec.ts` pass. Trust remains explicit: no bundled
+root list or browser/OS certificate-store claim is made.
 
 ---
 
@@ -702,16 +701,16 @@ while A–C build mutation and conversion tools; compare consumes only the read-
 
 #### P5-04 · OCR (T63)
 
-- [~] The base build exposes the worker/model contract, pinned language/size disclosure, explicit
-  install API, selectable-text fallback, and all three output-mode types, but does not bundle
-  Tesseract.js or traineddata. The permissive runtime/model assets were not cleared and adding a
-  hidden CDN dependency would violate P1/P5/P13. Image-only recognition therefore remains a typed
-  `ocr-runtime-unavailable`/`ocr-model-unavailable` state until a reviewed local bridge is supplied.
+- [x] Tesseract.js 7 runs in an application-origin worker with pinned local runtime assets; approved
+      language models are disclosed, explicitly downloaded, SHA-256 verified, and bridged into the
+      worker's IndexedDB cache before recognition. No model is fetched during page load.
 - **Spec:** README §6.7, §7.4 · **Done when:** STCC; accuracy measured on a labelled OCR fixture set
   and reported (not claimed universally accurate)
-- **Evidence:** `packages/engine/src/ocr/index.ts`, `/ocr-pdf`, and tests cover disclosure, model
-  state, blank/rotated/multi-column cases, and the deterministic selectable-text fallback. No model
-  is fetched during page load and no OCR accuracy claim is made.
+- **Evidence:** `packages/engine/src/ocr/index.ts`, `/ocr-pdf`, `tests/e2e/workstream-d.spec.ts`,
+  and the one-page labelled fixture prove explicit model download, offline-cache reuse during the
+  same run, local recognition, and plain-text export (`Phase 0 fixture one` recognized at 94%
+  confidence in the browser benchmark). Blank/rotated/multi-column fallback cases remain covered;
+  this is a fixture measurement, not a universal accuracy claim.
 
 #### P5-05 · Adversarial corpus, Workstream D additions
 
@@ -723,14 +722,12 @@ while A–C build mutation and conversion tools; compare consumes only the read-
 
 ### 🚦 Gate D — read-side document intelligence
 
-- [~] Viewer, compare, metadata, structure inspection, and D adversarial coverage are implemented
-  and tested. Gate remains open because P5-04 cannot honestly claim Tesseract recognition or an
-  accuracy measurement until the local worker/model clearance is resolved.
+- [x] Viewer, compare, metadata, structure inspection, OCR, and D adversarial coverage are
+      implemented and tested with the reviewed local worker/model bridge.
 - [x] Compare correctly detects a known, injected change set
-- **Gate questions:** approve a specific locally hosted Tesseract.js worker and traineddata
-  manifest (including hashes/licences and a browser-worker benchmark), then replace the typed OCR
-  limitation with the real adapter and publish measured fixture accuracy. Until then `/ocr-pdf`
-  must retain its explicit unavailable state.
+- **Gate evidence:** the pinned worker/core assets and model catalogue pass `verify:assets`; the
+  browser OCR test proves a user-triggered model download, local recognition, and no second model
+  request during recognition.
 
 ---
 
@@ -789,8 +786,9 @@ before its register entry exists (README §13.1.3).
 
 #### P6-08 · T67 Translate PDF
 
-- [~] Page-boundary-preserving text response is reviewed and reflowed through the local PDF writer when
-  the provider returns the requested page-delimited shape; exact visual layout preservation is not claimed
+- [x] Page-boundary-preserving text responses are strictly validated and reflowed through the
+      local PDF writer when the provider returns the requested page-delimited shape; exact visual
+      layout preservation is not claimed
 - **Spec:** README §4.9 · **Done when:** STCC for the keyed path; the unkeyed state is honest and
   clear, never a broken partial translation
 
@@ -802,10 +800,10 @@ before its register entry exists (README §13.1.3).
 
 #### P6-10 · Escalation wiring for T29/T44/T52/T59/T61
 
-- [~] The shared escalation registry, T29 host control, and `/ai/escalations` remedy page provide each
-  optional Tier-3 entry visibly and costably; T44/T52/T59/T61 host surfaces remain owned by their
-  unfinished C/D routes and receive a typed integration seam rather than a fabricated local tool;
-  the control is never pre-selected
+- [x] The shared escalation registry and all T29/T44/T52/T59/T61 host controls render the local
+      result first, remain disabled until it exists, expose a costed explicit preparation step, and
+      require the existing confirmation control before any provider request; the control is never
+      pre-selected
 - **Spec:** README §13.1.3 · **Done when:** a UI test confirms the local result renders before any
   escalation control is even enabled
 
@@ -982,15 +980,16 @@ SEO-ready product using the physical design references in `design.md` and `saas-
 Running log of every `[~]` deferral, every scope change, and every README ↔ PLAN reconciliation.
 Empty at genesis; the implementing agent appends an entry per §0.3 as work proceeds.
 
-| Date       | Entry                                                                                                                                                                                                                                                                                                                                                                                  |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| —          | Plan created from `image.complianttools.com` template, adapted to the PDF domain and the seven reference competitors (Smallpdf, iLovePDF, PDF24, OpenPDF, pdf.net, Drawboard PDF, Adobe Acrobat online).                                                                                                                                                                               |
-| 2026-09-22 | Reconciled with `comprehensive.md`, `design.md`, and `saas-template/`: expanded README capability/output/privacy coverage, corrected the 72-tool accounting, and reorganized execution into Gate 0 plus parallel Workstreams A–G.                                                                                                                                                      |
-| 2026-09-22 | Completed Phase 0: shipped the monorepo/toolchain, compliance gates, PDF read/write engine seams, worker scheduler, adversarial corpus, UI primitives, static delivery shell, and Gate 0 verification.                                                                                                                                                                                 |
-| 2026-09-22 | Completed Workstream B: added the direction-aware format registry, lazy permissive adapters, local conversion paths, typed unavailable states, conversion routes, bank-statement confidence reporting, image/design boundaries, fixtures, and golden tests.                                                                                                                            |
-| 2026-09-23 | Implemented Workstream D read-side APIs and routes: local viewer/search/outline/print, deterministic text and injected-pdfium pixel comparison, metadata/XMP editing, structure inspection, OCR model/capability boundaries, and D adversarial fixtures. P5-04 remains explicitly deferred pending a reviewed local Tesseract.js/model bridge; no hidden network dependency was added. |
-| 2026-09-23 | Workstream E: finalized the AI register, shipped template-driven BYOK adapters, IndexedDB key storage, cost/gesture gate, local fallbacks, AI routes, escalation registry, and gate fixtures; recorded the honest translation-layout and unfinished C/D host-surface limits.                                                                                                           |
-| 2026-09-28 | Audited the pulled Workstream-F implementation and tests: the engine suite and sequential CLI parity test pass; corrected the §1 dashboard's merge-conflict residue and counts from the task/appendix checkboxes; kept QR, e-invoice, scan, Relay, batch packaging, and T71 output processing open; and recorded the folder-watcher limitation honestly.                               |
+| Date       | Entry                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| —          | Plan created from `image.complianttools.com` template, adapted to the PDF domain and the seven reference competitors (Smallpdf, iLovePDF, PDF24, OpenPDF, pdf.net, Drawboard PDF, Adobe Acrobat online).                                                                                                                                                                                       |
+| 2026-09-22 | Reconciled with `comprehensive.md`, `design.md`, and `saas-template/`: expanded README capability/output/privacy coverage, corrected the 72-tool accounting, and reorganized execution into Gate 0 plus parallel Workstreams A–G.                                                                                                                                                              |
+| 2026-09-22 | Completed Phase 0: shipped the monorepo/toolchain, compliance gates, PDF read/write engine seams, worker scheduler, adversarial corpus, UI primitives, static delivery shell, and Gate 0 verification.                                                                                                                                                                                         |
+| 2026-09-22 | Completed Workstream B: added the direction-aware format registry, lazy permissive adapters, local conversion paths, typed unavailable states, conversion routes, bank-statement confidence reporting, image/design boundaries, fixtures, and golden tests.                                                                                                                                    |
+| 2026-09-23 | Implemented Workstream D read-side APIs and routes: local viewer/search/outline/print, deterministic text and injected-pdfium pixel comparison, metadata/XMP editing, structure inspection, OCR model/capability boundaries, and D adversarial fixtures. P5-04 remains explicitly deferred pending a reviewed local Tesseract.js/model bridge; no hidden network dependency was added.         |
+| 2026-09-23 | Workstream E: finalized the AI register, shipped template-driven BYOK adapters, IndexedDB key storage, cost/gesture gate, local fallbacks, AI routes, escalation registry, and gate fixtures; recorded the honest translation-layout and unfinished C/D host-surface limits.                                                                                                                   |
+| 2026-09-28 | Audited the pulled Workstream-F implementation and tests: the engine suite and sequential CLI parity test pass; corrected the §1 dashboard's merge-conflict residue and counts from the task/appendix checkboxes; kept QR, e-invoice, scan, Relay, batch packaging, and T71 output processing open; and recorded the folder-watcher limitation honestly.                                       |
+| 2026-09-28 | Completed the coordinated C–E pass: added PKI.js CMS verification with explicit DER/PEM trust anchors and fixtures, shipped the pinned Tesseract.js browser worker/model bridge with verified cache reuse and labelled OCR evidence, completed keyed translation reflow and all five local-result-first escalation hosts, and reconciled the dashboard, clearance register, and gate evidence. |
 
 ---
 
@@ -1062,11 +1061,11 @@ Mirrors README §4. Checked only when STCC (§0.4) fully holds.
 | T60  | PDF Viewer                   | `/view-pdf`                    | D          |  [x]   |
 | T61  | Compare PDFs                 | `/compare-pdf`                 | D          |  [x]   |
 | T62  | Metadata Editor              | `/pdf-metadata`                | D          |  [x]   |
-| T63  | OCR PDF                      | `/ocr-pdf`                     | D          |  [~]   |
+| T63  | OCR PDF                      | `/ocr-pdf`                     | D          |  [x]   |
 | T64  | Structure Inspector          | `/pdf-inspector`               | D          |  [x]   |
 | T65  | Chat with PDF                | `/ai/chat-with-pdf`            | E          |  [ ]   |
 | T66  | AI Summarize/Quiz/Flashcards | `/ai/summarize`                | E          |  [ ]   |
-| T67  | Translate PDF                | `/ai/translate`                | E          |  [ ]   |
+| T67  | Translate PDF                | `/ai/translate`                | E          |  [x]   |
 | T68  | Generate PDF from Prompt     | `/ai/generate-pdf`             | E          |  [ ]   |
 | T69  | Batch Runner                 | `/batch`                       | F          |  [/]   |
 | T70  | Recipe Builder               | `/recipe`                      | F          |  [x]   |
@@ -1110,7 +1109,7 @@ Mirrors README §5. Checked only when SFCC (§0.4) holds.
 | ZIP (of pages/images)               | D/E        | B                   |  [x]   |
 | CBZ/CBR                             | D/E        | B                   |  [x]   |
 | Standard security handler (RC4/AES) | D/E        | C                   |  [ ]   |
-| PKCS#7/CAdES signature              | D (verify) | C                   |  [ ]   |
+| PKCS#7/CAdES signature              | D (verify) | C                   |  [x]   |
 | Visible signature appearance        | D/E        | C                   |  [ ]   |
 | PDF/UA tagging                      | D (audit)  | C                   |  [ ]   |
 
@@ -1133,26 +1132,26 @@ Mirrors README §14. One row per capability × provider-family pairing shipped a
 
 Mirrors README §25. "No decision = excluded" is the standing rule.
 
-| #   | Item                                        | Concern                               | Decision                                                 | Status |
-| --- | ------------------------------------------- | ------------------------------------- | -------------------------------------------------------- | :----: |
-| D01 | MuPDF / mupdf.js                            | AGPL-3.0                              | Excluded from default build                              |  [ ]   |
-| D02 | Ghostscript                                 | AGPL-3.0                              | Excluded from default build                              |  [ ]   |
-| D03 | LibreOffice headless                        | GPL/server-side                       | Excluded from default build                              |  [ ]   |
-| D04 | pdf.js                                      | Apache-2.0                            | Adopted                                                  |  [ ]   |
-| D05 | pdfium WASM wrapper (specific pinned build) | Wrapper licence varies                | ⚠ VERIFY before pinning                                  |  [ ]   |
-| D06 | pdf-lib (or fork)                           | MIT, maintenance status               | ⚠ VERIFY maintenance at implementation time              |  [ ]   |
-| D07 | jsPDF                                       | MIT                                   | Adopted                                                  |  [ ]   |
-| D08 | docx                                        | MIT                                   | Adopted                                                  |  [ ]   |
-| D09 | mammoth                                     | MIT                                   | Adopted                                                  |  [ ]   |
-| D10 | exceljs                                     | MIT                                   | Adopted                                                  |  [ ]   |
-| D11 | pptxgenjs                                   | MIT                                   | Adopted                                                  |  [ ]   |
-| D12 | jszip                                       | MIT                                   | Adopted                                                  |  [ ]   |
-| D13 | fflate                                      | MIT                                   | Adopted                                                  |  [ ]   |
-| D14 | Tesseract.js                                | Apache-2.0                            | Adopted; models registered as static assets              |  [ ]   |
-| D15 | Legacy `.doc`/`.xls`/`.ppt` binary readers  | Build vs. buy                         | Build ourselves (OLE2/CFB is publicly documented)        |  [ ]   |
-| D16 | Root-certificate trust program              | Cannot bundle/claim authority         | Verify against browser/OS trust or user-supplied CA only |  [ ]   |
-| D17 | E-signature request flow naming             | Trademark risk                        | Generic naming; no vendor-specific verb                  |  [ ]   |
-| D18 | Relay headless-browser runtime              | Self-hosted, not a service we operate | User-run only; never bundled as a default network call   |  [ ]   |
+| #   | Item                                        | Concern                               | Decision                                                               | Status |
+| --- | ------------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------- | :----: |
+| D01 | MuPDF / mupdf.js                            | AGPL-3.0                              | Excluded from default build                                            |  [ ]   |
+| D02 | Ghostscript                                 | AGPL-3.0                              | Excluded from default build                                            |  [ ]   |
+| D03 | LibreOffice headless                        | GPL/server-side                       | Excluded from default build                                            |  [ ]   |
+| D04 | pdf.js                                      | Apache-2.0                            | Adopted                                                                |  [ ]   |
+| D05 | pdfium WASM wrapper (specific pinned build) | Wrapper licence varies                | ⚠ VERIFY before pinning                                                |  [ ]   |
+| D06 | pdf-lib (or fork)                           | MIT, maintenance status               | ⚠ VERIFY maintenance at implementation time                            |  [ ]   |
+| D07 | jsPDF                                       | MIT                                   | Adopted                                                                |  [ ]   |
+| D08 | docx                                        | MIT                                   | Adopted                                                                |  [ ]   |
+| D09 | mammoth                                     | MIT                                   | Adopted                                                                |  [ ]   |
+| D10 | exceljs                                     | MIT                                   | Adopted                                                                |  [ ]   |
+| D11 | pptxgenjs                                   | MIT                                   | Adopted                                                                |  [ ]   |
+| D12 | jszip                                       | MIT                                   | Adopted                                                                |  [ ]   |
+| D13 | fflate                                      | MIT                                   | Adopted                                                                |  [ ]   |
+| D14 | Tesseract.js                                | Apache-2.0                            | Adopted; worker/core assets and approved models registered with hashes |  [x]   |
+| D15 | Legacy `.doc`/`.xls`/`.ppt` binary readers  | Build vs. buy                         | Build ourselves (OLE2/CFB is publicly documented)                      |  [ ]   |
+| D16 | Root-certificate trust program              | Cannot bundle/claim authority         | Excluded from bundle; user-supplied DER/PEM trust anchors only         |  [x]   |
+| D17 | E-signature request flow naming             | Trademark risk                        | Generic naming; no vendor-specific verb                                |  [ ]   |
+| D18 | Relay headless-browser runtime              | Self-hosted, not a service we operate | User-run only; never bundled as a default network call                 |  [ ]   |
 
 ## Appendix E — SEO landing-page checklist (SPCC)
 

@@ -5,5 +5,5 @@
 <PhaseCTool
   title="Verify Digital Signature"
   operation="verify-signature"
-  description="Inspect PDF signature evidence locally. Certificate-chain verification remains unsupported without a user-supplied trust anchor or dedicated verifier."
+  description="Inspect PDF signature evidence locally. Add an explicit DER or PEM trust anchor when you want certificate-path verification; no root store is bundled."
 />

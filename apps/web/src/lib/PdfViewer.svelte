@@ -94,7 +94,7 @@
     accept=".pdf,application/pdf"
     multiple={false}
     label="Drop a PDF here or choose one"
-    onchange={selectFile}
+    onfiles={selectFile}
   />
   <div class="toolbar" aria-label="Viewer controls">
     <Button

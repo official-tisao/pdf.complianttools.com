@@ -14,6 +14,23 @@ export type EngineError =
     }
   | { kind: 'ocr-runtime-unavailable'; remedy: string }
   | {
+      kind: 'ocr-download-failed';
+      language: string;
+      cause: string;
+      remedy: string;
+    }
+  | {
+      kind: 'ocr-offline-unavailable';
+      language: string;
+      remedy: string;
+    }
+  | {
+      kind: 'ocr-recognition-failed';
+      language: string;
+      cause: string;
+      remedy: string;
+    }
+  | {
       kind: 'unsupported-format';
       format: string;
       direction: 'to-pdf' | 'from-pdf';

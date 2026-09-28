@@ -1,7 +1,8 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
-  import type { AnnotationKind } from '@pdf-complianttools/engine';
+  import type { AnnotationKind, EscalationId } from '@pdf-complianttools/engine';
+  import AiEscalationControl from '$lib/AiEscalationControl.svelte';
 
   type PhaseCOperation =
     | 'editor'
@@ -24,6 +25,12 @@
     | 'redact'
     | 'verify-signature';
 
+  const ESCALATION_BY_OPERATION: Partial<Record<PhaseCOperation, EscalationId>> = {
+    'create-form': 'T44',
+    'accessibility-audit': 'T52',
+    redact: 'T59',
+  };
+
   let {
     title,
     description,
@@ -44,6 +51,14 @@
   let recipients = $state('recipient@example.test');
   let threshold = $state(32);
   let page = $state(1);
+  let localReady = $state(false);
+  let localResult = $state('');
+  let trustAnchors = $state<Uint8Array[]>([]);
+  let trustAnchorLabel = $state(
+    'No trust anchor selected; valid signatures will be marked untrusted.',
+  );
+
+  const escalationTool = $derived(ESCALATION_BY_OPERATION[operation]);
 
   function selectFiles(list: FileList | null) {
     files = list ? Array.from(list) : [];
@@ -52,6 +67,35 @@
       : '';
     error = '';
     downloadHref = undefined;
+    localReady = false;
+    localResult = '';
+    note = '';
+  }
+
+  async function selectTrustAnchor(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    trustAnchors = [];
+    trustAnchorLabel = 'No trust anchor selected; valid signatures will be marked untrusted.';
+    if (!file) return;
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const source = new TextDecoder().decode(bytes);
+    const pemBlocks = [
+      ...source.matchAll(/-----BEGIN CERTIFICATE-----([\s\S]*?)-----END CERTIFICATE-----/gu),
+    ];
+    try {
+      const anchors = pemBlocks.length
+        ? pemBlocks.map((match) => {
+            const encoded = match[1]!.replace(/\s+/gu, '');
+            const binary = globalThis.atob(encoded);
+            return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+          })
+        : [bytes];
+      if (anchors.some((anchor) => anchor.length === 0)) throw new Error('empty certificate');
+      trustAnchors = anchors;
+      trustAnchorLabel = `${file.name} selected (${anchors.length} certificate${anchors.length === 1 ? '' : 's'}).`;
+    } catch {
+      trustAnchorLabel = 'The selected certificate could not be parsed as DER or PEM.';
+    }
   }
 
   function save(bytes: Uint8Array, name: string, type: string) {
@@ -70,6 +114,9 @@
     }
     busy = true;
     error = '';
+    localReady = false;
+    localResult = '';
+    note = '';
     status = 'Working locally…';
     try {
       const engine = await import('@pdf-complianttools/engine');
@@ -226,8 +273,12 @@
         save(result.bytes, 'redacted-verified.pdf', 'application/pdf');
         status = `Redaction exported only after verification. ${result.warnings.join(' ')}`;
       } else if (operation === 'verify-signature') {
-        const report = await engine.verifyDigitalSignatures(bytes!);
+        const report = await engine.verifyDigitalSignatures(bytes!, { trustAnchors });
         status = `${report.status}: ${report.remedy}`;
+      }
+      if (escalationTool) {
+        localResult = [note, status].filter(Boolean).join('\n');
+        localReady = true;
       }
     } catch (caught) {
       error =
@@ -254,13 +305,13 @@
   {#if operation === 'signature-background'}
     <FileDrop
       accept=".png,image/png"
-      onchange={selectFiles}
+      onfiles={selectFiles}
       label="Drop an 8-bit RGBA PNG signature photo"
     />
   {:else}
     <FileDrop
       {accept}
-      onchange={selectFiles}
+      onfiles={selectFiles}
       label={operation === 'add-image' || operation === 'overlay'
         ? 'Choose the base file, then the second local file'
         : 'Drop a PDF here or choose a local file'}
@@ -295,7 +346,20 @@
         /></label
       >
       <label>Message<textarea bind:value={note} rows="3"></textarea></label>
-    {:else if operation === 'accessibility-audit' || operation === 'verify-signature'}
+    {:else if operation === 'verify-signature'}
+      <p class="caution">
+        A cryptographically valid signature is shown as untrusted until you provide an explicit
+        certificate trust anchor. This app does not bundle or infer a root-certificate program.
+      </p>
+      <label
+        >Trust anchor (optional DER or PEM X.509 certificate)<input
+          type="file"
+          accept=".der,.cer,.pem,application/pkix-cert,application/x-pem-file"
+          onchange={(event) => void selectTrustAnchor(event)}
+        /></label
+      >
+      <p class="caution" role="status">{trustAnchorLabel}</p>
+    {:else if operation === 'accessibility-audit'}
       <p class="caution">
         This is a read-only evidence report. Unsupported cryptographic or authoring claims remain
         visible as remedies.
@@ -325,6 +389,11 @@
         >Download {downloadName}</a
       >{/if}
   </div>
+  {#if escalationTool}<AiEscalationControl
+      tool={escalationTool}
+      {localReady}
+      localText={localResult}
+    />{/if}
 </section>
 
 <style>

@@ -69,7 +69,7 @@
   <p class="eyebrow">{eyebrow}</p>
   <h1>{title}</h1>
   <p class="lede">{description}</p>
-  <FileDrop accept=".pdf,application/pdf" onchange={selectFiles} />
+  <FileDrop accept=".pdf,application/pdf" onfiles={selectFiles} />
   <div class="workspace">
     <div class="preview">
       <div class="toolbar">

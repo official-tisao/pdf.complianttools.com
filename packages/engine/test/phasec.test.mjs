@@ -115,6 +115,34 @@ test('password and signature boundaries stay honest', async () => {
   });
 });
 
+test('CMS signature verification distinguishes trust, tampering, unsupported CMS, and malformed ranges', async () => {
+  const signed = await fixture('signed-one-page.pdf');
+  const trustAnchor = await fixture('signed-one-page.trust.der');
+  const tampered = await fixture('signed-one-page-tampered.pdf');
+  const unsupported = await fixture('signed-one-page-unsupported.pdf');
+
+  assert.equal((await verifyDigitalSignatures(signed)).status, 'untrusted');
+  assert.equal(
+    (await verifyDigitalSignatures(signed, { trustAnchors: [trustAnchor] })).status,
+    'verified',
+  );
+  assert.equal(
+    (await verifyDigitalSignatures(tampered, { trustAnchors: [trustAnchor] })).status,
+    'invalid',
+  );
+  assert.equal(
+    (await verifyDigitalSignatures(unsupported, { trustAnchors: [trustAnchor] })).status,
+    'unsupported',
+  );
+
+  const malformed = signed.slice();
+  const malformedSource = new TextDecoder('latin1').decode(malformed);
+  const rangeLengthOffset = malformedSource.indexOf('0000000599');
+  assert.notEqual(rangeLengthOffset, -1);
+  malformed.set(new TextEncoder().encode('9999999999'), rangeLengthOffset);
+  assert.equal((await verifyDigitalSignatures(malformed)).status, 'malformed-byte-range');
+});
+
 test('signature background removal rejects codecs it cannot decode', () => {
   assert.throws(
     () => removeSignatureBackground(new globalThis.TextEncoder().encode('not a png')),
