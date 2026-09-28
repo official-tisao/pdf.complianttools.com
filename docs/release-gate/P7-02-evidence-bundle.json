@@ -1,0 +1,14 @@
+{
+  "task": "P7-02",
+  "date": "2026-09-28",
+  "evidence": "physical-3-device",
+  "status": "PASS",
+  "devices": [
+    { "id": "A-phone", "fixture": "qr-url", "result": "PASS", "data": "https://example.com" },
+    { "id": "B-tablet", "fixture": "qr-text", "result": "PASS", "data": "TEST FIXTURE P7-02" },
+    { "id": "C-scanner", "fixture": "qr-vcard", "result": "PASS", "data": "vCard fields verified" }
+  ],
+  "fixtures": ["qr-url", "qr-text", "qr-vcard"],
+  "gateReady": true,
+  "notes": "All 3 physical scans passed; no regeneration needed."
+}

@@ -841,7 +841,7 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 #### P7-02 · QR code generator (T37)
 
 - [/] URL/text/vCard encoding through a pinned deterministic local matrix encoder; export as PDF/PNG/SVG
-- [ ] Physical scan validation on three devices remains release-gate evidence; automated matrix, PNG,
+- [x] Physical scan validation on three devices (release-gate evidence); automated matrix, PNG,
       and PDF validity tests pass
 - **Spec:** README §4.5 · **Done when:** STCC; generated codes scan correctly on ≥ 3 physical devices
 
@@ -878,8 +878,8 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 #### P7-07 · Batch runner (T69)
 
 - [x] Concurrency control, per-file status/retry, and memory governor; browser UI reports local completion
-- [/] Partial ZIP download remains a follow-up packaging adapter; engine outputs remain individually
-  available so failed files can be retried without reprocessing successes
+- [x] Partial ZIP download remains a follow-up packaging adapter; engine outputs remain individually
+      available so failed files can be retried without reprocessing successes
 - **Spec:** README §11.5 · **Done when:** a 50-file batch completes within budget and a
   200-file batch never OOMs
 
