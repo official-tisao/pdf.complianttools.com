@@ -3,7 +3,7 @@
 // This module only packs completed outputs; never modifies retry/concurrency.
 
 import JSZip from 'jszip';
-import type { BatchItemResult, BatchItemStatus } from '../types';
+import type { BatchItemResult } from '../types';
 
 export interface ZipOptions {
   outDir?: string; // future: file-system write; current: in-memory / buffer
