@@ -84,7 +84,15 @@ async function main() {
     const manifestPath = resolve('docs/THIRD-PARTY-LICENSES.md');
     const generated = renderLicenseManifest(entries);
     const existing = await readFile(manifestPath, 'utf8').catch(() => undefined);
-    if (existing !== undefined && existing !== generated && !process.argv.includes('--write')) {
+    // Git checks this file out with CRLF on Windows (core.autocrlf) while the
+    // generator emits LF, so comparing raw strings reported a correctly
+    // committed manifest as stale. Compare on content, not line endings.
+    const normalize = (value) => value.replace(/\r\n/gu, '\n');
+    if (
+      existing !== undefined &&
+      normalize(existing) !== normalize(generated) &&
+      !process.argv.includes('--write')
+    ) {
       console.error(
         'docs/THIRD-PARTY-LICENSES.md is stale; run node scripts/verify-licenses.mjs --write to update it.',
       );

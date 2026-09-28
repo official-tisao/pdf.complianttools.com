@@ -45,15 +45,23 @@ export default [
     },
   },
   {
-    files: ['scripts/**/*.mjs', 'packages/**/*.test.mjs', 'playwright.config.ts'],
+    files: [
+      'scripts/**/*.mjs',
+      'packages/**/*.test.mjs',
+      'apps/relay/test/**/*.mjs',
+      'playwright.config.ts',
+    ],
     languageOptions: {
       globals: {
         AbortController: 'readonly',
         TextDecoder: 'readonly',
         DOMException: 'readonly',
         URL: 'readonly',
+        Buffer: 'readonly',
         console: 'readonly',
+        fetch: 'readonly',
         process: 'readonly',
+        Response: 'readonly',
         setTimeout: 'readonly',
       },
     },

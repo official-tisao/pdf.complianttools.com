@@ -106,9 +106,16 @@
     status = 'Document pack built locally with a generated table of contents.';
   }
   async function webpage() {
-    const result = await captureWebpageToPdf(text, endpoint);
-    download(result.bytes, 'webpage.pdf');
-    status = 'Relay capture completed.';
+    try {
+      const result = await captureWebpageToPdf(text, endpoint);
+      download(result.bytes, 'webpage.pdf');
+      status = 'Relay capture completed.';
+    } catch (caught) {
+      // PdfEngineError sets message to its remedy, so this surfaces the Relay's
+      // own guidance — a blocked URL, a missing browser binary — rather than a
+      // bare failure.
+      status = caught instanceof Error ? caught.message : 'The operation could not be completed.';
+    }
   }
   async function batch() {
     const inputs = await Promise.all(
@@ -183,7 +190,7 @@
     <p class="note">
       Webpage capture is explicit Relay mode. Local PDF tools do not need this endpoint.
     </p>
-    <button onclick={webpage}>Capture with Relay</button>
+    <button disabled={!endpoint.trim()} onclick={webpage}>Capture with Relay</button>
   {:else if kind === 'batch'}
     <input type="file" accept="application/pdf,.pdf" multiple onchange={selectFiles} /><button
       disabled={!files.length}

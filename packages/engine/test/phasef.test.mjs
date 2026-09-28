@@ -151,3 +151,49 @@ test('Relay remains explicit opt-in with typed failure when unconfigured', async
     (error) => error instanceof PdfEngineError && error.details.kind === 'relay-not-configured',
   );
 });
+
+test('Relay surfaces the server remedy so the user is told the real cause', async () => {
+  // The Relay distinguishes a blocked URL from a missing browser binary. That
+  // distinction is only useful if the client keeps it, so the remedy the server
+  // sends must survive into the thrown error's message.
+  const stub = async () =>
+    new Response(
+      JSON.stringify({
+        error: 'relay-failed',
+        cause: 'browser executable missing',
+        remedy: 'Install the pinned Playwright browser for this self-hosted Relay and retry.',
+      }),
+      { status: 503, headers: { 'content-type': 'application/json' } },
+    );
+  await assert.rejects(
+    () => captureWebpageToPdf('https://example.com', 'http://127.0.0.1:8787', stub),
+    (error) =>
+      error instanceof PdfEngineError &&
+      error.details.kind === 'relay-failed' &&
+      error.message ===
+        'Install the pinned Playwright browser for this self-hosted Relay and retry.' &&
+      error.details.cause === 'Relay returned HTTP 503 (relay-failed).',
+  );
+});
+
+test('Relay keeps a generic remedy when the failure body is not JSON', async () => {
+  const stub = async () => new Response('upstream exploded', { status: 502 });
+  await assert.rejects(
+    () => captureWebpageToPdf('https://example.com', 'http://127.0.0.1:8787', stub),
+    (error) =>
+      error instanceof PdfEngineError &&
+      error.details.kind === 'relay-failed' &&
+      /reachable and has a compatible headless browser/u.test(error.message),
+  );
+});
+
+test('Relay returns the PDF bytes on a successful capture', async () => {
+  const stub = async () =>
+    new Response(new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d]), {
+      status: 200,
+      headers: { 'content-type': 'application/pdf' },
+    });
+  const result = await captureWebpageToPdf('https://example.com', 'http://127.0.0.1:8787', stub);
+  assert.equal(result.mimeType, 'application/pdf');
+  assert.deepEqual([...result.bytes], [0x25, 0x50, 0x44, 0x46, 0x2d]);
+});

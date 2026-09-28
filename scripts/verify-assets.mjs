@@ -26,10 +26,18 @@ export async function verifyAssets(root = process.cwd()) {
       violations.push(`${relativePath}: missing static-asset-register entry`);
       continue;
     }
-    const hash = createHash('sha256')
-      .update(await readFile(path))
-      .digest('hex');
-    if (hash !== entry.sha256) violations.push(`${relativePath}: sha256 mismatch`);
+    // Git checks text assets out with CRLF on Windows (core.autocrlf) while the
+    // register records the LF bytes as committed, so hashing the raw file
+    // reported unmodified assets as changed. Accept either form: the match is
+    // still exact, it just does not treat a line-ending rewrite as a content
+    // change. Binary assets are unaffected because normalisation is a no-op
+    // unless the file actually contains CRLF.
+    const contents = await readFile(path);
+    const normalised = Buffer.from(contents.toString('utf8').replaceAll('\r\n', '\n'));
+    const matches =
+      createHash('sha256').update(contents).digest('hex') === entry.sha256 ||
+      createHash('sha256').update(normalised).digest('hex') === entry.sha256;
+    if (!matches) violations.push(`${relativePath}: sha256 mismatch`);
     for (const field of ['source', 'license', 'licenseUrl', 'checked']) {
       if (!entry[field]) violations.push(`${relativePath}: missing ${field}`);
     }
