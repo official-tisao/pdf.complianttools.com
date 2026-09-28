@@ -3,11 +3,11 @@
 // This module only packs completed outputs; never modifies retry/concurrency.
 
 import JSZip from 'jszip';
-import type { BatchItemResult } from './types.js';
+import type { BatchItemResult, BatchItemStatus } from '../types';
 
 export interface ZipOptions {
   outDir?: string; // future: file-system write; current: in-memory / buffer
-  includeFailed?: boolean; // include items with status !== 'completed' for audit
+  includeFailed?: boolean; // include items with status !== 'succeeded' for audit
 }
 
 export async function zipBatchResults(
@@ -23,10 +23,10 @@ export async function zipBatchResults(
   for (const r of results) {
     const isFailed = r.status === 'failed';
     if (isFailed) manifest.failed++;
-    else if (r.status === 'completed') manifest.completed++;
+    else if (r.status === 'succeeded') manifest.completed++;
 
     // Only pack if completed, or if includeFailed explicitly set
-    const shouldPack = r.status === 'completed' || (options.includeFailed && isFailed);
+    const shouldPack = r.status === 'succeeded' || (options.includeFailed && isFailed);
     if (!shouldPack) continue;
 
     // Entry naming convention: batch_{index}_{status}.pdf (or .bin if raw bytes)
