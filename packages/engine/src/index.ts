@@ -18,6 +18,7 @@ export * from './create.js';
 export * from './qr.js';
 export * from './invoice.js';
 export * from './scan.js';
+export * from './scan-deskew.js';
 export * from './workflows.js';
 export * from './watcher.js';
 export * from './relay.js';

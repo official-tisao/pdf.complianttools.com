@@ -5,11 +5,12 @@
   // module, so importing it eagerly would pull pdfjs, mammoth, exceljs and
   // pptxgenjs into all ten routes that share this component. Heavier ops
   // (scan, pack, batch, relay, folder watch) are loaded inside their handlers.
-  import type { FolderWatcher, Recipe } from '@pdf-complianttools/engine';
+  import type { FolderWatcher, Recipe, ScanFrame } from '@pdf-complianttools/engine';
   // recipe.ts is zod-only, so importing it eagerly costs nothing and keeps the
   // recipe description in the prerendered HTML.
   import { describeRecipe, serializeRecipe } from '@pdf-complianttools/engine/recipe';
   import { saveLocalJson } from '$lib/indexed-store';
+  import ScanCapture from '$lib/ScanCapture.svelte';
   import { downloadBytes } from '$lib/download';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
   import { page } from '$app/state';
@@ -56,6 +57,9 @@
   let endpoint = $state('');
   let template = $state<'blank' | 'grid' | 'lined' | 'dot'>('blank');
   let files = $state<File[]>([]);
+  // Camera-captured pages, owned by ScanCapture. Kept separate from `files` so
+  // re-picking the file input cannot discard a live capture.
+  let capturedFrames = $state<ScanFrame[]>([]);
   let recipe = $state<Recipe>({
     version: 'r1',
     steps: [{ op: 'compress', options: { preset: 'balanced' } }],
@@ -89,15 +93,28 @@
     status = `Generated deterministic QR version ${result.version}.`;
   }
   async function scan() {
-    const frames = files.map(async (file) => ({
-      bytes: new Uint8Array(await file.arrayBuffer()),
-      format: file.type === 'image/jpeg' ? ('jpg' as const) : ('png' as const),
-    }));
-    const { assembleScans } = await import('@pdf-complianttools/engine');
-    const result = await assembleScans(await Promise.all(frames));
-    download(result, 'scan.pdf');
-    status =
-      'Scan assembled locally; camera permission is only requested after an explicit capture action.';
+    try {
+      // Camera frames arrive first, imported images after, and both are pages of
+      // the same local document.
+      const imported = await Promise.all(
+        files.map(async (file) => ({
+          bytes: new Uint8Array(await file.arrayBuffer()),
+          format: file.type === 'image/jpeg' ? ('jpg' as const) : ('png' as const),
+        })),
+      );
+      const all = [...capturedFrames, ...imported];
+      if (!all.length) {
+        status = 'Capture a page or add image files first.';
+        return;
+      }
+      const { assembleScans } = await import('@pdf-complianttools/engine/scan');
+      download(await assembleScans(all), 'scan.pdf');
+      status = `Assembled ${all.length} page${all.length === 1 ? '' : 's'} locally. Nothing was uploaded.`;
+    } catch (caught) {
+      // PdfEngineError's message is its remedy, so the user gets an action
+      // rather than a bare failure.
+      status = caught instanceof Error ? caught.message : 'The scan could not be assembled.';
+    }
   }
   async function pack() {
     const attachments = await Promise.all(
@@ -178,10 +195,25 @@
     <label>Text or URL <input bind:value={text} /></label><button onclick={qr}>Export QR PDF</button
     >
   {:else if kind === 'scan'}
+    <!--
+      A real file input stays in the served HTML: §7.6 requires the no-JS
+      reference page to answer the query, and a scan route that only worked
+      through a camera would answer nothing without JavaScript.
+    -->
     <label
       >Scan images
       <input type="file" accept="image/png,image/jpeg" multiple onchange={selectFiles} /></label
-    ><button disabled={!files.length} onclick={scan}>Assemble scan to PDF</button>
+    ><button disabled={!files.length && !capturedFrames.length} onclick={scan}
+      >Assemble scan to PDF</button
+    >
+    <ScanCapture
+      onframes={(next) => {
+        capturedFrames = [...next];
+      }}
+      onstatus={(message) => {
+        status = message;
+      }}
+    />
   {:else if kind === 'pack'}
     <label
       >Documents to pack

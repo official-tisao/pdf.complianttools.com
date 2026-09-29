@@ -37,6 +37,7 @@ export default [
         Event: 'readonly',
         File: 'readonly',
         FileList: 'readonly',
+        MediaProvider: 'readonly',
         MouseEvent: 'readonly',
       },
     },

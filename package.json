@@ -19,6 +19,8 @@
     "test:e2e": "playwright test",
     "test:unit": "node --test scripts/*.test.mjs packages/engine/test/*.test.mjs",
     "test:latency": "node scripts/measure-latency.mjs",
+    "measure:skew": "node scripts/measure-skew.mjs",
+    "fixtures:skew": "node scripts/generate-skew-fixtures.mjs",
     "typecheck": "turbo run typecheck",
     "verify:assets": "node scripts/verify-assets.mjs",
     "verify:licenses": "node scripts/verify-licenses.mjs",
