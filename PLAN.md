@@ -108,25 +108,23 @@ task; they do not hold the entire workstream hostage.
 
 ## 1. Progress dashboard
 
-| Workstream   | Focus                                                | Tasks  | Done  | Gate |
-| ------------ | ---------------------------------------------------- | :----: | :---: | :--: |
-| 0            | Bootstrap, shared contracts, toolchain, IP clearance |   16   |  16   |  ✅  |
-| B            | Conversion breadth and format fixtures               |   14   |  14   |  ✅  |
-| A            | Core pipeline + organize/optimize/repair             |   20   |  20   |  ✅  |
-| B            | Conversion breadth and format fixtures               |   14   |   0   |  ⬜  |
-| <<<<<<< HEAD |
-| C            | Edit, annotate, forms, sign, protect, redact         |   12   |  12   |  ◐   |
-| D            | View, compare, inspect, metadata, OCR                |   5    |   4   |  ⚠️  |
-| E            | BYOK platform, AI escalation, document intelligence  |   11   |   9   |  ◐   |
-| F            | Create, Relay, batch/recipe/CLI/library              |   10   |   0   |  ⬜  |
-| G            | Cross-workstream hardening and launch convergence    |   7    |   0   |  ⬜  |
-| —            | **Total**                                            | **95** | **0** |      |
+| Workstream | Focus                                                | Tasks  |  Done  | Gate |
+| ---------- | ---------------------------------------------------- | :----: | :----: | :--: |
+| 0          | Bootstrap, shared contracts, toolchain, IP clearance |   16   |   16   |  ✅  |
+| A          | Core pipeline + organize/optimize/repair             |   20   |   20   |  ✅  |
+| B          | Conversion breadth and format fixtures               |   14   |   14   |  ✅  |
+| C          | Edit, annotate, forms, sign, protect, redact         |   12   |   12   |  ◐   |
+| D          | View, compare, inspect, metadata, OCR                |   5    |   4    |  ⚠️  |
+| E          | BYOK platform, AI escalation, document intelligence  |   11   |   9    |  ◐   |
+| F          | Create, Relay, batch/recipe/CLI/library              |   10   |   4    |  ◐   |
+| G          | Cross-workstream hardening and launch convergence    |   7    |   0    |  ⬜  |
+| —          | **Total**                                            | **95** | **79** |      |
 
 | Artefact                         | Target | Done |
 | -------------------------------- | :----: | :--: |
-| Tools (Appendix A)               |   72   |  0   |
-| Formats & standards (Appendix B) |   34   |  0   |
-| AI adapters (Appendix C)         |   8    |  0   |
+| Tools (Appendix A)               |   72   |  61  |
+| Formats & standards (Appendix B) |   34   |  25  |
+| AI adapters (Appendix C)         |   8    |  8   |
 | Clearance items (Appendix D)     |   18   |  0   |
 | Prerendered pages                |  ~250  |  0   |
 
@@ -943,8 +941,10 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 
 #### P7-09 · Folder watcher (T71)
 
-- [x] File System Access API permission request, local new-file polling, and visible pause/resume/stop
-      controls; no directory is read before explicit permission
+- [/] File System Access API permission request, local new-file polling, visible pause/resume/stop
+  controls, and an `onFile` callback seam; no directory is read before explicit permission
+- [ ] Auto-processing new files into an output folder is not implemented; the current route only
+      reports detected files and still needs a processor/output-folder adapter
 - **Spec:** README §4.10 · **Done when:** STCC
 
 #### P7-10 · CLI & library (T72)
@@ -961,15 +961,16 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 
 **Gate evidence / open questions:** `packages/engine/test/phasef.test.mjs` covers creation, QR matrix/PDF/PNG
 validity, invoice XML and attachment structure, scan assembly, document packs, batch retry/memory behavior,
-recipe document exclusion, folder permission/pause/stop, and Relay opt-in errors. The invoice work additionally
+recipe document exclusion, folder permission/pause/stop/callback behavior, and Relay opt-in errors. The invoice work additionally
 has a recipe-op test, a CLI/engine byte-parity test for `op: 'invoice'`, and three CI-re-measured evidence
 bundles: §19 latency (`docs/release-gate/P7-03-latency-evidence.json`), per-route bundle budgets
 (`P7-03-bundle-evidence.json`), and Lighthouse mobile across all four categories
 (`P7-03-lighthouse-evidence.json`). It also passes `axe` with zero violations, is keyboard-operable end to
 end, ships prerendered `ar` and `en-XA` variants, and works offline after one visit
 (`tests/e2e/offline.spec.ts`). Physical QR-device scans, full perspective deskew, partial ZIP packaging,
-and a real Relay render remain explicit release evidence questions because those capabilities need
-external hardware, a browser CV runtime, packaging work, or a separately installed Playwright browser.
+a real Relay render, and T71's processor/output-folder flow remain explicit release evidence questions
+because those capabilities need external hardware, a browser CV runtime, packaging work, a separately
+installed Playwright browser, or the missing watcher adapter.
 Published-schema e-invoice validation is no longer listed here: it was ruled out on the evidence and the
 P7-03 Done-when was amended accordingly on 2026-09-29 (§10), so the tool makes a structural-validation
 claim and says so.
@@ -1051,6 +1052,7 @@ Empty at genesis; the implementing agent appends an entry per §0.3 as work proc
 | 2026-09-28 | P7-06 Relay, second pass: found and fixed a defect that made capture impossible in a real browser. The Relay sent no CORS headers and answered `OPTIONS /render` with 404, so the app on one origin could never post to a Relay on another — the browser dropped the request and the user saw `Failed to fetch`, the same generic error that remedy propagation exists to replace. Added an explicit origin allow-list (`RELAY_ALLOWED_ORIGINS`, defaulting to the production domain and local dev/preview) rather than `*`, so a page the user visits cannot drive a Relay on their machine. Proven by a test that drives a real browser page through a real render: it returns `%PDF-` with the fix and `Failed to fetch` without it. Also added e2e coverage for the unconfigured case and for remedy propagation to the status line, both confirmed to fail against the pre-fix handler. Relay tests 22 -> 30.                                                                                                                                                                                                                                                                                                                      |
 | 2026-09-28 | Scope decision: README §23 places `apps/relay` "explicitly out of the P1–P7 default critical path", which contradicted P7-06's Done-when. Resolved by satisfying the Done-when — a real render is now proven in `apps/relay/test/render.test.mjs` — rather than by deferring it. Relay stays opt-in, self-hostable, and never required for local tools.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 2026-09-29 | P7-03 Done-when amended, then completed (T38, T39 → `[x]`). The original Done-when required the e-invoice XML to "validate against its published schema". That is not achievable by a browser-local tool, and the shortfall was proven rather than assumed: no browser exposes an XSD API; the WASM validator resolves no external `schemaLocation` under Node or the browser; the published npm validators need a Java SDK or a native binding; the pure-JS `xml-xsd-engine` silently compiles the UBL schema to an **empty** model and rejects even a hand-written known-good UBL 2.0 invoice; and inlining yields a derived schema, not the published one. The Done-when now states what the tool does — validate against a documented structural rule set, recover the embedded attachment byte-for-byte, and not attempt to read invoice fields out of a rendered page — and the pages say plainly that published-schema validation is not offered. A server-side validator would satisfy the old wording but break the local-only model this product is sold on (README §25.4), so the wording, not the boundary, was what moved. The five ruled-out routes are recorded inline so the question is not re-litigated from scratch. |
+| 2026-09-28 | Audited the pulled Workstream-F implementation and tests: the engine suite and sequential CLI parity test pass; corrected the §1 dashboard's merge-conflict residue and counts from the task/appendix checkboxes; kept QR, e-invoice, scan, Relay, batch packaging, and T71 output processing open; and recorded the folder-watcher limitation honestly.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 ---
 
@@ -1130,7 +1132,7 @@ Mirrors README §4. Checked only when STCC (§0.4) fully holds.
 | T68  | Generate PDF from Prompt     | `/ai/generate-pdf`             | E          |  [ ]   |
 | T69  | Batch Runner                 | `/batch`                       | F          |  [/]   |
 | T70  | Recipe Builder               | `/recipe`                      | F          |  [x]   |
-| T71  | Folder Watcher               | `/watch`                       | F          |  [x]   |
+| T71  | Folder Watcher               | `/watch`                       | F          |  [/]   |
 | T72  | CLI & Library                | `packages/cli`                 | F          |  [x]   |
 
 ## Appendix B — Format & standard tracker (34 rows)
