@@ -24,3 +24,11 @@ this directory.
   objects; expected behavior is a typed corrupt-structure outcome.
 - `adversarial/oversized-signature.pdf` — hand-authored signature widget with intentionally
   unreasonable coordinates; expected behavior is a typed unsupported/corrupt outcome with a remedy.
+
+## Workstream F additions
+
+- `p7-03/sample-invoice.xml` — UBL-style invoice generated locally by
+  `createInvoicePdf` from synthetic data (fake supplier/customer, no real business). Used to prove the
+  shipped XML round-trips through the structural validator and that its stated net, tax and gross
+  reconcile to the cent. Regenerate with the same `InvoiceData` in
+  `packages/engine/test/phasef.test.mjs`.

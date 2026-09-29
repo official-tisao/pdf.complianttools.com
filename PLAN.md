@@ -847,9 +847,25 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 
 #### P7-03 · Invoice creator + e-invoice (T38–T39)
 
-- [/] Visual builder, saved templates in IndexedDB, PDF attachment, and structural UBL-style XML seam
+- [/] Visual builder, named templates in a versioned IndexedDB store with a migration ladder, PDF
+  attachment, and structural UBL-style XML seam; the builder is a real form with live totals that
+  come from the same `invoiceTotals` the export uses
+- [/] Per-line tax rates are serialized (`cac:TaxTotal`, `cac:ClassifiedTaxCategory`), and totals are
+  summed from rounded components so a document's stated net/tax/gross always reconcile
+- [/] The e-invoice route also converts an existing XML file to PDF, validating it first and
+  refusing with the specific reason
+- [/] PDF→XML recovers the structured attachment byte-for-byte from a hybrid PDF (EmbeddedFiles →
+  Filespec → /EF → inflate), and refuses with a typed remedy when no attachment is present.
+  Reading invoice fields out of a rendered page is deliberately not offered and not claimed
 - [ ] Full published-schema validation is deferred until the approved UBL/ZUGFeRD schema artifact is
-      registered; current validation is intentionally structural and returns a remedy on failure
+      registered; current validation is intentionally structural and returns a remedy on failure.
+      All four implementation routes were tested and ruled out, not merely unstarted: browsers expose
+      no XSD validation API; the only viable WASM validator resolves no external `schemaLocation`
+      under Node or the browser alike; the published npm validators require a Java SDK or a native
+      binding; and inlining the schemas yields a derived schema, not the published one. Shipping a
+      hand-rolled subset validator would weaken the honesty this project is built on
+- [ ] STCC items 6–12 (prerendered-page contract beyond the existing shell, SEO checklist, latency
+      budget measurement, `axe`, and i18n) remain open and are tracked with the rest of Workstream F
 - **Spec:** README §4.5, §5.3 · **Done when:** STCC for each; e-invoice XML validates against its
   published schema
 

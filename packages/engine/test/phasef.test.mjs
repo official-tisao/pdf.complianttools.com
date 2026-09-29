@@ -9,7 +9,10 @@ import {
   describeRecipe,
   generateQr,
   createInvoicePdf,
+  invoiceTotals,
   validateEInvoiceXml,
+  extractInvoiceXmlFromPdf,
+  extractPdfAttachments,
   parseRecipe,
   runBatch,
   FolderWatcher,
@@ -51,6 +54,302 @@ test('invoice XML validates and is attached to the local PDF', async () => {
   const pdfText = new TextDecoder('latin1').decode(result.pdf);
   assert.match(pdfText, /\/Type \/EmbeddedFile/u);
   assert.match(pdfText, /\/Subtype \/application#2Fxml/u);
+});
+
+const baseInvoice = {
+  invoiceNumber: 'INV-1',
+  issueDate: '2026-09-23',
+  currency: 'CAD',
+  supplier: { name: 'A' },
+  customer: { name: 'B' },
+  lines: [{ description: 'Work', quantity: 2, unitPrice: 10, taxRate: 13 }],
+};
+
+test('invoice rejects every missing required field with a typed remedy', async () => {
+  // STCC #4/#5: each invalid-operation branch is reachable and names its cause.
+  const cases = [
+    [{ ...baseInvoice, invoiceNumber: '' }, /invoice number/u],
+    [{ ...baseInvoice, issueDate: '' }, /invoice number/u],
+    [{ ...baseInvoice, currency: '' }, /invoice number/u],
+    [{ ...baseInvoice, lines: [] }, /at least one line item/u],
+  ];
+  for (const [bad, pattern] of cases) {
+    await assert.rejects(
+      () => createInvoicePdf(bad),
+      (error) =>
+        error instanceof PdfEngineError &&
+        error.details.kind === 'invalid-operation' &&
+        error.details.operation === 'invoice' &&
+        pattern.test(error.message),
+    );
+  }
+});
+
+test('invoice rejects adversarial numeric and date input rather than emitting NaN', async () => {
+  // NaN and Infinity previously flowed through to toFixed and produced "NaN"
+  // in a business document. Every one of these must now be a typed error.
+  const bad = [
+    [{ ...baseInvoice, issueDate: '23/09/2026' }, /ISO date/u],
+    [{ ...baseInvoice, dueDate: 'soon' }, /ISO date/u],
+    [{ ...baseInvoice, dueDate: '2026-01-01' }, /cannot precede the issue date/u],
+    [{ ...baseInvoice, currency: 'DOLLARS' }, /ISO 4217/u],
+    [{ ...baseInvoice, currency: 'ca' }, /ISO 4217/u],
+    [
+      { ...baseInvoice, lines: [{ description: 'x', quantity: Number.NaN, unitPrice: 5 }] },
+      /positive number/u,
+    ],
+    [
+      { ...baseInvoice, lines: [{ description: 'x', quantity: 0, unitPrice: 5 }] },
+      /positive number/u,
+    ],
+    [
+      {
+        ...baseInvoice,
+        lines: [{ description: 'x', quantity: Number.POSITIVE_INFINITY, unitPrice: 5 }],
+      },
+      /positive number/u,
+    ],
+    [
+      { ...baseInvoice, lines: [{ description: 'x', quantity: 1, unitPrice: -5 }] },
+      /non-negative/u,
+    ],
+    [
+      { ...baseInvoice, lines: [{ description: 'x', quantity: 1, unitPrice: Number.NaN }] },
+      /non-negative/u,
+    ],
+    [
+      { ...baseInvoice, lines: [{ description: '  ', quantity: 1, unitPrice: 5 }] },
+      /needs a description/u,
+    ],
+    [
+      { ...baseInvoice, lines: [{ description: 'x', quantity: 1, unitPrice: 5, taxRate: 130 }] },
+      /between 0 and 100/u,
+    ],
+    [
+      {
+        ...baseInvoice,
+        lines: [{ description: 'x', quantity: 1, unitPrice: 5, taxRate: Number.NaN }],
+      },
+      /between 0 and 100/u,
+    ],
+  ];
+  for (const [invoice, pattern] of bad) {
+    await assert.rejects(
+      () => createInvoicePdf(invoice),
+      (error) =>
+        error instanceof PdfEngineError &&
+        error.details.kind === 'invalid-operation' &&
+        pattern.test(error.message),
+    );
+  }
+});
+
+test('invoice XML validation fails structurally and names the real cause', () => {
+  // The old validator returned a fixed remedy promising four things it never
+  // checked. Each failure below must now be reported individually.
+  const partial = validateEInvoiceXml(
+    '<?xml version="1.0"?><Invoice><cbc:ID>INV-1</cbc:ID></Invoice>',
+  );
+  assert.equal(partial.valid, false);
+  assert.deepEqual(partial.failures, [
+    'missing document currency',
+    'missing or malformed issue date',
+    'no invoice lines',
+    'missing tax total',
+    'missing monetary total',
+  ]);
+  assert.match(partial.remedy, /missing document currency; /u);
+
+  const garbage = validateEInvoiceXml('not xml at all');
+  assert.equal(garbage.valid, false);
+  assert.deepEqual(garbage.failures, [
+    'missing XML declaration',
+    'missing Invoice root element',
+    'unterminated Invoice element',
+    'missing invoice ID',
+    'missing document currency',
+    'missing or malformed issue date',
+    'no invoice lines',
+    'missing tax total',
+    'missing monetary total',
+  ]);
+  assert.equal(typeof garbage.remedy, 'string');
+  assert.ok(garbage.remedy.length > 0);
+});
+
+test('invoice XML validation rejects a truncated document and a bad date', async () => {
+  const { xml } = await createInvoicePdf(baseInvoice);
+  const truncated = validateEInvoiceXml(xml.replace('</Invoice>', ''));
+  assert.equal(truncated.valid, false);
+  assert.ok(truncated.failures.includes('unterminated Invoice element'));
+  const badDate = validateEInvoiceXml(
+    xml.replace('<cbc:IssueDate>2026-09-23', '<cbc:IssueDate>nope'),
+  );
+  assert.equal(badDate.valid, false);
+  assert.ok(badDate.failures.includes('missing or malformed issue date'));
+});
+
+test('invoice XML escapes every entity and keeps tax rates in the document', async () => {
+  // A description carrying XML metacharacters must not be able to break out of
+  // its element, and the per-line rate used in the totals must be serialized so
+  // a consumer can reconcile the tax rather than trust our arithmetic.
+  const result = await createInvoicePdf({
+    ...baseInvoice,
+    lines: [
+      { description: `A & B <Co> "Ltd" 'x'`, quantity: 1, unitPrice: 100, taxRate: 20 },
+      { description: 'Zero rated', quantity: 1, unitPrice: 50, taxRate: 0 },
+    ],
+  });
+  assert.match(result.xml, /A &amp; B &lt;Co&gt; &quot;Ltd&quot; &apos;x&apos;/u);
+  assert.ok(!result.xml.includes('<Co>'));
+  assert.match(result.xml, /<cbc:Percent>20\.00<\/cbc:Percent>/u);
+  assert.match(result.xml, /<cbc:Percent>0\.00<\/cbc:Percent>/u);
+  assert.equal(result.totals.net, 150);
+  assert.equal(result.totals.tax, 20);
+  assert.equal(result.totals.gross, 170);
+  assert.equal(validateEInvoiceXml(result.xml).valid, true);
+});
+
+test('invoice totals treat a missing tax rate as zero-rated and stay exact', () => {
+  const mixed = invoiceTotals({
+    ...baseInvoice,
+    lines: [
+      { description: 'No rate', quantity: 3, unitPrice: 19.99 },
+      { description: 'Taxed', quantity: 1, unitPrice: 10, taxRate: 5 },
+    ],
+  });
+  assert.equal(mixed.net, 69.97);
+  assert.equal(mixed.tax, 0.5);
+  assert.equal(mixed.gross, 70.47);
+});
+
+test('the shipped UBL fixture validates and its tax total reconciles', async () => {
+  // Fixture round-trip: the file in fixtures/p7-03 must be readable by the
+  // validator, and its TaxTotal must equal the LegalMonetaryTotal difference.
+  const xml = await readFile(
+    new URL('../../../fixtures/p7-03/sample-invoice.xml', import.meta.url),
+    'utf8',
+  );
+  const check = validateEInvoiceXml(xml);
+  assert.equal(check.valid, true, check.remedy);
+
+  const amount = (tag) =>
+    Number(new RegExp(`<cbc:${tag} currencyID="[A-Z]{3}">([\\d.]+)<`, 'u').exec(xml)?.[1]);
+  const net = amount('TaxExclusiveAmount');
+  const tax = amount('TaxAmount');
+  const gross = amount('PayableAmount');
+  assert.equal(Math.round((net + tax) * 100) / 100, gross);
+  assert.equal(net, 2836.5);
+  assert.equal(tax, 368.75);
+  assert.equal(gross, 3205.25);
+
+  // Every InvoiceLine must reference a category declared in TaxTotal.
+  const categories = new Set([...xml.matchAll(/<cbc:ID>([ZS]\d*)<\/cbc:ID>/gu)].map((m) => m[1]));
+  for (const line of [...xml.matchAll(/<cbc:ID>([ZS]\d*)<\/cbc:ID>/gu)]) {
+    assert.ok(categories.has(line[1]), `line references undeclared tax category ${line[1]}`);
+  }
+});
+
+test('invoice totals always reconcile to the cent', () => {
+  // The emitted XML states net, tax and gross separately, so a consumer adding
+  // them up must get the stated gross. Rounding each independently once made
+  // that fail by a cent on fractional-currency invoices.
+  const cases = [
+    [[{ description: 'a', quantity: 3, unitPrice: 19.99, taxRate: 13 }], 59.97, 7.8],
+    [[{ description: 'a', quantity: 1, unitPrice: 2400, taxRate: 13 }], 2400, 312],
+    [[{ description: 'a', quantity: 3, unitPrice: 145.5, taxRate: 13 }], 436.5, 56.74],
+    [[{ description: 'a', quantity: 7, unitPrice: 33.33 }], 233.31, 0],
+    [
+      [
+        { description: 'a', quantity: 1, unitPrice: 0.1, taxRate: 7 },
+        { description: 'b', quantity: 1, unitPrice: 0.2, taxRate: 7 },
+      ],
+      0.3,
+      0.02,
+    ],
+  ];
+  for (const [lines, net, tax] of cases) {
+    const totals = invoiceTotals({ ...baseInvoice, lines });
+    assert.equal(totals.net, net, `net for ${JSON.stringify(lines)}`);
+    assert.equal(totals.tax, tax, `tax for ${JSON.stringify(lines)}`);
+    assert.equal(
+      totals.gross,
+      Math.round((net + tax) * 100) / 100,
+      `gross for ${JSON.stringify(lines)}`,
+    );
+  }
+});
+
+test('the attached XML is recovered from the PDF byte-for-byte', async () => {
+  // This is the only honest PDF -> XML direction: read back the structured
+  // attachment we wrote, not a guess at the rendered page. Round-tripping must
+  // be exact, because a consumer re-deriving totals from altered XML would
+  // produce a different invoice.
+  const created = await createInvoicePdf({
+    ...baseInvoice,
+    lines: [
+      { description: 'A & B <Consulting>', quantity: 3, unitPrice: 145.5, taxRate: 13 },
+      { description: 'Zero rated', quantity: 1, unitPrice: 50, taxRate: 0 },
+    ],
+  });
+  const recovered = await extractInvoiceXmlFromPdf(created.pdf);
+  assert.equal(recovered, created.xml);
+
+  const attachments = await extractPdfAttachments(created.pdf);
+  assert.equal(attachments.length, 1);
+  assert.equal(attachments[0].name, 'invoice.xml');
+  assert.match(attachments[0].mimeType ?? '', /xml/u);
+  assert.equal(new TextDecoder().decode(attachments[0].bytes), created.xml);
+});
+
+test('recovering from a PDF with no attachment is a typed refusal, not a guess', async () => {
+  // A PDF from any other source has no structured data. Reading invoice fields
+  // off the rendered page would be guessing at a business document, so the
+  // engine refuses and says exactly why.
+  const plain = await createTemplatedPdf({
+    template: 'grid',
+    pages: [{ title: 'Not an invoice', lines: ['Invoice 999', 'Total 100.00'] }],
+  });
+  assert.deepEqual(await extractPdfAttachments(plain), []);
+  await assert.rejects(
+    () => extractInvoiceXmlFromPdf(plain),
+    (error) =>
+      error instanceof PdfEngineError &&
+      error.details.kind === 'unsupported-feature' &&
+      /no embedded e-invoice XML/u.test(error.message),
+  );
+});
+
+test('attachment recovery rejects adversarial input with a typed remedy', async () => {
+  // Not a PDF at all.
+  await assert.rejects(
+    () => extractPdfAttachments(new globalThis.TextEncoder().encode('not a pdf at all')),
+    (error) =>
+      error instanceof PdfEngineError &&
+      error.details.kind === 'corrupt-structure' &&
+      error.details.repairable === false &&
+      /could not be opened as a PDF/u.test(error.message),
+  );
+
+  // An attachment that claims to be XML but is not must not pass through as a
+  // valid e-invoice just because it was embedded.
+  const doc = await PDFDocument.create();
+  doc.addPage([200, 200]);
+  await doc.attach(
+    new globalThis.TextEncoder().encode('<Invoice>not really</Invoice>'),
+    'invoice.xml',
+    {
+      mimeType: 'application/xml',
+    },
+  );
+  const bytes = await doc.save({ useObjectStreams: true, addDefaultPage: false });
+  await assert.rejects(
+    () => extractInvoiceXmlFromPdf(bytes),
+    (error) =>
+      error instanceof PdfEngineError &&
+      error.details.kind === 'corrupt-structure' &&
+      /structural validation/u.test(error.message),
+  );
 });
 
 test('scan assembly and document pack preserve page order', async () => {

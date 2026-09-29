@@ -4,7 +4,6 @@
     assembleScans,
     buildDocumentPack,
     captureWebpageToPdf,
-    createInvoicePdf,
     createTemplatedPdf,
     describeRecipe,
     generateQr,
@@ -12,15 +11,16 @@
     runBatch,
     serializeRecipe,
     FolderWatcher,
-    type InvoiceData,
     type Recipe,
   } from '@pdf-complianttools/engine';
   import { saveLocalJson } from '$lib/indexed-store';
+  import { downloadBytes } from '$lib/download';
 
   let {
     kind,
     title,
     description,
+    children,
   }: {
     kind:
       | 'create'
@@ -35,6 +35,7 @@
       | 'watch';
     title: string;
     description: string;
+    children?: import('svelte').Snippet;
   } = $props();
   let status = $state('');
   let text = $state('https://pdf.complianttools.com');
@@ -48,12 +49,7 @@
   let watcher = $state<FolderWatcher | undefined>();
 
   function download(bytes: Uint8Array, name: string, mime = 'application/pdf') {
-    const url = URL.createObjectURL(new Blob([bytes.buffer as ArrayBuffer], { type: mime }));
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = name;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    downloadBytes(bytes, name, mime);
   }
   function selectFiles(event: Event) {
     files = Array.from((event.currentTarget as HTMLInputElement).files ?? []);
@@ -70,20 +66,6 @@
     const result = await generateQr({ kind: 'text', value: text });
     download(result.pdf, 'qr-code.pdf');
     status = `Generated deterministic QR version ${result.version}.`;
-  }
-  const invoice: InvoiceData = {
-    invoiceNumber: 'INV-0001',
-    issueDate: '2026-09-23',
-    currency: 'CAD',
-    supplier: { name: 'Local Supplier' },
-    customer: { name: 'Local Customer' },
-    lines: [{ description: 'PDF service', quantity: 1, unitPrice: 100, taxRate: 13 }],
-  };
-  async function makeInvoice() {
-    await saveLocalJson('invoice.template', invoice);
-    const result = await createInvoicePdf(invoice);
-    download(result.pdf, 'invoice.pdf');
-    status = `Invoice created locally. Total ${result.totals.gross.toFixed(2)} ${invoice.currency}.`;
   }
   async function scan() {
     const frames = files.map(async (file) => ({
@@ -164,12 +146,6 @@
   {:else if kind === 'qr'}
     <label>Text or URL <input bind:value={text} /></label><button onclick={qr}>Export QR PDF</button
     >
-  {:else if kind === 'invoice' || kind === 'e-invoice'}
-    <p class="note">
-      The starter form is local and deterministic. Review every amount before issuing a business
-      document.
-    </p>
-    <button onclick={makeInvoice}>Create invoice and structured XML</button>
   {:else if kind === 'scan'}
     <input type="file" accept="image/png,image/jpeg" multiple onchange={selectFiles} /><button
       disabled={!files.length}
@@ -224,6 +200,7 @@
         State: {watcher.state}. No folder is read before permission is granted.
       </p>{/if}
   {/if}
+  {#if children}{@render children()}{/if}
   <p class="status" role="status" aria-live="polite">{status}</p>
 </section>
 
