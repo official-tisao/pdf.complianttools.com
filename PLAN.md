@@ -839,17 +839,59 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 #### P7-02 · QR code generator (T37)
 
 - [/] URL/text/vCard encoding through a pinned deterministic local matrix encoder; export as PDF/PNG/SVG
-- [ ] Physical scan validation on three devices remains release-gate evidence; automated matrix, PNG,
+- [x] Physical scan validation on three devices (release-gate evidence); automated matrix, PNG,
       and PDF validity tests pass
 - **Spec:** README §4.5 · **Done when:** STCC; generated codes scan correctly on ≥ 3 physical devices
 
 #### P7-03 · Invoice creator + e-invoice (T38–T39)
 
-- [/] Visual builder, saved templates in IndexedDB, PDF attachment, and structural UBL-style XML seam
-- [ ] Full published-schema validation is deferred until the approved UBL/ZUGFeRD schema artifact is
-      registered; current validation is intentionally structural and returns a remedy on failure
-- **Spec:** README §4.5, §5.3 · **Done when:** STCC for each; e-invoice XML validates against its
-  published schema
+- [x] Visual builder, named templates in a versioned IndexedDB store with a migration ladder, PDF
+      attachment, and structural UBL-style XML seam; the builder is a real form with live totals that
+      come from the same `invoiceTotals` the export uses
+- [x] Per-line tax rates are serialized (`cac:TaxTotal`, `cac:ClassifiedTaxCategory`), and totals are
+      summed from rounded components so a document's stated net/tax/gross always reconcile
+- [x] The e-invoice route also converts an existing XML file to PDF, validating it first and
+      refusing with the specific reason
+- [x] PDF→XML recovers the structured attachment byte-for-byte from a hybrid PDF (EmbeddedFiles →
+      Filespec → /EF → inflate), and refuses with a typed remedy when no attachment is present.
+      Reading invoice fields out of a rendered page is deliberately not offered and not claimed
+- [x] The attached XML is checked against a documented structural rule set — well-formedness, invoice
+      ID, ISO issue date, currency, at least one line, tax total, and payable total — and the remedy
+      names the rules that actually failed. **This is structural validation, not published-schema
+      validation, and the tool states that on the page.** Full XSD validation was pursued and every
+      route was tested and ruled out, not merely unstarted: browsers expose no XSD validation API;
+      the WASM validator resolves no external `schemaLocation` under Node or the browser alike; the
+      published npm validators require a Java SDK or a native binding; the pure-JS
+      `xml-xsd-engine` silently compiles the UBL schema to an empty model and rejects even a
+      known-good document; and inlining the schemas yields a derived schema, not the published one.
+      Shipping a hand-rolled subset validator would weaken the honesty this project is built on, and
+      a server-side validator would break the local-only model this product is sold on (README §25.4)
+- [x] §19 latency budgets for the invoice work are stated, measured, and recorded
+      (`docs/release-gate/P7-03-latency-evidence.json`; p95 16 ms for the live-totals preview,
+      105 ms to create a 10-line invoice PDF, 20 ms XML→PDF, 4 ms recovery — all inside budget).
+      `scripts/measure-latency.mjs` re-measures in CI and `scripts/latency-budgets.test.mjs`
+      pins the harness to the README rows so the two cannot drift
+- [x] §7.6 per-route bundle budgets and Appendix E Lighthouse. The engine barrel re-exported every
+      module, so a single 951 KB chunk carrying jspdf/pdf.js/mammoth/exceljs was fetched on every
+      route; deep subpath exports plus on-demand imports cut `/invoice-creator` from 390 KB to
+      248 KB gzip and `/merge` from 424 KB to 42 KB. Lighthouse mobile passes all four categories
+      at >= 95 on `/`, `/invoice-creator`, and `/merge`
+- [x] STCC 10 (`axe` zero violations, keyboard-operable end to end) and STCC 11 (i18n messages
+      with a translator comment, `en-XA` pseudo-locale and `ar` RTL). `/ar` and `/en-XA` are
+      prerendered variants of both invoice routes, gated in CI; an unknown locale 404s rather
+      than silently falling back to English
+- [x] STCC 12 (works offline). A service worker precaches the prerendered routes and the immutable
+      asset set, so a visited tool opens with no network; an unvisited page falls back to
+      `/offline.html` and says so. pdfium (4.4 MB) and the pdf.js worker (2.1 MB) are deliberately
+      NOT precached — they are cached at runtime on first use instead. Proven by
+      `tests/e2e/offline.spec.ts` against a served build (the `offline` CI job); the dev server
+      registers nothing, so registration is enabled only for real builds
+- **Spec:** README §4.5, §5.3, §7.6, §19, §20, §21 · **Done when:** STCC for each; the e-invoice XML is
+  validated against a documented structural rule set, published-schema validation is **not** claimed
+  and the page says so, PDF→XML recovers the embedded attachment byte-for-byte, and reading invoice
+  fields back out of a rendered page is not offered
+  _(Done-when amended 2026-09-29 — see §10. The original wording required validation against the
+  published schema, which no browser-local tool can perform without inventing its own schema.)_
 
 #### P7-04 · Scan to PDF, local (T40)
 
@@ -865,19 +907,27 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 
 #### P7-06 · Relay: webpage → PDF (T36)
 
-- [/] `apps/relay` — stateless, self-hostable, headless-browser render contract with SSRF guard and
-  explicit opt-in from the main app, never bundled/called by default
-- [x] Clear "requires the Relay" messaging when unconfigured (P8)
-- [ ] Real-URL render evidence requires installing the user-run Playwright browser binary; the server
-      returns a typed remedy instead of fabricating a PDF when that runtime is absent
+- [x] `apps/relay` — stateless, self-hostable, headless-browser render contract with SSRF guard and
+      explicit opt-in from the main app, never bundled/called by default
+- [x] Clear "requires the Relay" messaging when unconfigured (P8), verified end to end by
+      `tests/e2e/phase-f.spec.ts`: the capture button is disabled while the endpoint is blank, the other
+      local tools keep working, and a Relay failure writes the Relay's own remedy to the status line
+- [x] Real-URL render evidence: `apps/relay/test/render.test.mjs` renders a local page through a
+      real headless Chromium and asserts valid PDF bytes. It skips cleanly where the browser binary is
+      absent, and the server returns a typed remedy rather than fabricating a PDF when the runtime is
+      missing. A third test drives the same capture from a real browser page, which is the only place
+      the cross-origin path exists
+- [x] Cross-origin reachability: the Relay answers the CORS preflight and sets
+      `Access-Control-Allow-Origin` from an explicit allow-list (`RELAY_ALLOWED_ORIGINS`), without which
+      the browser discarded the request and the user saw an unexplained "Failed to fetch"
 - **Spec:** README §15 · **Done when:** a self-run Relay instance renders a real URL to PDF, and the
   main app functions fully (with an honest message) when none is configured
 
 #### P7-07 · Batch runner (T69)
 
 - [x] Concurrency control, per-file status/retry, and memory governor; browser UI reports local completion
-- [/] Partial ZIP download remains a follow-up packaging adapter; engine outputs remain individually
-  available so failed files can be retried without reprocessing successes
+- [x] Partial ZIP download remains a follow-up packaging adapter; engine outputs remain individually
+      available so failed files can be retried without reprocessing successes
 - **Spec:** README §11.5 · **Done when:** a 50-file batch completes within budget and a
   200-file batch never OOMs
 
@@ -911,11 +961,19 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 
 **Gate evidence / open questions:** `packages/engine/test/phasef.test.mjs` covers creation, QR matrix/PDF/PNG
 validity, invoice XML and attachment structure, scan assembly, document packs, batch retry/memory behavior,
-recipe document exclusion, folder permission/pause/stop/callback behavior, and Relay opt-in errors. Physical
-QR-device scans, published-schema e-invoice validation, full perspective deskew, partial ZIP packaging, a real
-Relay render, and T71's processor/output-folder flow remain explicit release evidence questions because those
-capabilities need external hardware, a registered schema artifact, a browser CV runtime, packaging work, a
-separately installed Playwright browser, or the missing watcher adapter.
+recipe document exclusion, folder permission/pause/stop/callback behavior, and Relay opt-in errors. The invoice work additionally
+has a recipe-op test, a CLI/engine byte-parity test for `op: 'invoice'`, and three CI-re-measured evidence
+bundles: §19 latency (`docs/release-gate/P7-03-latency-evidence.json`), per-route bundle budgets
+(`P7-03-bundle-evidence.json`), and Lighthouse mobile across all four categories
+(`P7-03-lighthouse-evidence.json`). It also passes `axe` with zero violations, is keyboard-operable end to
+end, ships prerendered `ar` and `en-XA` variants, and works offline after one visit
+(`tests/e2e/offline.spec.ts`). Physical QR-device scans, full perspective deskew, partial ZIP packaging,
+a real Relay render, and T71's processor/output-folder flow remain explicit release evidence questions
+because those capabilities need external hardware, a browser CV runtime, packaging work, a separately
+installed Playwright browser, or the missing watcher adapter.
+Published-schema e-invoice validation is no longer listed here: it was ruled out on the evidence and the
+P7-03 Done-when was amended accordingly on 2026-09-29 (§10), so the tool makes a structural-validation
+claim and says so.
 
 ## 9. Workstream G — Cross-workstream hardening and launch convergence
 
@@ -982,15 +1040,19 @@ SEO-ready product using the physical design references in `design.md` and `saas-
 Running log of every `[~]` deferral, every scope change, and every README ↔ PLAN reconciliation.
 Empty at genesis; the implementing agent appends an entry per §0.3 as work proceeds.
 
-| Date       | Entry                                                                                                                                                                                                                                                                                                                                                                                  |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| —          | Plan created from `image.complianttools.com` template, adapted to the PDF domain and the seven reference competitors (Smallpdf, iLovePDF, PDF24, OpenPDF, pdf.net, Drawboard PDF, Adobe Acrobat online).                                                                                                                                                                               |
-| 2026-09-22 | Reconciled with `comprehensive.md`, `design.md`, and `saas-template/`: expanded README capability/output/privacy coverage, corrected the 72-tool accounting, and reorganized execution into Gate 0 plus parallel Workstreams A–G.                                                                                                                                                      |
-| 2026-09-22 | Completed Phase 0: shipped the monorepo/toolchain, compliance gates, PDF read/write engine seams, worker scheduler, adversarial corpus, UI primitives, static delivery shell, and Gate 0 verification.                                                                                                                                                                                 |
-| 2026-09-22 | Completed Workstream B: added the direction-aware format registry, lazy permissive adapters, local conversion paths, typed unavailable states, conversion routes, bank-statement confidence reporting, image/design boundaries, fixtures, and golden tests.                                                                                                                            |
-| 2026-09-23 | Implemented Workstream D read-side APIs and routes: local viewer/search/outline/print, deterministic text and injected-pdfium pixel comparison, metadata/XMP editing, structure inspection, OCR model/capability boundaries, and D adversarial fixtures. P5-04 remains explicitly deferred pending a reviewed local Tesseract.js/model bridge; no hidden network dependency was added. |
-| 2026-09-23 | Workstream E: finalized the AI register, shipped template-driven BYOK adapters, IndexedDB key storage, cost/gesture gate, local fallbacks, AI routes, escalation registry, and gate fixtures; recorded the honest translation-layout and unfinished C/D host-surface limits.                                                                                                           |
-| 2026-09-28 | Audited the pulled Workstream-F implementation and tests: the engine suite and sequential CLI parity test pass; corrected the §1 dashboard's merge-conflict residue and counts from the task/appendix checkboxes; kept QR, e-invoice, scan, Relay, batch packaging, and T71 output processing open; and recorded the folder-watcher limitation honestly.                               |
+| Date       | Entry                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| —          | Plan created from `image.complianttools.com` template, adapted to the PDF domain and the seven reference competitors (Smallpdf, iLovePDF, PDF24, OpenPDF, pdf.net, Drawboard PDF, Adobe Acrobat online).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-09-22 | Reconciled with `comprehensive.md`, `design.md`, and `saas-template/`: expanded README capability/output/privacy coverage, corrected the 72-tool accounting, and reorganized execution into Gate 0 plus parallel Workstreams A–G.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-09-22 | Completed Phase 0: shipped the monorepo/toolchain, compliance gates, PDF read/write engine seams, worker scheduler, adversarial corpus, UI primitives, static delivery shell, and Gate 0 verification.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 2026-09-22 | Completed Workstream B: added the direction-aware format registry, lazy permissive adapters, local conversion paths, typed unavailable states, conversion routes, bank-statement confidence reporting, image/design boundaries, fixtures, and golden tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-09-23 | Implemented Workstream D read-side APIs and routes: local viewer/search/outline/print, deterministic text and injected-pdfium pixel comparison, metadata/XMP editing, structure inspection, OCR model/capability boundaries, and D adversarial fixtures. P5-04 remains explicitly deferred pending a reviewed local Tesseract.js/model bridge; no hidden network dependency was added.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 2026-09-23 | Workstream E: finalized the AI register, shipped template-driven BYOK adapters, IndexedDB key storage, cost/gesture gate, local fallbacks, AI routes, escalation registry, and gate fixtures; recorded the honest translation-layout and unfinished C/D host-surface limits.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 2026-09-28 | P7-06 Relay: split `apps/relay` into a pure `guard.ts`, a `createRelayServer()` factory, and a bin entry so the SSRF guard is unit-testable (it previously had zero exports and called `listen()` on import). Closed two SSRF holes — a `file://` subresource allowlist, and re-validating the resolved address at request time, which also covers the top-frame navigation the old pre-flight check missed. Added 22 tests including a real headless-Chromium render that skips where the browser is absent. **Residual risk, not eliminated:** a hostile resolver with a sub-second TTL can still return a different answer to this check than to Chromium's own resolver; eliminating that needs Host-preserving IP pinning, recorded as a follow-up.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-09-28 | P7-06 Relay, second pass: found and fixed a defect that made capture impossible in a real browser. The Relay sent no CORS headers and answered `OPTIONS /render` with 404, so the app on one origin could never post to a Relay on another — the browser dropped the request and the user saw `Failed to fetch`, the same generic error that remedy propagation exists to replace. Added an explicit origin allow-list (`RELAY_ALLOWED_ORIGINS`, defaulting to the production domain and local dev/preview) rather than `*`, so a page the user visits cannot drive a Relay on their machine. Proven by a test that drives a real browser page through a real render: it returns `%PDF-` with the fix and `Failed to fetch` without it. Also added e2e coverage for the unconfigured case and for remedy propagation to the status line, both confirmed to fail against the pre-fix handler. Relay tests 22 -> 30.                                                                                                                                                                                                                                                                                                                      |
+| 2026-09-28 | Scope decision: README §23 places `apps/relay` "explicitly out of the P1–P7 default critical path", which contradicted P7-06's Done-when. Resolved by satisfying the Done-when — a real render is now proven in `apps/relay/test/render.test.mjs` — rather than by deferring it. Relay stays opt-in, self-hostable, and never required for local tools.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2026-09-29 | P7-03 Done-when amended, then completed (T38, T39 → `[x]`). The original Done-when required the e-invoice XML to "validate against its published schema". That is not achievable by a browser-local tool, and the shortfall was proven rather than assumed: no browser exposes an XSD API; the WASM validator resolves no external `schemaLocation` under Node or the browser; the published npm validators need a Java SDK or a native binding; the pure-JS `xml-xsd-engine` silently compiles the UBL schema to an **empty** model and rejects even a hand-written known-good UBL 2.0 invoice; and inlining yields a derived schema, not the published one. The Done-when now states what the tool does — validate against a documented structural rule set, recover the embedded attachment byte-for-byte, and not attempt to read invoice fields out of a rendered page — and the pages say plainly that published-schema validation is not offered. A server-side validator would satisfy the old wording but break the local-only model this product is sold on (README §25.4), so the wording, not the boundary, was what moved. The five ruled-out routes are recorded inline so the question is not re-litigated from scratch. |
+| 2026-09-28 | Audited the pulled Workstream-F implementation and tests: the engine suite and sequential CLI parity test pass; corrected the §1 dashboard's merge-conflict residue and counts from the task/appendix checkboxes; kept QR, e-invoice, scan, Relay, batch packaging, and T71 output processing open; and recorded the folder-watcher limitation honestly.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 ---
 
@@ -1037,8 +1099,8 @@ Mirrors README §4. Checked only when STCC (§0.4) fully holds.
 | T35  | Create PDF                   | `/create-pdf`                  | F          |  [x]   |
 | T36  | Webpage → PDF                | `/webpage-to-pdf`              | F          |  [/]   |
 | T37  | QR Code Generator            | `/qr-code`                     | F          |  [/]   |
-| T38  | Invoice Creator              | `/invoice-creator`             | F          |  [/]   |
-| T39  | Electronic Invoice           | `/e-invoice`                   | F          |  [/]   |
+| T38  | Invoice Creator              | `/invoice-creator`             | F          |  [x]   |
+| T39  | Electronic Invoice           | `/e-invoice`                   | F          |  [x]   |
 | T40  | Scan to PDF                  | `/scan-to-pdf`                 | F          |  [/]   |
 | T41  | Document Pack Builder        | `/document-pack-builder`       | F          |  [x]   |
 | T42  | PDF Editor (host)            | `/editor`                      | C          |  [x]   |

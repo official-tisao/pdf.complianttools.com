@@ -1,0 +1,184 @@
+{
+  "task": "P7-03",
+  "date": "2026-09-29",
+  "evidenceType": "Lighthouse mobile audit of the production build",
+  "environment": {
+    "lighthouse": "13.5.0",
+    "formFactor": "mobile"
+  },
+  "minimumScore": 95,
+  "results": [
+    {
+      "route": "/",
+      "categories": {
+        "performance": {
+          "score": 100
+        },
+        "accessibility": {
+          "score": 100
+        },
+        "best-practices": {
+          "score": 100
+        },
+        "seo": {
+          "score": 100
+        }
+      },
+      "worstCategory": 100,
+      "status": "PASS",
+      "failing": [
+        {
+          "id": "network-dependency-tree-insight",
+          "title": "Network dependency tree",
+          "score": 0
+        },
+        {
+          "id": "render-blocking-insight",
+          "title": "Render-blocking requests",
+          "score": 0.5,
+          "items": [
+            {
+              "wastedMs": 305
+            },
+            {
+              "wastedMs": 305
+            },
+            {
+              "wastedMs": 155
+            }
+          ]
+        },
+        {
+          "id": "first-contentful-paint",
+          "title": "First Contentful Paint",
+          "score": 0.96,
+          "displayValue": "1.5 s"
+        }
+      ]
+    },
+    {
+      "route": "/invoice-creator",
+      "categories": {
+        "performance": {
+          "score": 98
+        },
+        "accessibility": {
+          "score": 100
+        },
+        "best-practices": {
+          "score": 100
+        },
+        "seo": {
+          "score": 100
+        }
+      },
+      "worstCategory": 98,
+      "status": "PASS",
+      "failing": [
+        {
+          "id": "unused-javascript",
+          "title": "Reduce unused JavaScript",
+          "score": 0,
+          "displayValue": "Est savings of 112 KiB",
+          "items": [
+            {
+              "wastedMs": 175158
+            },
+            {
+              "wastedMs": 28612
+            }
+          ]
+        },
+        {
+          "id": "network-dependency-tree-insight",
+          "title": "Network dependency tree",
+          "score": 0
+        },
+        {
+          "id": "render-blocking-insight",
+          "title": "Render-blocking requests",
+          "score": 0.5,
+          "items": [
+            {
+              "wastedMs": 305
+            },
+            {
+              "wastedMs": 305
+            },
+            {
+              "wastedMs": 155
+            }
+          ]
+        },
+        {
+          "id": "first-contentful-paint",
+          "title": "First Contentful Paint",
+          "score": 0.88,
+          "displayValue": "1.9 s"
+        },
+        {
+          "id": "largest-contentful-paint",
+          "title": "Largest Contentful Paint",
+          "score": 0.98,
+          "displayValue": "1.9 s"
+        }
+      ]
+    },
+    {
+      "route": "/merge",
+      "categories": {
+        "performance": {
+          "score": 99
+        },
+        "accessibility": {
+          "score": 100
+        },
+        "best-practices": {
+          "score": 100
+        },
+        "seo": {
+          "score": 100
+        }
+      },
+      "worstCategory": 99,
+      "status": "PASS",
+      "failing": [
+        {
+          "id": "network-dependency-tree-insight",
+          "title": "Network dependency tree",
+          "score": 0
+        },
+        {
+          "id": "render-blocking-insight",
+          "title": "Render-blocking requests",
+          "score": 0.5,
+          "items": [
+            {
+              "wastedMs": 305
+            },
+            {
+              "wastedMs": 305
+            },
+            {
+              "wastedMs": 305
+            }
+          ]
+        },
+        {
+          "id": "first-contentful-paint",
+          "title": "First Contentful Paint",
+          "score": 0.95,
+          "displayValue": "1.6 s"
+        },
+        {
+          "id": "largest-contentful-paint",
+          "title": "Largest Contentful Paint",
+          "score": 0.99,
+          "displayValue": "1.6 s"
+        }
+      ]
+    }
+  ],
+  "status": "PASS",
+  "notes": "Every category is gated at the Appendix E minimum, not performance alone."
+}

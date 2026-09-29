@@ -10,6 +10,26 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./invoice": {
+      "types": "./dist/invoice.d.ts",
+      "import": "./dist/invoice.js"
+    },
+    "./create": {
+      "types": "./dist/create.d.ts",
+      "import": "./dist/create.js"
+    },
+    "./qr": {
+      "types": "./dist/qr.d.ts",
+      "import": "./dist/qr.js"
+    },
+    "./merge": {
+      "types": "./dist/pdf/merge.d.ts",
+      "import": "./dist/pdf/merge.js"
+    },
+    "./recipe": {
+      "types": "./dist/recipe.d.ts",
+      "import": "./dist/recipe.js"
     }
   },
   "scripts": {

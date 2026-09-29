@@ -1,0 +1,1 @@
+{ "fixture": "qr-vcard", "kind": "vcard", "value": "N:Test;TEL:+123", "export": "pdf/png/svg" }

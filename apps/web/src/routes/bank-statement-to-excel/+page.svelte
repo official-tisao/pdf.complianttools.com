@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SeoTags from '$lib/SeoTags.svelte';
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
 
@@ -38,6 +39,10 @@
     content="Extract ruled or ruleless bank statement rows locally with visible heuristic confidence."
   />
 </svelte:head>
+<SeoTags
+  name="Bank statement to Excel locally"
+  description="Extract ruled or ruleless bank statement rows locally with visible heuristic confidence."
+/>
 
 <section class="tool-page">
   <p class="eyebrow">STRUCTURED EXTRACTION</p>

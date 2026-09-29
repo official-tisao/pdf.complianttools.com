@@ -1,6 +1,7 @@
 <script lang="ts">
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import Button from '@pdf-complianttools/ui/Button.svelte';
+  import SeoTags from '$lib/SeoTags.svelte';
   import {
     OCR_MODELS,
     getOcrCapability,
@@ -53,6 +54,10 @@
     content="OCR capability disclosure and selectable-text fallback for local PDF processing."
   /></svelte:head
 >
+<SeoTags
+  name="OCR PDF locally"
+  description="OCR capability disclosure and selectable-text fallback for local PDF processing."
+/>
 <section class="page">
   <p class="eyebrow">LOCAL OCR</p>
   <h1>OCR PDF</h1>

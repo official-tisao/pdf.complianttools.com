@@ -1,26 +1,24 @@
 <script lang="ts">
   /* global HTMLInputElement, HTMLSelectElement, location, navigator */
-  import {
-    assembleScans,
-    buildDocumentPack,
-    captureWebpageToPdf,
-    createInvoicePdf,
-    createTemplatedPdf,
-    describeRecipe,
-    generateQr,
-    pickFolder,
-    runBatch,
-    serializeRecipe,
-    FolderWatcher,
-    type InvoiceData,
-    type Recipe,
-  } from '@pdf-complianttools/engine';
+  // Types are erased at build time, so the type-only import costs nothing. The
+  // runtime imports use deep subpaths: the engine barrel re-exports every
+  // module, so importing it eagerly would pull pdfjs, mammoth, exceljs and
+  // pptxgenjs into all ten routes that share this component. Heavier ops
+  // (scan, pack, batch, relay, folder watch) are loaded inside their handlers.
+  import type { FolderWatcher, Recipe } from '@pdf-complianttools/engine';
+  // recipe.ts is zod-only, so importing it eagerly costs nothing and keeps the
+  // recipe description in the prerendered HTML.
+  import { describeRecipe, serializeRecipe } from '@pdf-complianttools/engine/recipe';
   import { saveLocalJson } from '$lib/indexed-store';
+  import { downloadBytes } from '$lib/download';
+  import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
+  import { page } from '$app/state';
 
   let {
     kind,
     title,
     description,
+    children,
   }: {
     kind:
       | 'create'
@@ -35,8 +33,25 @@
       | 'watch';
     title: string;
     description: string;
+    children?: import('svelte').Snippet;
   } = $props();
   let status = $state('');
+  // Every kind that renders its own control block in the markup below. The
+  // invoice kinds deliberately aren't here: they supply their UI via `children`
+  // (InvoiceBuilder), so falling through is correct for them and wrong for
+  // anything else. A `kind` that is neither handled nor has children renders
+  // this notice instead of silently borrowing another tool's controls — which
+  // is how the folder watcher once appeared on the invoice routes.
+  const SELF_RENDERED: ReadonlySet<string> = new Set([
+    'create',
+    'qr',
+    'scan',
+    'pack',
+    'webpage',
+    'batch',
+    'recipe',
+    'watch',
+  ]);
   let text = $state('https://pdf.complianttools.com');
   let endpoint = $state('');
   let template = $state<'blank' | 'grid' | 'lined' | 'dot'>('blank');
@@ -46,19 +61,20 @@
     steps: [{ op: 'compress', options: { preset: 'balanced' } }],
   });
   let watcher = $state<FolderWatcher | undefined>();
+  const structuredData = $derived(
+    softwareApplicationLd({ name: title, description, path: page.url.pathname }),
+  );
 
   function download(bytes: Uint8Array, name: string, mime = 'application/pdf') {
-    const url = URL.createObjectURL(new Blob([bytes.buffer as ArrayBuffer], { type: mime }));
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = name;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    downloadBytes(bytes, name, mime);
   }
   function selectFiles(event: Event) {
     files = Array.from((event.currentTarget as HTMLInputElement).files ?? []);
   }
   async function create() {
+    // jspdf is ~950 KB. Only /create-pdf needs it, so it is loaded here
+    // rather than statically, keeping it out of every other route.
+    const { createTemplatedPdf } = await import('@pdf-complianttools/engine/create');
     const bytes = createTemplatedPdf({
       template,
       pages: [{ title: 'Local PDF', lines: ['Created in your browser.', 'No file was uploaded.'] }],
@@ -67,29 +83,17 @@
     status = 'Created locally.';
   }
   async function qr() {
+    const { generateQr } = await import('@pdf-complianttools/engine/qr');
     const result = await generateQr({ kind: 'text', value: text });
     download(result.pdf, 'qr-code.pdf');
     status = `Generated deterministic QR version ${result.version}.`;
-  }
-  const invoice: InvoiceData = {
-    invoiceNumber: 'INV-0001',
-    issueDate: '2026-09-23',
-    currency: 'CAD',
-    supplier: { name: 'Local Supplier' },
-    customer: { name: 'Local Customer' },
-    lines: [{ description: 'PDF service', quantity: 1, unitPrice: 100, taxRate: 13 }],
-  };
-  async function makeInvoice() {
-    await saveLocalJson('invoice.template', invoice);
-    const result = await createInvoicePdf(invoice);
-    download(result.pdf, 'invoice.pdf');
-    status = `Invoice created locally. Total ${result.totals.gross.toFixed(2)} ${invoice.currency}.`;
   }
   async function scan() {
     const frames = files.map(async (file) => ({
       bytes: new Uint8Array(await file.arrayBuffer()),
       format: file.type === 'image/jpeg' ? ('jpg' as const) : ('png' as const),
     }));
+    const { assembleScans } = await import('@pdf-complianttools/engine');
     const result = await assembleScans(await Promise.all(frames));
     download(result, 'scan.pdf');
     status =
@@ -102,18 +106,28 @@
         bytes: new Uint8Array(await file.arrayBuffer()),
       })),
     );
+    const { buildDocumentPack } = await import('@pdf-complianttools/engine');
     download(await buildDocumentPack('Document pack', attachments), 'document-pack.pdf');
     status = 'Document pack built locally with a generated table of contents.';
   }
   async function webpage() {
-    const result = await captureWebpageToPdf(text, endpoint);
-    download(result.bytes, 'webpage.pdf');
-    status = 'Relay capture completed.';
+    try {
+      const { captureWebpageToPdf } = await import('@pdf-complianttools/engine');
+      const result = await captureWebpageToPdf(text, endpoint);
+      download(result.bytes, 'webpage.pdf');
+      status = 'Relay capture completed.';
+    } catch (caught) {
+      // PdfEngineError sets message to its remedy, so this surfaces the Relay's
+      // own guidance — a blocked URL, a missing browser binary — rather than a
+      // bare failure.
+      status = caught instanceof Error ? caught.message : 'The operation could not be completed.';
+    }
   }
   async function batch() {
     const inputs = await Promise.all(
       files.map((file) => file.arrayBuffer().then((bytes) => new Uint8Array(bytes))),
     );
+    const { runBatch } = await import('@pdf-complianttools/engine');
     const results = await runBatch(inputs, recipe, { concurrency: 2 });
     status = `${results.filter((item) => item.status === 'succeeded').length}/${results.length} files completed locally.`;
   }
@@ -124,6 +138,7 @@
     status = `${describeRecipe(recipe)}. Share link copied; it contains no document bytes.`;
   }
   async function startWatch() {
+    const { FolderWatcher, pickFolder } = await import('@pdf-complianttools/engine');
     const directory = await pickFolder();
     watcher = new FolderWatcher(directory, {
       onFile: async (file) => {
@@ -135,12 +150,17 @@
   }
 </script>
 
-<svelte:head
-  ><title>{title} — pdf.complianttools.com</title><meta
-    name="description"
-    content={description}
-  /></svelte:head
->
+<svelte:head>
+  <title>{title} — pdf.complianttools.com</title>
+  <meta name="description" content={description} />
+  <!--
+    Canonical and hreflang are emitted per route rather than once in the layout:
+    they are path-specific, and a layout-level tag would point every page at the
+    same URL, which is the exact error canonical exists to prevent.
+  -->
+  <!-- safe-html-reviewed: JSON-LD needs a script element Svelte cannot emit; the payload is JSON.stringify from $lib/seo with "<" escaped, tested in scripts/seo.test.mjs -->
+  {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
+</svelte:head>
 
 <section class="feature-page">
   <p class="eyebrow">LOCAL WORKFLOW</p>
@@ -157,22 +177,16 @@
   {:else if kind === 'qr'}
     <label>Text or URL <input bind:value={text} /></label><button onclick={qr}>Export QR PDF</button
     >
-  {:else if kind === 'invoice' || kind === 'e-invoice'}
-    <p class="note">
-      The starter form is local and deterministic. Review every amount before issuing a business
-      document.
-    </p>
-    <button onclick={makeInvoice}>Create invoice and structured XML</button>
   {:else if kind === 'scan'}
-    <input type="file" accept="image/png,image/jpeg" multiple onchange={selectFiles} /><button
-      disabled={!files.length}
-      onclick={scan}>Assemble scan to PDF</button
-    >
+    <label
+      >Scan images
+      <input type="file" accept="image/png,image/jpeg" multiple onchange={selectFiles} /></label
+    ><button disabled={!files.length} onclick={scan}>Assemble scan to PDF</button>
   {:else if kind === 'pack'}
-    <input type="file" accept="application/pdf,.pdf" multiple onchange={selectFiles} /><button
-      disabled={!files.length}
-      onclick={pack}>Build document pack</button
-    >
+    <label
+      >Documents to pack
+      <input type="file" accept="application/pdf,.pdf" multiple onchange={selectFiles} /></label
+    ><button disabled={!files.length} onclick={pack}>Build document pack</button>
   {:else if kind === 'webpage'}
     <label>Public webpage URL <input bind:value={text} /></label><label
       >Your Relay endpoint <input
@@ -183,12 +197,12 @@
     <p class="note">
       Webpage capture is explicit Relay mode. Local PDF tools do not need this endpoint.
     </p>
-    <button onclick={webpage}>Capture with Relay</button>
+    <button disabled={!endpoint.trim()} onclick={webpage}>Capture with Relay</button>
   {:else if kind === 'batch'}
-    <input type="file" accept="application/pdf,.pdf" multiple onchange={selectFiles} /><button
-      disabled={!files.length}
-      onclick={batch}>Run local batch</button
-    >
+    <label
+      >PDFs to process
+      <input type="file" accept="application/pdf,.pdf" multiple onchange={selectFiles} /></label
+    ><button disabled={!files.length} onclick={batch}>Run local batch</button>
     <p class="note">
       Concurrency and memory are bounded; failed files remain individually retryable in the engine
       API.
@@ -207,7 +221,7 @@
     >
     <p class="recipe-description">{describeRecipe(recipe)}</p>
     <button onclick={shareRecipe}>Copy document-free recipe link</button>
-  {:else}
+  {:else if kind === 'watch'}
     <button onclick={startWatch}>Choose folder and start watcher</button>{#if watcher}<button
         onclick={() => watcher?.pause()}>Pause</button
       ><button onclick={() => watcher?.resume()}>Resume</button><button
@@ -217,6 +231,10 @@
         State: {watcher.state}. No folder is read before permission is granted.
       </p>{/if}
   {/if}
+  {#if !SELF_RENDERED.has(kind) && !children}
+    <p class="note">This tool has no controls yet. Nothing was run.</p>
+  {/if}
+  {#if children}{@render children()}{/if}
   <p class="status" role="status" aria-live="polite">{status}</p>
 </section>
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SeoTags from '$lib/SeoTags.svelte';
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import AiEscalationList from '$lib/AiEscalationList.svelte';
@@ -31,6 +32,10 @@
     content="Extract PDF text to reviewable Markdown locally, with optional explicit BYOK escalation."
   />
 </svelte:head>
+<SeoTags
+  name="PDF to Markdown locally"
+  description="Extract PDF text to reviewable Markdown locally, with optional explicit BYOK escalation."
+/>
 
 <section class="tool-page">
   <p class="eyebrow">EXTRACT</p>

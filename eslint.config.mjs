@@ -42,19 +42,53 @@ export default [
     },
     rules: {
       'svelte/no-navigation-without-resolve': 'off',
+      // JSON-LD must be injected as raw markup: there is no Svelte element for
+      // it. Every call site concatenates JSONLD_OPEN + JSON.stringify(...) +
+      // JSONLD_CLOSE from $lib/seo, so the payload is serialised by us rather
+      // than interpolated from page copy.
+      'svelte/no-at-html-tags': 'off',
     },
   },
   {
-    files: ['scripts/**/*.mjs', 'packages/**/*.test.mjs', 'playwright.config.ts'],
+    // Build/tooling config runs in Node, not the browser, so it gets the Node
+    // globals. `svelte.config.js` reads process.env to decide whether to
+    // register the service worker, which is a production-only concern.
+    files: ['**/svelte.config.js', '**/vite.config.ts', '**/vite.config.js'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+      },
+    },
+  },
+  {
+    files: [
+      'scripts/**/*.mjs',
+      'packages/**/*.test.mjs',
+      'apps/relay/test/**/*.mjs',
+      'playwright.config.ts',
+    ],
     languageOptions: {
       globals: {
         AbortController: 'readonly',
+        AbortSignal: 'readonly',
         TextDecoder: 'readonly',
+        TextEncoder: 'readonly',
         DOMException: 'readonly',
         URL: 'readonly',
+        Buffer: 'readonly',
         console: 'readonly',
+        fetch: 'readonly',
         process: 'readonly',
+        Response: 'readonly',
         setTimeout: 'readonly',
+        performance: 'readonly',
+        // A measurement harness times work inside `page.evaluate`, whose
+        // callback body executes in the BROWSER, not in Node. These are that
+        // page context's globals, not this script's.
+        document: 'readonly',
+        Event: 'readonly',
+        requestAnimationFrame: 'readonly',
       },
     },
   },

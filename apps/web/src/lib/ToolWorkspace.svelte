@@ -3,7 +3,8 @@
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import OptionPanel, { type OptionField } from '@pdf-complianttools/ui/OptionPanel.svelte';
   import PageGrid from '@pdf-complianttools/ui/PageGrid.svelte';
-  import { inspectWithPdfJs } from '@pdf-complianttools/engine';
+  import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
+  import { page } from '$app/state';
 
   let {
     title,
@@ -25,6 +26,9 @@
   let seeded = false;
   let status = $state('');
   let pageCount = $state(0);
+  const structuredData = $derived(
+    softwareApplicationLd({ name: title, description, path: page.url.pathname }),
+  );
 
   $effect(() => {
     if (!seeded) {
@@ -44,6 +48,9 @@
       return;
     }
     try {
+      // pdf.js is ~500 KB. It is only needed to show a page-count preview, so it
+      // is loaded here rather than statically, and the tool still works without it.
+      const { inspectWithPdfJs } = await import('@pdf-complianttools/engine');
       pageCount = (await inspectWithPdfJs(new Uint8Array(await first.arrayBuffer()))).pageCount;
     } catch (error) {
       pageCount = 0;
@@ -64,6 +71,20 @@
     }
   }
 </script>
+
+<!--
+  This component owns the route's meta description. The site layout
+  deliberately does not supply a default: SvelteKit does not dedupe
+  <svelte:head> by attribute name, so a layout-level default plus a page-level
+  one ships two <meta name="description"> tags, which crawlers treat as a
+  conflict. Every route must therefore emit exactly one, and the routes that
+  previously relied on the layout default (all of these) emit it here.
+-->
+<svelte:head>
+  <meta name="description" content={description} />
+  <!-- safe-html-reviewed: JSON-LD needs a script element Svelte cannot emit; the payload is JSON.stringify from $lib/seo with "<" escaped, tested in scripts/seo.test.mjs -->
+  {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
+</svelte:head>
 
 <section class="tool-page">
   <p class="eyebrow">{eyebrow}</p>

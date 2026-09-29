@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offline — pdf.complianttools.com</title>
+    <meta
+      name="description"
+      content="This page has not been visited before, so it is not available offline."
+    />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --ink: #1c1a17;
+        --muted: #6b6760;
+        --hairline: #1c1a171a;
+      }
+      body {
+        font: 16px/1.6 system-ui, -apple-system, sans-serif;
+        color: var(--ink);
+        display: grid;
+        margin: 0;
+        min-height: 100vh;
+        place-items: center;
+        text-align: center;
+      }
+      main {
+        max-width: 34rem;
+        padding: 2rem;
+      }
+      h1 {
+        font-size: clamp(1.75rem, 5vw, 2.5rem);
+        letter-spacing: -0.03em;
+        margin: 0 0 1rem;
+      }
+      p {
+        color: var(--muted);
+        margin: 0 0 1rem;
+      }
+      a {
+        color: inherit;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --ink: #f2f0ec;
+          --muted: #a8a29a;
+          --hairline: #f2f0ec24;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>You are offline, and this page was not saved.</h1>
+      <p>
+        Tools work entirely in your browser, but each page has to be visited once while you are
+        online before it is stored for offline use. Any tool you have already opened still works
+        with no connection.
+      </p>
+      <p><a href="/">Return to the tool directory</a></p>
+    </main>
+  </body>
+</html>

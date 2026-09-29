@@ -35,7 +35,23 @@ export async function captureWebpageToPdf(
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ url: parsed.toString() }),
     });
-    if (!response.ok) throw new Error(`Relay returned HTTP ${response.status}.`);
+    if (!response.ok) {
+      // The Relay knows which failure it hit — a blocked URL, a missing browser
+      // binary, a render timeout — and each has a different remedy. Prefer its
+      // answer so the message names the actual problem.
+      let cause = `Relay returned HTTP ${response.status}.`;
+      let remedy =
+        'Check that the user-run Relay is reachable and has a compatible headless browser installed.';
+      try {
+        const body = (await response.json()) as { error?: string; remedy?: string };
+        if (typeof body.remedy === 'string' && body.remedy) remedy = body.remedy;
+        if (typeof body.error === 'string' && body.error)
+          cause = `Relay returned HTTP ${response.status} (${body.error}).`;
+      } catch {
+        // Non-JSON error body; keep the generic remedy.
+      }
+      throw new PdfEngineError({ kind: 'relay-failed', endpoint, cause, remedy });
+    }
     const bytes = new Uint8Array(await response.arrayBuffer());
     return { bytes, mimeType: 'application/pdf' };
   } catch (error) {

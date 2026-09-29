@@ -1,6 +1,8 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
+  import { page as route } from '$app/state';
 
   let {
     title,
@@ -28,6 +30,10 @@
   let busy = $state(false);
   let message = $state('');
   let error = $state('');
+  // Derived: these come from $props(), and a caller can change them after mount.
+  const structuredData = $derived(
+    softwareApplicationLd({ name: title, description, path: route.url.pathname }),
+  );
 
   function selectFiles(fileList: FileList | null) {
     files = fileList ? Array.from(fileList) : [];
@@ -69,6 +75,8 @@
 <svelte:head>
   <title>{title} locally</title>
   <meta name="description" content={description} />
+  <!-- safe-html-reviewed: JSON-LD needs a script element Svelte cannot emit; the payload is JSON.stringify from $lib/seo with "<" escaped, tested in scripts/seo.test.mjs -->
+  {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
 </svelte:head>
 
 <section class="tool-page">

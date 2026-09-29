@@ -1,0 +1,8 @@
+P7-02 Physical Scan Plan — Evidence for Gate
+Devices required: 3 physical (phone mobile 1, tablet/scanner app 2, different OS/brand 3)
+Fixture set: fixtures/p7-02/qr-url, qr-text, qr-vcard (each exported PDF/PNG/SVG)
+Criteria: each code scans correctly (data read back matches input) within 3 sec
+Pass/fail per device per fixture: PASS / FAIL / TIMEOUT
+Regeneration trigger: any FAIL → fix packages/engine/src/qr.ts → rebuild fixtures → rescan
+Evidence file: docs/release-gate/P7-02-evidence-bundle.json
+Plan version: 2026-09-28

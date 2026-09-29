@@ -1,5 +1,6 @@
 <script lang="ts">
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import SeoTags from '$lib/SeoTags.svelte';
   import { inspectStructure, type StructureReport } from '@pdf-complianttools/engine';
   let report = $state<StructureReport>();
   let status = $state('Choose a PDF to inspect locally.');
@@ -24,6 +25,10 @@
     content="Inspect PDF pages, version, encryption, fonts, tags, and object counts locally."
   /></svelte:head
 >
+<SeoTags
+  name="PDF structure inspector"
+  description="Inspect PDF pages, version, encryption, fonts, tags, and object counts locally."
+/>
 <section class="page">
   <p class="eyebrow">STRUCTURE</p>
   <h1>Structure inspector</h1>

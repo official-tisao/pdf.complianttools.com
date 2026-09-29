@@ -48,7 +48,143 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e -- tests/e2e/no-network.spec.ts
+      - run: pnpm exec playwright test tests/e2e/no-network.spec.ts
+
+  latency:
+    # The README §19 budgets are only meaningful as a measured, repeated
+    # figure in a real browser, so this job builds the app, serves it, and
+    # records the result as release evidence. Kept out of `pnpm verify` because
+    # it needs a running server and a browser, not just the unit gate.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Serve the built app
+        run: pnpm exec vite preview --host 127.0.0.1 --port 4173 &
+      - name: Measure §19 latency budgets
+        run: pnpm verify:latency
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p7-03-latency-evidence
+          path: docs/release-gate/P7-03-latency-evidence.json
+
+  bundle:
+    # Per-route bundle budget (README §7.6). Measures the bytes a browser
+    # actually fetches from the production build, not the modulepreload graph,
+    # so a route is only billed for what a user downloads.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm verify:bundle
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p7-03-bundle-evidence
+          path: docs/release-gate/P7-03-bundle-evidence.json
+
+  lighthouse:
+    # Appendix E: Lighthouse mobile >= 95. Every category is gated, not just
+    # performance, because a route can pass on speed while failing accessibility
+    # or SEO outright.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm verify:lighthouse
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p7-03-lighthouse-evidence
+          path: docs/release-gate/P7-03-lighthouse-evidence.json
+
+  accessibility:
+    # STCC #10 (`axe` zero violations, keyboard operability) and STCC #11 (the
+    # prerendered `ar` and `en-XA` locale variants). The audit runs against the
+    # hydrated page, because axe can only see the DOM the browser built, not the
+    # prerendered shell.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test tests/e2e/accessibility.spec.ts
+
+  i18n:
+    # STCC #11: the `ar` and `en-XA` variants are prerendered, so a build that
+    # breaks a translated route or introduces overflow fails here rather than in
+    # production. The catalogue contract itself is covered by the unit suite.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test tests/e2e/accessibility.spec.ts
+
+  offline:
+    # STCC #12: the service worker only exists in a production build, so this
+    # job builds and previews rather than using the dev server the other e2e
+    # jobs rely on.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test tests/e2e/offline.spec.ts
+        env:
+          OFFLINE: '1'
 
   credential-leak:
     runs-on: ubuntu-latest

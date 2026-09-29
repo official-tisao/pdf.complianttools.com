@@ -320,15 +320,15 @@ no key, offline-capable · `◐` = local primary path with an optional, explicit
 
 ### 4.5 Create
 
-| #   | Tool                                | Route                    | Mode  | Notes                                                                                                                                     |
-| --- | ----------------------------------- | ------------------------ | ----- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| T35 | Blank / Templated PDF Creator       | `/create-pdf`            | Local | Create from supplied content/files or a blank page; page size/orientation presets, grid/lined/dot templates, and reusable local templates |
-| T36 | Webpage (URL) → PDF                 | `/webpage-to-pdf`        | Relay | Requires the user-run Relay (§15); never a hosted capture service                                                                         |
-| T37 | QR Code Generator                   | `/qr-code`               | Local | Encodes URL/text/vCard; export as PDF, PNG, or SVG                                                                                        |
-| T38 | Invoice Creator                     | `/invoice-creator`       | Local | Visual builder + line items, tax, totals, customer/vendor fields, and saved templates in IndexedDB                                        |
-| T39 | Electronic Invoice (e-invoice)      | `/e-invoice`             | Local | Create PDF invoices, convert PDF invoices to structured XML, and convert XML e-invoices to PDF; UBL/ZUGFeRD-style embedding per §5.3      |
-| T40 | Scan to PDF                         | `/scan-to-pdf`           | Local | Camera capture via `getUserMedia`, perspective deskew, multi-page assembly                                                                |
-| T41 | Job-Application / Form-Pack Builder | `/document-pack-builder` | Local | Merge a cover letter + resume + attachments into one ordered PDF with a generated table of contents                                       |
+| #   | Tool                                | Route                    | Mode  | Notes                                                                                                                                                                                       |
+| --- | ----------------------------------- | ------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T35 | Blank / Templated PDF Creator       | `/create-pdf`            | Local | Create from supplied content/files or a blank page; page size/orientation presets, grid/lined/dot templates, and reusable local templates                                                   |
+| T36 | Webpage (URL) → PDF                 | `/webpage-to-pdf`        | Relay | Requires the user-run Relay (§15); never a hosted capture service                                                                                                                           |
+| T37 | QR Code Generator                   | `/qr-code`               | Local | Encodes URL/text/vCard; export as PDF, PNG, or SVG                                                                                                                                          |
+| T38 | Invoice Creator                     | `/invoice-creator`       | Local | Visual builder + line items, tax, totals, customer/vendor fields, and named templates in IndexedDB                                                                                          |
+| T39 | Electronic Invoice (e-invoice)      | `/e-invoice`             | Local | Create PDF invoices with a UBL-style XML attachment, convert XML e-invoices to PDF, and recover that exact XML from a hybrid PDF; reading fields back out of a rendered page is not offered |
+| T40 | Scan to PDF                         | `/scan-to-pdf`           | Local | Camera capture via `getUserMedia`, perspective deskew, multi-page assembly                                                                                                                  |
+| T41 | Job-Application / Form-Pack Builder | `/document-pack-builder` | Local | Merge a cover letter + resume + attachments into one ordered PDF with a generated table of contents                                                                                         |
 
 ### 4.6 Edit & annotate
 
@@ -465,14 +465,14 @@ the competitive landscape but are not claims made by this product and can change
 
 ### 5.3 Text & markup
 
-| Format                             | → PDF | PDF → | Notes                                                      |
-| ---------------------------------- | :---: | :---: | ---------------------------------------------------------- |
-| Plain text (TXT)                   |   ●   |   ●   |                                                            |
-| Markdown (CommonMark + tables/GFM) |   ●   |   ●   | Round-trips headings, lists, tables, code blocks           |
-| HTML / CSS (pasted or file)        |   ●   |   ●   | Live-URL capture needs the Relay (§15)                     |
-| EPUB                               |   ●   |   ●   |                                                            |
-| CSV                                |   ●   |   ●   |                                                            |
-| XML e-invoice (UBL/ZUGFeRD-style)  |   ●   |   ●   | Embedded as a compliant attachment, not just appended text |
+| Format                             | → PDF | PDF → | Notes                                                                                                                                                                                                                                                                                                                                                                           |
+| ---------------------------------- | :---: | :---: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plain text (TXT)                   |   ●   |   ●   |                                                                                                                                                                                                                                                                                                                                                                                 |
+| Markdown (CommonMark + tables/GFM) |   ●   |   ●   | Round-trips headings, lists, tables, code blocks                                                                                                                                                                                                                                                                                                                                |
+| HTML / CSS (pasted or file)        |   ●   |   ●   | Live-URL capture needs the Relay (§15)                                                                                                                                                                                                                                                                                                                                          |
+| EPUB                               |   ●   |   ●   |                                                                                                                                                                                                                                                                                                                                                                                 |
+| CSV                                |   ●   |   ●   |                                                                                                                                                                                                                                                                                                                                                                                 |
+| XML e-invoice (UBL/ZUGFeRD-style)  |   ●   |   ●   | Embedded as an attachment, not appended text; PDF → XML recovers that attachment exactly, and does not read fields off a rendered page. Validated against structural rules, **not** the published UBL/ZUGFeRD XSD — no browser-local tool can validate against a published schema without inventing its own, so the tool states this on the page rather than implying otherwise |
 
 ### 5.4 Raster & vector images
 
@@ -890,6 +890,10 @@ file when they open a shared recipe.
 | Compress a 20 MB PDF (balanced preset)        | ≤ 4 s               |
 | OCR one page (English)                        | ≤ 2 s               |
 | Page-thumbnail grid scroll, 500-page document | 60 fps, virtualized |
+| Invoice field edit → live totals update       | ≤ 150 ms            |
+| Create an invoice PDF (10 line items)         | ≤ 500 ms            |
+| Convert e-invoice XML to PDF                  | ≤ 500 ms            |
+| Recover XML from a hybrid PDF attachment      | ≤ 500 ms            |
 
 ---
 

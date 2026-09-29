@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SeoTags from '$lib/SeoTags.svelte';
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import { getAvailableFormats, getFormatRegistry } from '@pdf-complianttools/engine';
@@ -64,6 +65,10 @@
     content="Convert supported office, text, markup, archive, and image files to PDF locally in your browser."
   />
 </svelte:head>
+<SeoTags
+  name="Convert files to PDF locally"
+  description="Convert supported office, text, markup, archive, and image files to PDF locally in your browser."
+/>
 
 <section class="tool-page">
   <p class="eyebrow">CONVERT</p>

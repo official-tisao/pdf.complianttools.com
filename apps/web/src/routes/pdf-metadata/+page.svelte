@@ -1,6 +1,7 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import SeoTags from '$lib/SeoTags.svelte';
   import { readPdfMetadata, setPdfMetadata, type PdfMetadata } from '@pdf-complianttools/engine';
 
   let file = $state<File>();
@@ -61,6 +62,10 @@
     content="Read and edit PDF document information locally without uploading the file."
   /></svelte:head
 >
+<SeoTags
+  name="PDF metadata editor"
+  description="Read and edit PDF document information locally without uploading the file."
+/>
 <section class="page">
   <p class="eyebrow">DOCUMENT INFO</p>
   <h1>Metadata editor</h1>
