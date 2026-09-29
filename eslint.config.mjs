@@ -42,6 +42,11 @@ export default [
     },
     rules: {
       'svelte/no-navigation-without-resolve': 'off',
+      // JSON-LD must be injected as raw markup: there is no Svelte element for
+      // it. Every call site concatenates JSONLD_OPEN + JSON.stringify(...) +
+      // JSONLD_CLOSE from $lib/seo, so the payload is serialised by us rather
+      // than interpolated from page copy.
+      'svelte/no-at-html-tags': 'off',
     },
   },
   {
@@ -54,7 +59,9 @@ export default [
     languageOptions: {
       globals: {
         AbortController: 'readonly',
+        AbortSignal: 'readonly',
         TextDecoder: 'readonly',
+        TextEncoder: 'readonly',
         DOMException: 'readonly',
         URL: 'readonly',
         Buffer: 'readonly',
@@ -63,6 +70,13 @@ export default [
         process: 'readonly',
         Response: 'readonly',
         setTimeout: 'readonly',
+        performance: 'readonly',
+        // A measurement harness times work inside `page.evaluate`, whose
+        // callback body executes in the BROWSER, not in Node. These are that
+        // page context's globals, not this script's.
+        document: 'readonly',
+        Event: 'readonly',
+        requestAnimationFrame: 'readonly',
       },
     },
   },

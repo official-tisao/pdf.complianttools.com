@@ -1,0 +1,59 @@
+{
+  "task": "P7-03",
+  "date": "2026-09-29",
+  "evidenceType": "repeat measurement, p95 against README section 19 budgets",
+  "environment": {
+    "browser": "chromium (Playwright)",
+    "baseUrl": "http://127.0.0.1:4187",
+    "repeats": 20,
+    "warmup": 5,
+    "node": "v22.23.2",
+    "note": "Live-totals and create-invoice rows are measured in the browser; the XML->PDF and recovery rows run against the same engine in Node."
+  },
+  "results": [
+    {
+      "interaction": "Invoice field edit -> live totals update",
+      "budgetMs": 150,
+      "samples": 20,
+      "minMs": 1,
+      "medianMs": 7.7,
+      "p95Ms": 16.1,
+      "maxMs": 16.1,
+      "status": "PASS"
+    },
+    {
+      "interaction": "Create an invoice PDF (10 line items)",
+      "budgetMs": 500,
+      "samples": 20,
+      "minMs": 89,
+      "medianMs": 99,
+      "p95Ms": 105,
+      "maxMs": 105,
+      "status": "PASS"
+    },
+    {
+      "interaction": "Convert e-invoice XML to PDF",
+      "budgetMs": 500,
+      "samples": 20,
+      "minMs": 8.43,
+      "medianMs": 9.31,
+      "p95Ms": 19.66,
+      "maxMs": 19.66,
+      "status": "PASS",
+      "runtime": "node (same engine as the browser bundle)"
+    },
+    {
+      "interaction": "Recover XML from a hybrid PDF attachment",
+      "budgetMs": 500,
+      "samples": 20,
+      "minMs": 1.2,
+      "medianMs": 1.7,
+      "p95Ms": 4.29,
+      "maxMs": 4.29,
+      "status": "PASS",
+      "runtime": "node (same engine as the browser bundle)"
+    }
+  ],
+  "status": "PASS",
+  "notes": "Budgets are the README section 19 invoice rows. p95 is the gate, so one slow outlier does not fail a run but a real regression does."
+}

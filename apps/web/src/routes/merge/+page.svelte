@@ -1,10 +1,13 @@
 <script lang="ts">
   import ToolWorkspace from '$lib/ToolWorkspace.svelte';
-  import { mergePdfBuffers } from '@pdf-complianttools/engine';
   import { fieldsFor } from '$lib/tool-options';
 
   async function merge(files: File[], values: Record<string, string | number | boolean>) {
     void values;
+    // pdf-lib is ~170 KB gzip. The merge route is usable before a file is even
+    // chosen, so the writer is loaded on the first merge rather than on page
+    // load. This is the same treatment the invoice routes use.
+    const { mergePdfBuffers } = await import('@pdf-complianttools/engine/merge');
     const result = await mergePdfBuffers(
       await Promise.all(files.map(async (file) => new Uint8Array(await file.arrayBuffer()))),
     );
@@ -22,12 +25,7 @@
   }
 </script>
 
-<svelte:head
-  ><title>Merge PDF locally</title><meta
-    name="description"
-    content="Combine PDF files locally in your browser."
-  /></svelte:head
->
+<svelte:head><title>Merge PDF locally</title></svelte:head>
 <ToolWorkspace
   title="Merge PDF"
   eyebrow="ORGANIZE"

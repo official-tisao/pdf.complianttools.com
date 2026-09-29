@@ -864,10 +864,22 @@ start in parallel with A–E; only their shared engine calls and recipe contract
       under Node or the browser alike; the published npm validators require a Java SDK or a native
       binding; and inlining the schemas yields a derived schema, not the published one. Shipping a
       hand-rolled subset validator would weaken the honesty this project is built on
-- [ ] STCC items 6–12 (prerendered-page contract beyond the existing shell, SEO checklist, latency
-      budget measurement, `axe`, and i18n) remain open and are tracked with the rest of Workstream F
-- **Spec:** README §4.5, §5.3 · **Done when:** STCC for each; e-invoice XML validates against its
-  published schema
+- [x] §19 latency budgets for the invoice work are stated, measured, and recorded
+      (`docs/release-gate/P7-03-latency-evidence.json`; p95 16 ms for the live-totals preview,
+      105 ms to create a 10-line invoice PDF, 20 ms XML→PDF, 4 ms recovery — all inside budget).
+      `scripts/measure-latency.mjs` re-measures in CI and `scripts/latency-budgets.test.mjs`
+      pins the harness to the README rows so the two cannot drift
+- [x] §7.6 per-route bundle budgets and Appendix E Lighthouse. The engine barrel re-exported every
+      module, so a single 951 KB chunk carrying jspdf/pdf.js/mammoth/exceljs was fetched on every
+      route; deep subpath exports plus on-demand imports cut `/invoice-creator` from 390 KB to
+      248 KB gzip and `/merge` from 424 KB to 42 KB. Lighthouse mobile passes all four categories
+      at >= 95 on `/`, `/invoice-creator`, and `/merge`
+- [ ] STCC items 10, 11, 12 remain open: a full `axe` run, i18n with translator comments and
+      `en-XA`/`ar` checks, and the offline story (no service worker). STCC 6 and 7 are met for
+      these two routes: canonical, hreflang, JSON-LD and FAQ are in the served HTML for all 71
+      prerendered pages, and a drag/paste layer sits on the file inputs
+- **Spec:** README §4.5, §5.3, §7.6, §19 · **Done when:** STCC for each; e-invoice XML validates
+  against its published schema
 
 #### P7-04 · Scan to PDF, local (T40)
 
@@ -935,10 +947,12 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 
 **Gate evidence / open questions:** `packages/engine/test/phasef.test.mjs` covers creation, QR matrix/PDF/PNG
 validity, invoice XML and attachment structure, scan assembly, document packs, batch retry/memory behavior,
-recipe document exclusion, folder permission/pause/stop, and Relay opt-in errors. Physical QR-device scans,
-published-schema e-invoice validation, full perspective deskew, partial ZIP packaging, and a real Relay render
-remain explicit release evidence questions because those capabilities need external hardware, a registered
-schema artifact, a browser CV runtime, packaging work, or a separately installed Playwright browser.
+recipe document exclusion, folder permission/pause/stop, and Relay opt-in errors. The invoice work additionally
+has a recipe-op test, a CLI/engine byte-parity test for `op: 'invoice'`, and measured §19 latency evidence
+(`docs/release-gate/P7-03-latency-evidence.json`, re-measured by the `latency` CI job). Physical QR-device
+scans, published-schema e-invoice validation, full perspective deskew, partial ZIP packaging, and a real
+Relay render remain explicit release evidence questions because those capabilities need external hardware, a
+registered schema artifact, a browser CV runtime, packaging work, or a separately installed Playwright browser.
 
 ## 9. Workstream G — Cross-workstream hardening and launch convergence
 

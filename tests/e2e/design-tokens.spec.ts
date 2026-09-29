@@ -17,5 +17,7 @@ test('design tokens render in light and dark themes without a blank shell', asyn
   expect(lightCanvas).not.toBe('');
   expect(darkCanvas).not.toBe('');
   expect(darkCanvas).not.toBe(lightCanvas);
-  await expect(page.getByRole('button', { name: /Start with Merge PDF/i })).toBeVisible();
+  // A link, not a button: the hero CTAs navigate, and an <a> inside a <button>
+  // is invalid HTML with no accessible role.
+  await expect(page.getByRole('link', { name: /Start with Merge PDF/i })).toBeVisible();
 });

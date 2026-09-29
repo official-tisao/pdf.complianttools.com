@@ -1,0 +1,48 @@
+{
+  "task": "P7-03",
+  "date": "2026-09-29",
+  "evidenceType": "gzip bytes actually fetched from the production build",
+  "environment": {
+    "node": "v22.23.2",
+    "server": "vite preview (production build)"
+  },
+  "results": [
+    {
+      "route": "/",
+      "files": 13,
+      "gzippedKb": 38,
+      "budgetKb": 60,
+      "status": "PASS"
+    },
+    {
+      "route": "/invoice-creator",
+      "files": 18,
+      "gzippedKb": 248,
+      "budgetKb": 275,
+      "status": "PASS"
+    },
+    {
+      "route": "/e-invoice",
+      "files": 17,
+      "gzippedKb": 250,
+      "budgetKb": 275,
+      "status": "PASS"
+    },
+    {
+      "route": "/merge",
+      "files": 16,
+      "gzippedKb": 42,
+      "budgetKb": 470,
+      "status": "PASS"
+    },
+    {
+      "route": "/view-pdf",
+      "files": 24,
+      "gzippedKb": 567,
+      "budgetKb": 625,
+      "status": "PASS"
+    }
+  ],
+  "status": "PASS",
+  "notes": "Measured, not estimated: the figure is what the browser requested. Modulepreload hints that the route graph can reach are excluded unless actually fetched."
+}

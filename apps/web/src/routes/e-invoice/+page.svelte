@@ -1,5 +1,4 @@
 <script lang="ts">
-  /* global HTMLInputElement */
   /**
    * T39. Three directions, all local: build a PDF with a UBL-style XML
    * attachment, render an existing XML file to PDF, and recover the attached
@@ -8,22 +7,48 @@
    */
   import FeaturePage from '$lib/FeaturePage.svelte';
   import InvoiceBuilder from '$lib/InvoiceBuilder.svelte';
+  import FileDropZone from '$lib/FileDropZone.svelte';
+  import FaqSection from '$lib/FaqSection.svelte';
   import { downloadBytes } from '$lib/download';
+  // Deep import for the light invoice helpers (pdf-lib only). `convertToPdf`
+  // is deliberately NOT imported here: it lives in the conversion module, which
+  // pulls pdfjs/mammoth/exceljs. It is loaded on demand inside the handler, so
+  // a user who only builds an invoice never downloads it.
   import {
-    convertToPdf,
     extractInvoiceXmlFromPdf,
     validateEInvoiceXml,
-  } from '@pdf-complianttools/engine';
+  } from '@pdf-complianttools/engine/invoice';
 
-  let fileInput = $state<HTMLInputElement | undefined>();
   let status = $state('');
+
+  const faq = [
+    {
+      question: 'Is my invoice sent to a server?',
+      answer:
+        'No. Every conversion here runs in this browser tab. The AI and webpage-capture tools are the only parts of this site that can contact a network endpoint, and each says so before it does.',
+    },
+    {
+      question: 'What does "structural validation" actually check?',
+      answer:
+        'That the document is well-formed and carries the elements a consumer needs: an XML declaration, an invoice ID, an ISO issue date, a currency, at least one line, a tax total, and a payable total. It does not validate against the published OASIS UBL schema, which a browser-only tool cannot do reliably.',
+    },
+    {
+      question: 'Can I get my invoice data back out of the PDF?',
+      answer:
+        'Yes, if the PDF carries a structured attachment — the XML this tool embeds, recovered exactly as it was written. A PDF from any other source has no structured data, and the tool will tell you that rather than guess at the rendered page.',
+    },
+    {
+      question: 'Will this satisfy a tax authority?',
+      answer:
+        'That depends on your jurisdiction and is not something this tool can answer. It produces a readable PDF and a structured XML copy. Whether either satisfies a filing or compliance requirement is for you and your accountant to confirm.',
+    },
+  ];
 
   function download(bytes: Uint8Array, name: string, mime = 'application/pdf') {
     downloadBytes(bytes, name, mime);
   }
 
-  async function onPick(event: Event) {
-    const file = (event.currentTarget as HTMLInputElement).files?.[0];
+  async function onPick([file]: File[]) {
     if (!file) return;
     try {
       const xml = new TextDecoder().decode(new Uint8Array(await file.arrayBuffer()));
@@ -32,6 +57,7 @@
         status = `${check.remedy ?? 'The file is not a usable e-invoice.'} Nothing was converted.`;
         return;
       }
+      const { convertToPdf } = await import('@pdf-complianttools/engine');
       const result = await convertToPdf('xml-einvoice', new TextEncoder().encode(xml), {
         fileName: file.name,
       });
@@ -45,8 +71,7 @@
   let recoverStatus = $state('');
   let recovered = $state<string | undefined>();
 
-  async function onPickPdf(event: Event) {
-    const file = (event.currentTarget as HTMLInputElement).files?.[0];
+  async function onPickPdf([file]: File[]) {
     if (!file) return;
     recovered = undefined;
     try {
@@ -77,12 +102,11 @@
       Drop an e-invoice XML file to render its fields as a PDF. The file is read in this tab and
       never uploaded.
     </p>
-    <input
-      type="file"
+    <FileDropZone
+      label="E-invoice XML file"
       accept=".xml,application/xml,text/xml"
-      bind:this={fileInput}
-      onchange={onPick}
-      aria-describedby="xml-help"
+      onfiles={onPick}
+      describedBy="xml-help"
     />
     <p id="xml-help" class="note">
       The XML is checked against local structural rules first. A file that fails is reported with
@@ -97,11 +121,11 @@
       Drop a PDF that carries an embedded e-invoice XML file to get that exact XML back. The file is
       read in this tab and never uploaded.
     </p>
-    <input
-      type="file"
+    <FileDropZone
+      label="Hybrid PDF with an embedded invoice"
       accept=".pdf,application/pdf"
-      onchange={onPickPdf}
-      aria-describedby="recover-help"
+      onfiles={onPickPdf}
+      describedBy="recover-help"
     />
     <p id="recover-help" class="note">
       This reads the structured attachment only. It will not guess invoice fields out of the
@@ -116,6 +140,16 @@
       </details>
     {/if}
   </section>
+
+  <noscript>
+    <p>
+      These conversions run entirely in your browser and need JavaScript enabled. The file pickers
+      above are visible without it, but they cannot read a file or produce a PDF. Nothing you choose
+      is uploaded.
+    </p>
+  </noscript>
+
+  <FaqSection entries={faq} />
 </FeaturePage>
 
 <style>

@@ -1,6 +1,9 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
+  // Aliased: this component already uses `page` for the target PDF page number.
+  import { page as route } from '$app/state';
   import type { AnnotationKind } from '@pdf-complianttools/engine';
 
   type PhaseCOperation =
@@ -44,6 +47,10 @@
   let recipients = $state('recipient@example.test');
   let threshold = $state(32);
   let page = $state(1);
+  // Derived: these come from $props(), and a caller can change them after mount.
+  const structuredData = $derived(
+    softwareApplicationLd({ name: title, description, path: route.url.pathname }),
+  );
 
   function selectFiles(list: FileList | null) {
     files = list ? Array.from(list) : [];
@@ -242,6 +249,8 @@
 <svelte:head>
   <title>{title} locally</title>
   <meta name="description" content={description} />
+  <!-- safe-html-reviewed: JSON-LD needs a script element Svelte cannot emit; the payload is JSON.stringify from $lib/seo with "<" escaped, tested in scripts/seo.test.mjs -->
+  {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
 </svelte:head>
 
 <section class="tool-page">

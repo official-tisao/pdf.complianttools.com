@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
+  import SeoTags from '$lib/SeoTags.svelte';
   import {
     ALL_AI_CAPABILITIES,
     createIndexedDbKeyStore,
@@ -93,6 +94,12 @@
     content="Configure an explicit, user-owned AI connection without sending keys to this app."
   />
 </svelte:head>
+
+<SeoTags
+  name="Connect your AI"
+  description="Configure an explicit, user-owned AI connection without sending keys to this app."
+  category="UtilitiesApplication"
+/>
 
 <section class="page">
   <p class="eyebrow">BYOK · EXPLICIT ONLY</p>

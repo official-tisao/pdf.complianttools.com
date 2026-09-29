@@ -890,6 +890,10 @@ file when they open a shared recipe.
 | Compress a 20 MB PDF (balanced preset)        | ≤ 4 s               |
 | OCR one page (English)                        | ≤ 2 s               |
 | Page-thumbnail grid scroll, 500-page document | 60 fps, virtualized |
+| Invoice field edit → live totals update       | ≤ 150 ms            |
+| Create an invoice PDF (10 line items)         | ≤ 500 ms            |
+| Convert e-invoice XML to PDF                  | ≤ 500 ms            |
+| Recover XML from a hybrid PDF attachment      | ≤ 500 ms            |
 
 ---
 

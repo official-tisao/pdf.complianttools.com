@@ -1,4 +1,16 @@
-import { expect, test } from '@playwright/test';
+import assert from 'node:assert/strict';
+import { expect, test, type Page } from '@playwright/test';
+
+/**
+ * The invoice routes are prerendered, so their static markup accepts input
+ * before hydration and then discards it. Wait for the builder to report itself
+ * live rather than for elements to merely exist, or an assertion races the
+ * client-side mount and observes the pre-hydration state.
+ */
+const openBuilder = async (page: Page, path: string) => {
+  await page.goto(path);
+  await expect(page.locator('.builder[data-hydrated="true"]')).toBeVisible();
+};
 
 const phaseFRoutes = [
   ['/create-pdf', 'Create a PDF'],
@@ -81,6 +93,138 @@ test('an unreachable Relay still produces an actionable message', async ({ page 
   );
 });
 
+test('a tool route never renders another tool\'s controls', async ({ page }) => {
+  // Regression guard. FeaturePage once fell through to a catch-all `{:else}`,
+  // so /invoice-creator and /e-invoice served the folder watcher — controls
+  // those tools were never built for. Each route is checked only against
+  // controls that belong to a DIFFERENT tool, since every tool legitimately
+  // renders its own.
+  const OWNED: Readonly<Record<string, RegExp>> = {
+    '/invoice-creator': /Invoice number/i,
+    '/e-invoice': /Invoice number/i,
+    '/merge': /Merge PDF/i,
+    '/qr-code': /Text or URL/i,
+    '/watch': /Choose folder and start watcher/i,
+  };
+  const FOREIGN: ReadonlyArray<readonly [string, RegExp]> = [
+    ['folder watcher', /Choose folder and start watcher/i],
+    // T35's own label, distinct from the invoice builder's "Templates" fieldset.
+    ['create-pdf template picker', /Template Grid/i],
+    ['Relay endpoint', /Your Relay endpoint/i],
+  ];
+  for (const [route, own] of Object.entries(OWNED)) {
+    await page.goto(route);
+    await expect(page.locator('body').filter({ hasText: own })).toHaveCount(1);
+    for (const [name, pattern] of FOREIGN) {
+      if (pattern.test(own.source)) continue; // its own control, not a foreign one
+      await expect(
+        page.locator('body').filter({ hasText: pattern }),
+        `${route} must not show ${name} controls`,
+      ).toHaveCount(0);
+    }
+  }
+});
+
+test('every invoice file input has an accessible name', async ({ page }) => {
+  // A bare <input type="file"> with only aria-describedby has no accessible
+  // name — the surrounding <p> is not a label — so it is unreachable by name
+  // in assistive tech and fails the axe `label` rule.
+  await openBuilder(page, '/e-invoice');
+  const fileInputs = page.locator('.reverse input[type="file"]');
+  await expect(fileInputs).toHaveCount(2);
+  const count = await fileInputs.count();
+  for (let index = 0; index < count; index += 1) {
+    const input = fileInputs.nth(index);
+    await expect(input).toHaveAccessibleName(/.+/u);
+  }
+  // A keyboard user must be able to reach and activate both by tabbing.
+  await fileInputs.first().focus();
+  await expect(fileInputs.first()).toBeFocused();
+});
+
+test('the invoice tools are reachable from the site chrome', async ({ page }) => {
+  // A tool nobody can navigate to is not shipped. The header nav is hidden
+  // below 768px, so the landing-page directory is what mobile users get.
+  await page.goto('/');
+  await expect(page.getByRole('link', { name: 'Invoices', exact: true })).toHaveAttribute(
+    'href',
+    '/invoice-creator',
+  );
+  await expect(page.getByRole('link', { name: 'E-invoice', exact: true })).toHaveAttribute(
+    'href',
+    '/e-invoice',
+  );
+
+  await page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('link', { name: 'Invoices' }).click();
+  await expect(page.getByRole('heading', { name: 'Invoice creator' })).toBeVisible();
+
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: 'Create and invoices' })
+    .getByRole('link', { name: 'Electronic invoice (UBL-style XML)' })
+    .click();
+  await expect(page.getByRole('heading', { name: 'Electronic invoice' })).toBeVisible();
+});
+
+test('a page ships exactly one meta description', async ({ page }) => {
+  // Two <meta name="description"> tags is a crawler conflict. SvelteKit does
+  // not dedupe <svelte:head> by attribute name, so the layout carries no
+  // default and each page owns its own.
+  for (const route of ['/invoice-creator', '/e-invoice', '/merge', '/']) {
+    await page.goto(route);
+    const descriptions = page.locator('meta[name="description"]');
+    await expect(
+      descriptions,
+      `${route} must ship exactly one meta description`,
+    ).toHaveCount(1);
+  }
+});
+
+test('every prerendered page carries canonical, hreflang, and structured data', async ({ page }) => {
+  // Appendix E / §7.6. Canonical and hreflang come from the layout so a new
+  // route cannot ship without them; JSON-LD is per route. Checked on a spread
+  // of component families: FeaturePage, ToolWorkspace, and a bespoke route.
+  for (const route of ['/', '/invoice-creator', '/merge', '/compare-pdf', '/ocr-pdf']) {
+    await page.goto(route);
+    const canonical = page.locator('link[rel="canonical"]');
+    await expect(canonical, `${route} must have a canonical link`).toHaveCount(1);
+    expect(new URL((await canonical.getAttribute('href')) ?? '').pathname).toBe(
+      new URL(page.url()).pathname,
+    );
+    await expect(page.locator('link[rel="alternate"][hreflang]')).toHaveCount(3);
+    await expect(page.locator('script[type="application/ld+json"]')).not.toHaveCount(0);
+  }
+});
+
+test('the JSON-LD is valid, factual structured data', async ({ page }) => {
+  // The claim is deliberately free of ratings and review counts: a rich result
+  // that search engines later discount costs more than the one we forgo.
+  await page.goto('/invoice-creator');
+  const blocks = page.locator('script[type="application/ld+json"]');
+  const count = await blocks.count();
+  assert.ok(count >= 2, 'expected SoftwareApplication and FAQPage');
+  for (let index = 0; index < count; index += 1) {
+    const parsed = JSON.parse((await blocks.nth(index).textContent()) ?? '{}');
+    expect(parsed['@context']).toBe('https://schema.org');
+    expect(parsed.aggregateRating).toBeUndefined();
+    expect(parsed.review).toBeUndefined();
+  }
+});
+
+test('the invoice FAQ is in the served HTML, not produced by hydration', async ({ page }) => {
+  // §7.6 requires the answer to exist without JavaScript.
+  await page.goto('/e-invoice');
+  await expect(
+    page.getByRole('heading', { name: 'Frequently asked questions' }),
+  ).toBeVisible();
+  await expect(page.getByText(/published OASIS UBL schema/u)).toBeAttached();
+
+  // And the zero-JS reference is present, so the page is honest about needing JS.
+  const noscript = page.locator('noscript');
+  await expect(noscript).toHaveCount(1);
+  expect((await noscript.textContent()) ?? '').toMatch(/need[s]? JavaScript/u);
+});
+
 test('recipe route describes a document-free deterministic share', async ({ page }) => {
   await page.goto('/recipe');
   await expect(page.getByText(/document-free recipe/i)).toBeVisible();
@@ -92,15 +236,6 @@ test.describe('P7-03 invoice builder', () => {
   // getByRole('status') is ambiguous. Scope to the builder's own region.
   const builderStatus = (page: import('@playwright/test').Page) =>
     page.locator('.builder [role="status"]');
-
-  // The route is prerendered, so its static markup accepts input before
-  // hydration and then discards it. Wait for the builder to report itself live
-  // rather than for elements to merely exist, or every assertion below races
-  // the client-side mount and observes the pre-hydration state.
-  const openBuilder = async (page: import('@playwright/test').Page, path: string) => {
-    await page.goto(path);
-    await expect(page.locator('.builder[data-hydrated="true"]')).toBeVisible();
-  };
 
   test('the builder is a real form and previews totals live', async ({ page }) => {
     await openBuilder(page, '/invoice-creator');

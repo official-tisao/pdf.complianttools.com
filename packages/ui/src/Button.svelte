@@ -25,8 +25,14 @@
     border: 1px solid transparent;
     border-radius: var(--radius-pill, 999px);
     cursor: pointer;
+    display: inline-flex;
     font: 600 1rem/1.5 var(--font-sans, system-ui, sans-serif);
-    padding: 8px 28px;
+    /* 44px minimum height: WCAG 2.2 target size (minimum), and the Lighthouse
+       mobile "touch targets have sufficient size" audit. 8px padding gave
+       ~38px, which failed. */
+    align-items: center;
+    min-height: 44px;
+    padding: 10px 28px;
     transition:
       transform 160ms ease,
       opacity 160ms ease;

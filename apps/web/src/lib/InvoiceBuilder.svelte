@@ -4,13 +4,14 @@
    * T38/T39 invoice builder. Owns its own state and calls the local engine only
    * on an explicit gesture — nothing is generated or transmitted on keystroke.
    */
-  import {
-    createInvoicePdf,
-    invoiceTotals,
-    validateEInvoiceXml,
-    type InvoiceData,
-    type InvoiceLine,
-  } from '@pdf-complianttools/engine';
+  // Deep subpath import, not the engine barrel: `index.ts` re-exports every
+  // module, so importing from it pulls pdfjs, mammoth, exceljs and pptxgenjs
+  // into every route that renders this form. `invoiceTotals` runs on every
+  // keystroke for the live preview, so it stays eager — it is pure arithmetic
+  // with no dependencies. `createInvoicePdf` pulls pdf-lib (~170 KB gzip) and is
+  // only needed when the user presses the button, so it loads on demand.
+  import { invoiceTotals, validateEInvoiceXml } from '@pdf-complianttools/engine/invoice';
+  import type { InvoiceData, InvoiceLine } from '@pdf-complianttools/engine';
   import { downloadBytes } from '$lib/download';
   import {
     deleteTemplate,
@@ -96,6 +97,7 @@
 
   async function create() {
     try {
+      const { createInvoicePdf } = await import('@pdf-complianttools/engine/invoice');
       const result = await createInvoicePdf(current());
       download(result.pdf, `${invoiceNumber.trim() || 'invoice'}.pdf`);
       const check = validateEInvoiceXml(result.xml);

@@ -1,13 +1,29 @@
 <script lang="ts">
   import '@pdf-complianttools/ui/tokens.css';
   import { page } from '$app/state';
+  import { HREFLANG, canonicalUrl } from '$lib/seo';
 
   let { children } = $props();
 </script>
 
 <svelte:head>
   <meta name="theme-color" content="#f0eeea" />
-  <meta name="description" content="Local-first PDF tools that run in your browser." />
+  <!--
+    No site-wide <meta name="description"> here on purpose. SvelteKit does NOT
+    dedupe <svelte:head> entries by attribute name, so shipping a default here
+    produced TWO description tags on every tool route (verified in the build
+    output) — a conflict for crawlers. The description is therefore owned
+    solely by the page: each tool component sets a specific one.
+
+    Canonical and hreflang DO live here, unlike the description. They are
+    derived purely from the route path, so every page computes the identical
+    value for itself, and deriving them once here means a new route cannot ship
+    without them.
+  -->
+  <link rel="canonical" href={canonicalUrl(page.url.pathname)} />
+  {#each HREFLANG as entry (entry.hreflang)}
+    <link rel="alternate" hreflang={entry.hreflang} href={canonicalUrl(page.url.pathname)} />
+  {/each}
 </svelte:head>
 
 <header class="site-header">
@@ -15,6 +31,9 @@
   <nav aria-label="Primary navigation">
     <a href="/merge">Merge</a>
     <a href="/convert">Convert</a>
+    <a href="/create-pdf">Create</a>
+    <a href="/invoice-creator">Invoices</a>
+    <a href="/e-invoice">E-invoice</a>
     <a href="/pdf-to-markdown">PDF to Markdown</a>
     <a href="/recipe">Recipes</a>
     <a href="/batch">Batch</a>

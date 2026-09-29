@@ -15,6 +15,9 @@ import {
   extractPdfAttachments,
   parseRecipe,
   runBatch,
+  compile,
+  inspectWithPdfJs,
+  run,
   FolderWatcher,
   captureWebpageToPdf,
   PdfEngineError,
@@ -349,6 +352,80 @@ test('attachment recovery rejects adversarial input with a typed remedy', async 
       error instanceof PdfEngineError &&
       error.details.kind === 'corrupt-structure' &&
       /structural validation/u.test(error.message),
+  );
+});
+
+const runRecipeToBytes = async (steps) => {
+  const recipe = parseRecipe({ version: 'r1', steps });
+  // The invoice op ignores its input entirely, so any valid PDF seeds the run.
+  const input = await fixture('one-page.pdf');
+  const plan = compile(recipe, await inspectWithPdfJs(input));
+  let result;
+  for await (const event of run(plan, [input])) if (event.kind === 'result') result = event.bytes;
+  assert.ok(result, 'the recipe produced no result');
+  return result;
+};
+
+test('the invoice recipe op produces a real PDF with the attached XML', async () => {
+  // The op is live in shipped code but had no coverage at all: a recipe that
+  // creates an invoice must yield a loadable PDF, not an empty or truncated one.
+  const bytes = await runRecipeToBytes([{ op: 'invoice', options: { invoice: baseInvoice } }]);
+  const document = await PDFDocument.load(bytes);
+  assert.equal(document.getPageCount(), 1);
+
+  // The attachment must survive the pipeline, since that is the whole point of
+  // a hybrid invoice: a later consumer recovers the XML from these bytes.
+  const recovered = await extractInvoiceXmlFromPdf(bytes);
+  const expected = await createInvoicePdf(baseInvoice);
+  assert.equal(recovered, expected.xml);
+  assert.equal(validateEInvoiceXml(recovered).valid, true);
+});
+
+test('a creation op must be the first step in a recipe', async () => {
+  // Ordering is enforced in the pipeline; this proves the invoice op is covered
+  // by the same guard as the other creation ops rather than slipping past it.
+  await assert.rejects(
+    () =>
+      runRecipeToBytes([
+        { op: 'compress', options: {} },
+        { op: 'invoice', options: { invoice: baseInvoice } },
+      ]),
+    (error) =>
+      error instanceof PdfEngineError &&
+      error.details.kind === 'invalid-operation' &&
+      /must be the first step/u.test(error.message),
+  );
+});
+
+test('an invalid invoice in a recipe surfaces the engine remedy', async () => {
+  // The recipe schema types the invoice as an untyped record, so Zod cannot
+  // reject it. It must still fail as a typed PdfEngineError naming the cause,
+  // not as a TypeError from deep inside the cast.
+  for (const [invoice, pattern] of [
+    [{ ...baseInvoice, currency: 'DOLLARS' }, /ISO 4217/u],
+    [{ ...baseInvoice, lines: [] }, /at least one line item/u],
+    [{ ...baseInvoice, issueDate: 'nope' }, /ISO date/u],
+  ]) {
+    await assert.rejects(
+      () => runRecipeToBytes([{ op: 'invoice', options: { invoice } }]),
+      (error) =>
+        error instanceof PdfEngineError &&
+        error.details.kind === 'invalid-operation' &&
+        pattern.test(error.message),
+    );
+  }
+});
+
+test('a recipe cannot smuggle document bytes into the invoice', async () => {
+  // Recipes are document-free by contract (P7-07/T70), so an invoice carrying
+  // raw bytes must be rejected rather than embedded.
+  assert.throws(
+    () =>
+      parseRecipe({
+        version: 'r1',
+        steps: [{ op: 'invoice', options: { invoice: { ...baseInvoice, bytes: [1, 2, 3] } } }],
+      }),
+    PdfEngineError,
   );
 });
 

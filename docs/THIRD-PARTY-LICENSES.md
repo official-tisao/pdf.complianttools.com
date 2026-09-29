@@ -29,6 +29,7 @@ Generated from the locked dependency graph.
 - eslint-visitor-keys@5.0.1 — Apache-2.0 — https://github.com/eslint/js
 - eslint@10.11.0 — MIT — https://github.com/eslint/eslint
 - license-checker-rseidelsohn@4.2.11 — BSD-3-Clause — https://github.com/RSeidelsohn/license-checker-rseidelsohn
+- lighthouse@13.5.0 — Apache-2.0 — https://github.com/GoogleChrome/lighthouse
 - lint-staged@16.2.7 — MIT — https://github.com/lint-staged/lint-staged
 - pdf-lib@1.17.1 — MIT — https://github.com/Hopding/pdf-lib
 - pdf.complianttools.com@0.1.0 — UNLICENSED — registry metadata
