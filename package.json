@@ -31,6 +31,7 @@
     "verify": "pnpm format:check && pnpm lint && pnpm verify:source-safety && pnpm typecheck && pnpm test && pnpm verify:licenses && pnpm verify:assets && pnpm verify:trademarks && pnpm verify:plan-sync"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-conventional": "21.2.3",
     "@eslint/js": "10.0.1",

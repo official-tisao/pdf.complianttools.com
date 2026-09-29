@@ -30,30 +30,28 @@
         {
           "id": "network-dependency-tree-insight",
           "title": "Network dependency tree",
-          "score": 0,
-          "items": [{}, {}, {}]
+          "score": 0
         },
         {
           "id": "render-blocking-insight",
           "title": "Render-blocking requests",
-          "score": 0,
-          "displayValue": "Est savings of 110 ms",
+          "score": 0.5,
           "items": [
             {
-              "wastedMs": 307
+              "wastedMs": 305
             },
             {
-              "wastedMs": 307
+              "wastedMs": 305
             },
             {
-              "wastedMs": 157
+              "wastedMs": 155
             }
           ]
         },
         {
           "id": "first-contentful-paint",
           "title": "First Contentful Paint",
-          "score": 0.95,
+          "score": 0.96,
           "displayValue": "1.5 s"
         }
       ]
@@ -94,14 +92,12 @@
         {
           "id": "network-dependency-tree-insight",
           "title": "Network dependency tree",
-          "score": 0,
-          "items": [{}, {}, {}]
+          "score": 0
         },
         {
           "id": "render-blocking-insight",
           "title": "Render-blocking requests",
-          "score": 0,
-          "displayValue": "Est savings of 110 ms",
+          "score": 0.5,
           "items": [
             {
               "wastedMs": 305
@@ -117,14 +113,14 @@
         {
           "id": "first-contentful-paint",
           "title": "First Contentful Paint",
-          "score": 0.89,
-          "displayValue": "1.8 s"
+          "score": 0.88,
+          "displayValue": "1.9 s"
         },
         {
           "id": "largest-contentful-paint",
           "title": "Largest Contentful Paint",
           "score": 0.98,
-          "displayValue": "1.8 s"
+          "displayValue": "1.9 s"
         }
       ]
     },
@@ -132,7 +128,7 @@
       "route": "/merge",
       "categories": {
         "performance": {
-          "score": 100
+          "score": 99
         },
         "accessibility": {
           "score": 100
@@ -144,14 +140,13 @@
           "score": 100
         }
       },
-      "worstCategory": 100,
+      "worstCategory": 99,
       "status": "PASS",
       "failing": [
         {
           "id": "network-dependency-tree-insight",
           "title": "Network dependency tree",
-          "score": 0,
-          "items": [{}, {}, {}]
+          "score": 0
         },
         {
           "id": "render-blocking-insight",
@@ -159,13 +154,13 @@
           "score": 0.5,
           "items": [
             {
-              "wastedMs": 306
+              "wastedMs": 305
             },
             {
-              "wastedMs": 306
+              "wastedMs": 305
             },
             {
-              "wastedMs": 306
+              "wastedMs": 305
             }
           ]
         },
@@ -173,7 +168,13 @@
           "id": "first-contentful-paint",
           "title": "First Contentful Paint",
           "score": 0.95,
-          "displayValue": "1.5 s"
+          "displayValue": "1.6 s"
+        },
+        {
+          "id": "largest-contentful-paint",
+          "title": "Largest Contentful Paint",
+          "score": 0.99,
+          "displayValue": "1.6 s"
         }
       ]
     }

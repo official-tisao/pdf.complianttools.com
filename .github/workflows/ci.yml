@@ -126,6 +126,45 @@ jobs:
           name: p7-03-lighthouse-evidence
           path: docs/release-gate/P7-03-lighthouse-evidence.json
 
+  accessibility:
+    # STCC #10 (`axe` zero violations, keyboard operability) and STCC #11 (the
+    # prerendered `ar` and `en-XA` locale variants). The audit runs against the
+    # hydrated page, because axe can only see the DOM the browser built, not the
+    # prerendered shell.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e -- tests/e2e/accessibility.spec.ts
+
+  i18n:
+    # STCC #11: the `ar` and `en-XA` variants are prerendered, so a build that
+    # breaks a translated route or introduces overflow fails here rather than in
+    # production. The catalogue contract itself is covered by the unit suite.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e -- tests/e2e/accessibility.spec.ts
+
   credential-leak:
     runs-on: ubuntu-latest
     steps:

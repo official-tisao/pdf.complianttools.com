@@ -10,35 +10,35 @@
     {
       "route": "/",
       "files": 13,
-      "gzippedKb": 38,
+      "gzippedKb": 39,
       "budgetKb": 60,
       "status": "PASS"
     },
     {
       "route": "/invoice-creator",
-      "files": 18,
-      "gzippedKb": 248,
+      "files": 20,
+      "gzippedKb": 252,
       "budgetKb": 275,
       "status": "PASS"
     },
     {
       "route": "/e-invoice",
-      "files": 17,
-      "gzippedKb": 250,
+      "files": 20,
+      "gzippedKb": 254,
       "budgetKb": 275,
       "status": "PASS"
     },
     {
       "route": "/merge",
-      "files": 16,
+      "files": 17,
       "gzippedKb": 42,
       "budgetKb": 470,
       "status": "PASS"
     },
     {
       "route": "/view-pdf",
-      "files": 24,
-      "gzippedKb": 567,
+      "files": 25,
+      "gzippedKb": 568,
       "budgetKb": 625,
       "status": "PASS"
     }

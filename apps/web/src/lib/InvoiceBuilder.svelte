@@ -13,6 +13,7 @@
   import { invoiceTotals, validateEInvoiceXml } from '@pdf-complianttools/engine/invoice';
   import type { InvoiceData, InvoiceLine } from '@pdf-complianttools/engine';
   import { downloadBytes } from '$lib/download';
+  import { localeAttributes, translate, type Locale } from '$lib/i18n';
   import {
     deleteTemplate,
     listTemplates,
@@ -21,7 +22,18 @@
     type NamedTemplate,
   } from '$lib/indexed-store';
 
-  let { variant = 'creator' }: { variant?: 'creator' | 'e-invoice' } = $props();
+  let {
+    variant = 'creator',
+    locale = 'en',
+  }: { variant?: 'creator' | 'e-invoice'; locale?: Locale } = $props();
+
+  // Every user-facing string goes through the message boundary: the English
+  // text is the fallback, and the key selects a translation. A missing
+  // translation degrades to English rather than an empty control.
+  const t = (key: string, fallback: string) => translate(locale, key, fallback);
+  // Derived: `locale` is a prop a caller can change after mount, and a captured
+  // value would leave the section's lang/dir pointing at the old locale.
+  const attributes = $derived(localeAttributes(locale));
 
   const today = () => new Date().toISOString().slice(0, 10);
 
@@ -171,36 +183,61 @@
   });
 </script>
 
-<section class="builder" data-hydrated={hydrated ? 'true' : 'false'}>
+<section
+  class="builder"
+  lang={attributes.lang}
+  dir={attributes.dir}
+  data-hydrated={hydrated ? 'true' : 'false'}
+>
   <fieldset>
-    <legend>Invoice</legend>
-    <label>Invoice number <input bind:value={invoiceNumber} /></label>
+    <legend>{t('invoice.legend.invoice', 'Invoice')}</legend>
+    <label>{t('invoice.field.number', 'Invoice number')} <input bind:value={invoiceNumber} /></label
+    >
     <div class="pair">
-      <label>Issue date <input type="date" bind:value={issueDate} /></label>
-      <label>Due date <input type="date" bind:value={dueDate} /></label>
+      <label
+        >{t('invoice.field.issueDate', 'Issue date')}
+        <input type="date" bind:value={issueDate} /></label
+      >
+      <label
+        >{t('invoice.field.dueDate', 'Due date')} <input type="date" bind:value={dueDate} /></label
+      >
     </div>
     <label
-      >Currency (3-letter ISO code)
+      >{t('invoice.field.currency', 'Currency (3-letter ISO code)')}
       <input bind:value={currency} maxlength="3" autocomplete="off" />
     </label>
   </fieldset>
 
   <fieldset>
-    <legend>From</legend>
-    <label>Supplier name <input bind:value={supplierName} /></label>
-    <label>Address <input bind:value={supplierAddress} /></label>
-    <label>Tax ID <input bind:value={supplierTaxId} autocomplete="off" /></label>
+    <legend>{t('invoice.legend.from', 'From')}</legend>
+    <label
+      >{t('invoice.field.supplierName', 'Supplier name')} <input bind:value={supplierName} /></label
+    >
+    <label
+      >{t('invoice.field.supplierAddress', 'Address')} <input bind:value={supplierAddress} /></label
+    >
+    <label
+      >{t('invoice.field.supplierTaxId', 'Tax ID')}
+      <input bind:value={supplierTaxId} autocomplete="off" /></label
+    >
   </fieldset>
 
   <fieldset>
-    <legend>Bill to</legend>
-    <label>Customer name <input bind:value={customerName} /></label>
-    <label>Address <input bind:value={customerAddress} /></label>
-    <label>Tax ID <input bind:value={customerTaxId} autocomplete="off" /></label>
+    <legend>{t('invoice.legend.billTo', 'Bill to')}</legend>
+    <label
+      >{t('invoice.field.customerName', 'Customer name')} <input bind:value={customerName} /></label
+    >
+    <label
+      >{t('invoice.field.customerAddress', 'Address')} <input bind:value={customerAddress} /></label
+    >
+    <label
+      >{t('invoice.field.customerTaxId', 'Tax ID')}
+      <input bind:value={customerTaxId} autocomplete="off" /></label
+    >
   </fieldset>
 
   <fieldset>
-    <legend>Line items</legend>
+    <legend>{t('invoice.legend.lines', 'Line items')}</legend>
     {#each lines as line, index (index)}
       <div class="line">
         <label
@@ -257,26 +294,26 @@
           onclick={() => removeLine(index)}
           disabled={lines.length === 1}
         >
-          Remove<span class="sr-only"> line {index + 1}</span>
+          {t('invoice.action.removeLine', 'Remove')}<span class="sr-only"> line {index + 1}</span>
         </button>
       </div>
     {/each}
-    <button type="button" onclick={addLine}>Add line</button>
+    <button type="button" onclick={addLine}>{t('invoice.action.addLine', 'Add line')}</button>
   </fieldset>
 
   <fieldset>
-    <legend>Totals</legend>
+    <legend>{t('invoice.legend.totals', 'Totals')}</legend>
     <dl class="totals">
       <div>
-        <dt>Net</dt>
+        <dt>{t('invoice.total.net', 'Net')}</dt>
         <dd>{money(totals.net)} {currency.toUpperCase()}</dd>
       </div>
       <div>
-        <dt>Tax</dt>
+        <dt>{t('invoice.total.tax', 'Tax')}</dt>
         <dd>{money(totals.tax)} {currency.toUpperCase()}</dd>
       </div>
       <div class="gross">
-        <dt>Total</dt>
+        <dt>{t('invoice.total.gross', 'Total')}</dt>
         <dd>{money(totals.gross)} {currency.toUpperCase()}</dd>
       </div>
     </dl>
@@ -287,12 +324,12 @@
   </fieldset>
 
   <fieldset>
-    <legend>Notes</legend>
-    <label>Notes on the invoice <input bind:value={notes} /></label>
+    <legend>{t('invoice.legend.notes', 'Notes')}</legend>
+    <label>{t('invoice.field.notes', 'Notes on the invoice')} <input bind:value={notes} /></label>
   </fieldset>
 
   <fieldset>
-    <legend>Templates</legend>
+    <legend>{t('invoice.legend.templates', 'Templates')}</legend>
     <p class="note">
       Templates are stored in this browser's IndexedDB only. They are never uploaded, and clearing
       site data removes them.
@@ -302,32 +339,44 @@
         >Template name
         <input bind:value={templateName} placeholder="e.g. Standard consulting" />
       </label>
-      <button type="button" onclick={persist} disabled={!templateName.trim()}>Save template</button>
+      <button type="button" onclick={persist} disabled={!templateName.trim()}
+        >{t('invoice.action.saveTemplate', 'Save template')}</button
+      >
     </div>
     {#if templates.length}
       <ul class="templates">
         {#each templates as record (record.id)}
           <li>
             <span>{record.name}</span>
-            <button type="button" onclick={() => recall(record)}>Load</button>
-            <button type="button" onclick={() => forget(record)}>Delete</button>
+            <button type="button" onclick={() => recall(record)}
+              >{t('invoice.action.loadTemplate', 'Load')}</button
+            >
+            <button type="button" onclick={() => forget(record)}
+              >{t('invoice.action.deleteTemplate', 'Delete')}</button
+            >
           </li>
         {/each}
       </ul>
     {:else}
-      <p class="note">No saved templates yet.</p>
+      <p class="note">{t('invoice.template.none', 'No saved templates yet.')}</p>
     {/if}
   </fieldset>
 
   <button type="button" class="primary" onclick={create}>
     {variant === 'e-invoice'
-      ? 'Create invoice with structured XML attachment'
-      : 'Create invoice PDF'}
+      ? t('invoice.action.createWithXml', 'Create invoice with structured XML attachment')
+      : t('invoice.action.create', 'Create invoice PDF')}
   </button>
   <p class="note">
     {variant === 'e-invoice'
-      ? 'The PDF carries a UBL-style XML file attachment. Local structural validation runs on the result; published-schema validation is not yet available, so check the XML against the schema your recipient requires.'
-      : 'Review every amount before issuing a business document. This tool does not verify tax rates, registration numbers, or legal compliance.'}
+      ? t(
+          'invoice.audit.schema',
+          'The PDF carries a UBL-style XML file attachment. Local structural validation runs on the result; published-schema validation is not yet available, so check the XML against the schema your recipient requires.',
+        )
+      : t(
+          'invoice.audit.honest',
+          'Review every amount before issuing a business document. This tool does not verify tax rates, registration numbers, or legal compliance.',
+        )}
   </p>
 
   {#if preview}
@@ -359,12 +408,19 @@
     gap: 8px;
     margin: 16px 0;
     max-width: 520px;
+    /* A translated or pseudo-localised label is longer than the English, and a
+       label without a width floor lets its text wrap rather than widen the row. */
+    min-width: 0;
   }
   input {
     border: 1px solid var(--color-hairline);
     border-radius: 8px;
     font: inherit;
+    /* A fixed width would overflow the grid track once the label is
+       translated or pseudo-localised. */
+    min-width: 0;
     padding: 12px;
+    width: 100%;
   }
   .pair {
     display: flex;
@@ -372,14 +428,20 @@
     gap: 16px;
   }
   .pair label {
-    flex: 1 1 200px;
+    /* The 200px basis was a floor that a longer translated label could not fit
+       under, forcing the row wider than the page. `minmax(0, …)` lets it shrink
+       and wrap instead. */
+    flex: 1 1 min(200px, 100%);
   }
   .line {
     align-items: end;
     border-top: 1px solid var(--color-hairline);
     display: grid;
     gap: 12px;
-    grid-template-columns: 3fr 1fr 1fr 1fr auto;
+    /* minmax(0, …) lets each track shrink below its content, and the labels
+       wrap, so a translated or pseudo-localised string cannot force the row
+       wider than the page. Found by the en-XA overflow check. */
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
     padding-top: 8px;
   }
   .line label {

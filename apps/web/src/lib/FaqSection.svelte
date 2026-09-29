@@ -6,14 +6,26 @@
    * of questions than the page shows.
    */
   import { JSONLD_CLOSE, JSONLD_OPEN, faqPageLd } from '$lib/seo';
+  import { translate } from '$lib/i18n';
 
   let {
     entries,
     heading = 'Frequently asked questions',
+    locale = 'en',
   }: {
-    entries: ReadonlyArray<{ question: string; answer: string }>;
+    entries: ReadonlyArray<{ key: string; question: string; answer: string }>;
     heading?: string;
+    locale?: import('$lib/i18n').Locale;
   } = $props();
+
+  // The same entries feed the FAQPage JSON-LD, so a localised page still
+  // describes the questions it actually shows.
+  const localized = $derived(
+    entries.map((entry) => ({
+      question: translate(locale, `faq.${entry.key}`, entry.question),
+      answer: translate(locale, `faq.${entry.key}Body`, entry.answer),
+    })),
+  );
 
   // Derived, not captured once: these entries come from a $props() reference
   // that a caller can change after mount, and a stale id would break the
@@ -25,12 +37,12 @@
 
 <svelte:head>
   <!-- safe-html-reviewed: JSON-LD needs a script element Svelte cannot emit; the payload is JSON.stringify from $lib/seo with "<" escaped, tested in scripts/seo.test.mjs -->
-  {@html JSONLD_OPEN + faqPageLd(entries) + JSONLD_CLOSE}
+  {@html JSONLD_OPEN + faqPageLd(localized) + JSONLD_CLOSE}
 </svelte:head>
 
 <section class="faq" aria-labelledby={headingId}>
   <h2 id={headingId}>{heading}</h2>
-  {#each entries as entry (entry.question)}
+  {#each localized as entry (entry.question)}
     <details>
       <summary>{entry.question}</summary>
       <p>{entry.answer}</p>

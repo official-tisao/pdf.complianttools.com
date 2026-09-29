@@ -11,6 +11,7 @@
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { format } from 'node:util';
 import lighthouse from 'lighthouse';
 import { chromium } from '@playwright/test';
 
@@ -77,20 +78,26 @@ try {
         (audit) =>
           audit.score !== null && audit.score < 1 && audit.scoreDisplayMode !== 'informative',
       )
-      .map((audit) => ({
-        id: audit.id,
-        title: audit.title,
-        score: audit.score,
-        displayValue: audit.displayValue ?? undefined,
-        ...(audit.details?.items?.length
-          ? {
-              items: audit.details.items.slice(0, 3).map((item) => ({
-                node: item.node?.snippet ?? item.source?.url ?? undefined,
-                wastedMs: item.wastedMs ?? item.totalBytes ?? undefined,
-              })),
-            }
-          : {}),
-      }))
+      .map((audit) => {
+        // Lighthouse's insight audits return items that carry no attributable
+        // node or saving. Keeping them writes `"items": [{}, {}, {}]`, which is
+        // noise in the evidence and which Prettier reflows differently from the
+        // generator, so only items that actually say something are kept.
+        const items = (audit.details?.items ?? [])
+          .map((item) => ({
+            node: item.node?.snippet ?? item.source?.url ?? undefined,
+            wastedMs: item.wastedMs ?? item.totalBytes ?? undefined,
+          }))
+          .filter((item) => item.node !== undefined || item.wastedMs !== undefined)
+          .slice(0, 3);
+        return {
+          id: audit.id,
+          title: audit.title,
+          score: audit.score,
+          displayValue: audit.displayValue ?? undefined,
+          ...(items.length > 0 ? { items } : {}),
+        };
+      })
       .sort((a, b) => (a.score ?? 0) - (b.score ?? 0))
       .slice(0, 8);
     results.push({
@@ -122,7 +129,12 @@ const outPath = resolve(
   outArgument?.slice('--out='.length) ?? 'docs/release-gate/P7-03-lighthouse-evidence.json',
 );
 await mkdir(dirname(outPath), { recursive: true });
-await writeFile(outPath, `${JSON.stringify(report, null, 2)}\n`);
+// Written with Prettier's own formatter rather than `JSON.stringify(.., 2)`:
+// the evidence file is checked by `pnpm format:check` in CI, and a raw
+// stringify does not match Prettier's output. Formatting here means the file is
+// valid the moment it is generated, instead of needing a follow-up `format`
+// run that a committing developer would otherwise have to remember.
+await writeFile(outPath, `${format(`${JSON.stringify(report, null, 2)}\n`)}`);
 
 for (const entry of results) {
   const scores = Object.entries(entry.categories)

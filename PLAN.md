@@ -874,12 +874,15 @@ start in parallel with A–E; only their shared engine calls and recipe contract
       route; deep subpath exports plus on-demand imports cut `/invoice-creator` from 390 KB to
       248 KB gzip and `/merge` from 424 KB to 42 KB. Lighthouse mobile passes all four categories
       at >= 95 on `/`, `/invoice-creator`, and `/merge`
-- [ ] STCC items 10, 11, 12 remain open: a full `axe` run, i18n with translator comments and
-      `en-XA`/`ar` checks, and the offline story (no service worker). STCC 6 and 7 are met for
-      these two routes: canonical, hreflang, JSON-LD and FAQ are in the served HTML for all 71
-      prerendered pages, and a drag/paste layer sits on the file inputs
-- **Spec:** README §4.5, §5.3, §7.6, §19 · **Done when:** STCC for each; e-invoice XML validates
-  against its published schema
+- [x] STCC 10 (`axe` zero violations, keyboard-operable end to end) and STCC 11 (i18n messages
+      with a translator comment, `en-XA` pseudo-locale and `ar` RTL). `/ar` and `/en-XA` are
+      prerendered variants of both invoice routes, gated in CI; an unknown locale 404s rather
+      than silently falling back to English
+- [ ] STCC 12 remains open: there is no service worker, so a cold load with the network down
+      fails at the HTML fetch. The routes state that they are local and never upload, but do not
+      yet claim to work offline
+- **Spec:** README §4.5, §5.3, §7.6, §19, §20, §21 · **Done when:** STCC for each; e-invoice XML
+  validates against its published schema
 
 #### P7-04 · Scan to PDF, local (T40)
 

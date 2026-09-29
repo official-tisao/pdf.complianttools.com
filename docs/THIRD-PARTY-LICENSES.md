@@ -2,6 +2,7 @@
 
 Generated from the locked dependency graph.
 
+- @axe-core/playwright@4.13.0 — MPL-2.0 — https://github.com/dequelabs/axe-core-npm
 - @commitlint/cli@21.2.3 — MIT — https://github.com/conventional-changelog/commitlint
 - @commitlint/config-conventional@21.2.3 — MIT — https://github.com/conventional-changelog/commitlint
 - @eslint-community/eslint-utils@4.10.1 — MIT — https://github.com/eslint-community/eslint-utils

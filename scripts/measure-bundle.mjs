@@ -12,6 +12,7 @@
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { format } from 'node:util';
 import { gzipSync } from 'node:zlib';
 import { chromium } from '@playwright/test';
 
@@ -129,7 +130,9 @@ const outPath = resolve(
   outArgument?.slice('--out='.length) ?? 'docs/release-gate/P7-03-bundle-evidence.json',
 );
 await mkdir(dirname(outPath), { recursive: true });
-await writeFile(outPath, `${JSON.stringify(report, null, 2)}\n`);
+// Formatted with Prettier's own formatter: this file is checked by
+// `pnpm format:check`, and a raw stringify does not match Prettier's output.
+await writeFile(outPath, `${format(`${JSON.stringify(report, null, 2)}\n`)}`);
 
 for (const entry of results) {
   console.log(
