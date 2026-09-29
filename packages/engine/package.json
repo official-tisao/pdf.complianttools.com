@@ -35,6 +35,10 @@
       "types": "./dist/scan.d.ts",
       "import": "./dist/scan.js"
     },
+    "./scan-camera": {
+      "types": "./dist/scan-camera.d.ts",
+      "import": "./dist/scan-camera.js"
+    },
     "./scan-deskew": {
       "types": "./dist/scan-deskew.d.ts",
       "import": "./dist/scan-deskew.js"

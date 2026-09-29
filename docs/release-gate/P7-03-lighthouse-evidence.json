@@ -18,15 +18,20 @@
           "score": 100
         },
         "best-practices": {
-          "score": 100
+          "score": 96
         },
         "seo": {
           "score": 100
         }
       },
-      "worstCategory": 100,
+      "worstCategory": 96,
       "status": "PASS",
       "failing": [
+        {
+          "id": "errors-in-console",
+          "title": "Browser errors were logged to the console",
+          "score": 0
+        },
         {
           "id": "network-dependency-tree-insight",
           "title": "Network dependency tree",
@@ -38,94 +43,26 @@
           "score": 0.5,
           "items": [
             {
-              "wastedMs": 305
+              "wastedMs": 302
             },
             {
-              "wastedMs": 305
+              "wastedMs": 152
             },
             {
-              "wastedMs": 155
+              "wastedMs": 302
             }
           ]
         },
         {
           "id": "first-contentful-paint",
           "title": "First Contentful Paint",
-          "score": 0.96,
-          "displayValue": "1.5 s"
+          "score": 0.97,
+          "displayValue": "1.4 s"
         }
       ]
     },
     {
       "route": "/invoice-creator",
-      "categories": {
-        "performance": {
-          "score": 98
-        },
-        "accessibility": {
-          "score": 100
-        },
-        "best-practices": {
-          "score": 100
-        },
-        "seo": {
-          "score": 100
-        }
-      },
-      "worstCategory": 98,
-      "status": "PASS",
-      "failing": [
-        {
-          "id": "unused-javascript",
-          "title": "Reduce unused JavaScript",
-          "score": 0,
-          "displayValue": "Est savings of 112 KiB",
-          "items": [
-            {
-              "wastedMs": 175158
-            },
-            {
-              "wastedMs": 28612
-            }
-          ]
-        },
-        {
-          "id": "network-dependency-tree-insight",
-          "title": "Network dependency tree",
-          "score": 0
-        },
-        {
-          "id": "render-blocking-insight",
-          "title": "Render-blocking requests",
-          "score": 0.5,
-          "items": [
-            {
-              "wastedMs": 305
-            },
-            {
-              "wastedMs": 305
-            },
-            {
-              "wastedMs": 155
-            }
-          ]
-        },
-        {
-          "id": "first-contentful-paint",
-          "title": "First Contentful Paint",
-          "score": 0.88,
-          "displayValue": "1.9 s"
-        },
-        {
-          "id": "largest-contentful-paint",
-          "title": "Largest Contentful Paint",
-          "score": 0.98,
-          "displayValue": "1.9 s"
-        }
-      ]
-    },
-    {
-      "route": "/merge",
       "categories": {
         "performance": {
           "score": 99
@@ -134,15 +71,20 @@
           "score": 100
         },
         "best-practices": {
-          "score": 100
+          "score": 96
         },
         "seo": {
           "score": 100
         }
       },
-      "worstCategory": 99,
+      "worstCategory": 96,
       "status": "PASS",
       "failing": [
+        {
+          "id": "errors-in-console",
+          "title": "Browser errors were logged to the console",
+          "score": 0
+        },
         {
           "id": "network-dependency-tree-insight",
           "title": "Network dependency tree",
@@ -154,13 +96,13 @@
           "score": 0.5,
           "items": [
             {
-              "wastedMs": 305
+              "wastedMs": 302
             },
             {
-              "wastedMs": 305
+              "wastedMs": 302
             },
             {
-              "wastedMs": 305
+              "wastedMs": 152
             }
           ]
         },
@@ -175,6 +117,59 @@
           "title": "Largest Contentful Paint",
           "score": 0.99,
           "displayValue": "1.6 s"
+        }
+      ]
+    },
+    {
+      "route": "/merge",
+      "categories": {
+        "performance": {
+          "score": 100
+        },
+        "accessibility": {
+          "score": 100
+        },
+        "best-practices": {
+          "score": 96
+        },
+        "seo": {
+          "score": 100
+        }
+      },
+      "worstCategory": 96,
+      "status": "PASS",
+      "failing": [
+        {
+          "id": "errors-in-console",
+          "title": "Browser errors were logged to the console",
+          "score": 0
+        },
+        {
+          "id": "network-dependency-tree-insight",
+          "title": "Network dependency tree",
+          "score": 0
+        },
+        {
+          "id": "render-blocking-insight",
+          "title": "Render-blocking requests",
+          "score": 0.5,
+          "items": [
+            {
+              "wastedMs": 302
+            },
+            {
+              "wastedMs": 302
+            },
+            {
+              "wastedMs": 152
+            }
+          ]
+        },
+        {
+          "id": "first-contentful-paint",
+          "title": "First Contentful Paint",
+          "score": 0.96,
+          "displayValue": "1.5 s"
         }
       ]
     }

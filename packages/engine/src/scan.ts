@@ -1,81 +1,18 @@
 import { imageToPdf } from './conversion/images.js';
 import { PdfEngineError } from './errors.js';
 import { estimateSkew, type GrayscaleImage } from './scan-deskew.js';
-
-export type ScanMediaStream = { getTracks: () => readonly { stop: () => void }[] };
-export type ScanFrame = {
-  bytes: Uint8Array;
-  format: 'jpg' | 'png';
-  width?: number;
-  height?: number;
-};
-export type DeskewEstimate = { angleDegrees: number; confidence: number; applied: boolean };
-
-/** The `DOMException` names getUserMedia uses when a device simply is not there. */
-const NO_DEVICE_ERRORS = new Set(['NotFoundError', 'DevicesNotFoundError', 'OverconstrainedError']);
-
-/** The names that mean the user or the page is not allowed to use the camera. */
-const PERMISSION_ERRORS = new Set([
-  'NotAllowedError',
-  'PermissionDeniedError',
-  'SecurityError',
-  'PermissionDismissedError',
-]);
-
-function errorName(error: unknown): string {
-  return error instanceof Error ? error.name : '';
-}
+import type { ScanFrame } from './scan-camera.js';
 
 /**
- * Requests the camera. Always explicit: this is only ever reached from a user
- * gesture, and calling it never starts a stream on module import.
+ * The scan capability that actually does work: deskewing and PDF assembly.
  *
- * A refusal and a missing camera are reported as different failures, because
- * they need different actions from the user. Telling someone to grant
- * permission on a device that has no camera (or whose permission is permanently
- * blocked) sends them somewhere they cannot succeed (P8).
+ * Both reach heavy modules — `conversion/images.ts` pulls pdf-lib, and
+ * `scan-deskew.ts` is the estimator — so this module must only ever be reached
+ * through a dynamic import, by the gesture that needs it. The camera
+ * primitives a capture UI must hold statically live in `scan-camera.ts`, which
+ * is a leaf; see that file for why the split exists.
  */
-export async function requestScanCamera(): Promise<ScanMediaStream> {
-  const browser = (
-    globalThis as {
-      navigator?: {
-        mediaDevices?: { getUserMedia: (constraints: unknown) => Promise<ScanMediaStream> };
-      };
-    }
-  ).navigator;
-  if (!browser?.mediaDevices?.getUserMedia)
-    throw new PdfEngineError({
-      kind: 'unsupported-feature',
-      feature: 'camera capture',
-      remedy: 'Use a browser with getUserMedia support or import scanned image files instead.',
-    });
-  try {
-    return await browser.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' } },
-      audio: false,
-    });
-  } catch (error) {
-    const name = errorName(error);
-    if (PERMISSION_ERRORS.has(name))
-      throw new PdfEngineError({
-        kind: 'permission-denied',
-        resource: 'camera',
-        remedy: 'Allow camera access in the browser, or choose image files for a local scan.',
-      });
-    if (NO_DEVICE_ERRORS.has(name))
-      throw new PdfEngineError({
-        kind: 'camera-unavailable',
-        remedy:
-          'No camera was found on this device. Import scanned image files instead, or capture one on a device with a camera.',
-      });
-    // An unrecognised rejection (a platform string, or a non-Error) must still
-    // arrive as a typed, actionable failure rather than an opaque one.
-    throw new PdfEngineError({
-      kind: 'camera-unavailable',
-      remedy: `The camera could not be started${name ? ` (${name})` : ''}. Import scanned image files instead.`,
-    });
-  }
-}
+export type DeskewEstimate = { angleDegrees: number; confidence: number; applied: boolean };
 
 /**
  * Rotation deskew measured from pixels. Delegates to `scan-deskew.ts`, which
@@ -122,6 +59,9 @@ export async function assembleScans(frames: readonly ScanFrame[]): Promise<Uint8
   return mergePdfBuffers(pages);
 }
 
-export function stopScanCamera(stream: ScanMediaStream): void {
-  stream.getTracks().forEach((track) => track.stop());
-}
+// Re-exported so the established `engine/scan` entry point still offers the
+// whole scan surface. Existing callers and tests keep working unchanged; new
+// code that needs the camera on page load imports `engine/scan-camera`
+// directly, because reaching these through `scan.ts` costs pdf-lib.
+export { requestScanCamera, stopScanCamera } from './scan-camera.js';
+export type { ScanFrame, ScanMediaStream } from './scan-camera.js';

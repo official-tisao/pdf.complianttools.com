@@ -12,8 +12,13 @@
    * canvas. This component owns the browser surface and hands the engine plain
    * bytes, so the same deskew code runs here and in a worker (§8.4).
    */
-  import type { ScanFrame, ScanMediaStream } from '@pdf-complianttools/engine';
-  import { stopScanCamera } from '@pdf-complianttools/engine/scan';
+  import type { ScanFrame, ScanMediaStream } from '@pdf-complianttools/engine/scan-camera';
+  // The leaf camera subpath, NOT `engine/scan`: this import has to be static,
+  // because the release hook below runs from an unmount effect. `engine/scan`
+  // reaches pdf-lib and the deskew estimator, so a static import from it would
+  // put half a megabyte on the critical path of every route that renders this
+  // component — including routes, such as /invoice-creator, that never scan.
+  import { stopScanCamera } from '@pdf-complianttools/engine/scan-camera';
 
   let {
     onframes,
