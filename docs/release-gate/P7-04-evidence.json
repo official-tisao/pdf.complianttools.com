@@ -10,7 +10,7 @@
   "skewedFixtures": 7,
   "worstResidualAfterDegrees": 0.05,
   "meanDetectionErrorDegrees": 0.018,
-  "maxDeskewMs": 71.9,
+  "maxDeskewMs": 65.5,
   "status": "PASS",
   "gateUpdateAuthorized": false,
   "knownGaps": [
@@ -28,7 +28,7 @@
       "applied": false,
       "confidence": 0.474,
       "correctedTo": "900x640",
-      "deskewMs": 41.7,
+      "deskewMs": 40.3,
       "pass": true
     },
     {
@@ -40,7 +40,7 @@
       "applied": true,
       "confidence": 0.444,
       "correctedTo": "723x391",
-      "deskewMs": 71.9,
+      "deskewMs": 65.5,
       "pass": true
     },
     {
@@ -52,7 +52,7 @@
       "applied": true,
       "confidence": 0.427,
       "correctedTo": "799x498",
-      "deskewMs": 59.4,
+      "deskewMs": 57.1,
       "pass": true
     },
     {
@@ -64,7 +64,7 @@
       "applied": true,
       "confidence": 0.417,
       "correctedTo": "855x576",
-      "deskewMs": 59.5,
+      "deskewMs": 59.2,
       "pass": true
     },
     {
@@ -76,7 +76,7 @@
       "applied": true,
       "confidence": 0.427,
       "correctedTo": "865x592",
-      "deskewMs": 53.8,
+      "deskewMs": 53.4,
       "pass": true
     },
     {
@@ -88,7 +88,7 @@
       "applied": true,
       "confidence": 0.443,
       "correctedTo": "832x546",
-      "deskewMs": 63.5,
+      "deskewMs": 50.9,
       "pass": true
     },
     {
@@ -100,7 +100,7 @@
       "applied": true,
       "confidence": 0.465,
       "correctedTo": "767x453",
-      "deskewMs": 57.3,
+      "deskewMs": 52.5,
       "pass": true
     },
     {
@@ -112,7 +112,7 @@
       "applied": true,
       "confidence": 0.695,
       "correctedTo": "659x302",
-      "deskewMs": 45.2,
+      "deskewMs": 41.5,
       "pass": true
     }
   ]
