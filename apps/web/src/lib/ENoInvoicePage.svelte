@@ -189,6 +189,10 @@
   .status {
     color: var(--color-muted);
     line-height: 1.6;
+    /* The pseudo-locale pads every string with a run of `~` that has no break
+       opportunity, so a long note becomes one unbreakable token wider than the
+       column and the document scrolls sideways at a phone width. */
+    overflow-wrap: anywhere;
   }
   pre {
     background: var(--color-hairline);

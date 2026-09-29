@@ -404,6 +404,11 @@
     border-radius: 12px;
     margin: 0 0 24px;
     padding: 8px 20px 20px;
+    /* The UA default for <fieldset> is `min-inline-size: min-content`, which
+       floors the box at its widest unbreakable child. A text input carries a
+       ~257px intrinsic width, so the fieldset refused to shrink below that and
+       pushed the document wider than a 320px phone viewport. */
+    min-inline-size: 0;
   }
   legend {
     font-weight: 600;
@@ -422,6 +427,11 @@
     border: 1px solid var(--color-hairline);
     border-radius: 8px;
     font: inherit;
+    /* `content-box` (the UA default here, since the app sets no global reset)
+       adds the 12px padding and 1px border ON TOP of `width: 100%`, so every
+       input rendered 26px wider than the label grid track that holds it and
+       set a floor under the whole page. `border-box` makes 100% mean the box. */
+    box-sizing: border-box;
     /* A fixed width would overflow the grid track once the label is
        translated or pseudo-localised. */
     min-width: 0;
@@ -495,7 +505,11 @@
     color: white;
     cursor: pointer;
     padding: 12px 22px;
-    white-space: nowrap;
+    /* `nowrap` kept a pseudo-localised or translated button label on one line,
+       and the longest of them ("Create invoice with structured XML attachment")
+       then set a min-content width wider than a phone viewport. */
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   button:disabled {
     cursor: not-allowed;
@@ -513,6 +527,11 @@
   .status {
     color: var(--color-muted);
     line-height: 1.6;
+    /* The pseudo-locale's padding is a run of `~` with no break opportunity, so a
+       long string produces one unbreakable token wider than the column and the
+       document scrolls sideways at a phone width. Found by the en-XA overflow
+       check at 320px. */
+    overflow-wrap: anywhere;
   }
   .status {
     margin-top: 20px;

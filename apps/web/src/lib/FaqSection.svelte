@@ -67,10 +67,16 @@
   summary {
     cursor: pointer;
     font-weight: 500;
+    /* The pseudo-locale pads every string and wraps it in full-width brackets,
+       and a translated answer is longer than the English. Without this, the
+       longest unbreakable run in an answer sets a min-content width wider than
+       the page and the whole document scrolls sideways at a phone width. */
+    overflow-wrap: anywhere;
   }
   p {
     color: var(--color-muted);
     line-height: 1.6;
     margin: 8px 0 0;
+    overflow-wrap: anywhere;
   }
 </style>

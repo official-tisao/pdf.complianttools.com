@@ -48,7 +48,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e -- tests/e2e/no-network.spec.ts
+      - run: pnpm exec playwright test tests/e2e/no-network.spec.ts
 
   latency:
     # The README §19 budgets are only meaningful as a measured, repeated
@@ -144,7 +144,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e -- tests/e2e/accessibility.spec.ts
+      - run: pnpm exec playwright test tests/e2e/accessibility.spec.ts
 
   i18n:
     # STCC #11: the `ar` and `en-XA` variants are prerendered, so a build that
@@ -163,7 +163,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e -- tests/e2e/accessibility.spec.ts
+      - run: pnpm exec playwright test tests/e2e/accessibility.spec.ts
 
   offline:
     # STCC #12: the service worker only exists in a production build, so this
