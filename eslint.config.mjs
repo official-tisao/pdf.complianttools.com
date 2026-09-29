@@ -50,6 +50,18 @@ export default [
     },
   },
   {
+    // Build/tooling config runs in Node, not the browser, so it gets the Node
+    // globals. `svelte.config.js` reads process.env to decide whether to
+    // register the service worker, which is a production-only concern.
+    files: ['**/svelte.config.js', '**/vite.config.ts', '**/vite.config.js'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+      },
+    },
+  },
+  {
     files: [
       'scripts/**/*.mjs',
       'packages/**/*.test.mjs',

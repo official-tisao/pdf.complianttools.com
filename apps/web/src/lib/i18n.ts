@@ -54,6 +54,8 @@ const arabic: Readonly<Record<string, string>> = {
   'invoice.template.none': 'لا توجد قوالب محفوظة بعد.',
   'invoice.template.localOnly':
     'تُحفظ القوالب في تخزين المتصفح هذا فقط. لا تُرفع أبدًا، ومسح بيانات الموقع يزيلها.',
+  'invoice.offline':
+    'تعمل هذه الأداة دون اتصال بعد أن تزورها مرة واحدة. لا يُرفع أي شيء في أي وقت، متصلًا كان أو غير متصل.',
   'invoice.preview.fidelity':
     'تأتي مجاميع المعاينة من الدالة نفسها في المحرك التي ينتج منها التصدير، فلا يمكن أن تتعارضا.',
   'invoice.audit.honest':

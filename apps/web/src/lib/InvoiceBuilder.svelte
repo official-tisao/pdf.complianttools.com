@@ -334,6 +334,12 @@
       Templates are stored in this browser's IndexedDB only. They are never uploaded, and clearing
       site data removes them.
     </p>
+    <p class="note">
+      {t(
+        'invoice.offline',
+        'This tool works with no connection once you have visited it. Nothing is uploaded at any point, online or off.',
+      )}
+    </p>
     <div class="pair">
       <label
         >Template name

@@ -9,7 +9,9 @@ import { expect, test, type Page } from '@playwright/test';
  */
 const openBuilder = async (page: Page, path: string) => {
   await page.goto(path);
-  await expect(page.locator('.builder[data-hydrated="true"]')).toBeVisible();
+  // The dev server's first compile is slow on a cold cache; the default 5s
+  // assertion timeout is not enough for a route that has not been built yet.
+  await expect(page.locator('.builder[data-hydrated="true"]')).toBeVisible({ timeout: 30_000 });
 };
 
 const phaseFRoutes = [

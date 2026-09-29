@@ -17,7 +17,9 @@ const a11yRoutes = [
 
 const openBuilder = async (page: import('@playwright/test').Page, path: string) => {
   await page.goto(path);
-  await expect(page.locator('.builder[data-hydrated="true"]')).toBeAttached();
+  // The dev server's first compile is slow on a cold cache; the default 5s
+  // assertion timeout is not enough for a route that has not been built yet.
+  await expect(page.locator('.builder[data-hydrated="true"]')).toBeAttached({ timeout: 30_000 });
 };
 
 for (const [route, heading] of a11yRoutes) {
