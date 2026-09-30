@@ -6,9 +6,10 @@ import { runInModuleWorker } from './runtime/module-worker.js';
  *
  * This corrects rotation only — the small tilt a page picks up when it is
  * photographed on a flat surface, which is the dominant case for a phone scan.
- * It is deliberately not a projective warp: four-point document detection plus a
- * homography is a separate capability, recorded as a follow-up in PLAN.md P7-04
- * and in `docs/WORKSTREAM-F-GATE.md`.
+ * It is deliberately not a projective warp: four-point document detection and the
+ * homography live in `scan-perspective.ts`, because a photo can have both a tilt
+ * and a perspective and the two corrections are independent. A caller that has
+ * both runs this and then `correctPerspective`.
  *
  * The estimate uses the classical projection-profile method (Postl). Text lines
  * that are horizontal stack into the same rows, so the row-sum profile is
@@ -27,7 +28,7 @@ const MAX_SEARCH_ANGLE_DEGREES = 15;
 const ANGLE_STEP_DEGREES = 0.1;
 
 /** Detection runs on a downscaled copy; the correction always runs at full resolution. */
-const WORKING_EDGE_LIMIT = 512;
+export const WORKING_EDGE_LIMIT = 512;
 
 /** Below this the rotation is invisible and re-encoding the image is not worth the quality loss. */
 const MIN_APPLIED_ANGLE_DEGREES = 0.25;
@@ -157,7 +158,7 @@ export function toGrayscale(
 }
 
 /** Box-filter downscale. Detection only needs the line structure, not the glyph detail. */
-function downscale(image: GrayscaleImage, limit: number): GrayscaleImage {
+export function downscaleForDetection(image: GrayscaleImage, limit: number): GrayscaleImage {
   const longest = Math.max(image.width, image.height);
   if (longest <= limit) return image;
   const width = Math.max(1, Math.round((image.width * limit) / longest));
@@ -185,7 +186,7 @@ function downscale(image: GrayscaleImage, limit: number): GrayscaleImage {
 }
 
 /** Otsu's method: the threshold maximising between-class variance. */
-function otsuThreshold(pixels: Uint8Array): number {
+export function otsuThreshold(pixels: Uint8Array): number {
   const histogram = new Uint32Array(256);
   for (let index = 0; index < pixels.length; index += 1) histogram[pixels[index]!]! += 1;
   const total = pixels.length;
@@ -213,6 +214,22 @@ function otsuThreshold(pixels: Uint8Array): number {
 }
 
 type InkPoints = { readonly xs: Int32Array; readonly ys: Int32Array; readonly count: number };
+
+/**
+ * An Otsu-thresholded ink mask, one byte per pixel.
+ *
+ * Exported for the perspective detector, which needs the same "dark against light" decision but
+ * as a filled region rather than a point list: tracing a page boundary asks which pixels are
+ * *page*, which is the complement of the ink the rotation estimator looks for.
+ */
+export function otsuInkMask(image: GrayscaleImage): Uint8Array {
+  const threshold = otsuThreshold(image.pixels);
+  const mask = new Uint8Array(image.pixels.length);
+  for (let index = 0; index < image.pixels.length; index += 1) {
+    mask[index] = image.pixels[index]! <= threshold ? 1 : 0;
+  }
+  return mask;
+}
 
 function collectInk(image: GrayscaleImage): InkPoints {
   const threshold = otsuThreshold(image.pixels);
@@ -314,7 +331,10 @@ export function estimateSkew(image: GrayscaleImage, options: SkewOptions = {}): 
   assertImage(image);
   const maxAngle = Math.min(Math.abs(options.maxAngleDegrees ?? MAX_SEARCH_ANGLE_DEGREES), 89);
   const step = Math.abs(options.angleStepDegrees ?? ANGLE_STEP_DEGREES);
-  const working = downscale(image, Math.max(16, options.workingEdgeLimit ?? WORKING_EDGE_LIMIT));
+  const working = downscaleForDetection(
+    image,
+    Math.max(16, options.workingEdgeLimit ?? WORKING_EDGE_LIMIT),
+  );
   const ink = collectInk(working);
   const minimumInk = Math.max(
     MIN_INK_PIXELS,

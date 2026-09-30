@@ -46,9 +46,16 @@ function parseRange(value: string, count: number): number[] {
   return [...new Set(pages)];
 }
 
+/**
+ * `updateMetadata: false` is load-bearing, not tidiness. pdf-lib's default is to stamp a
+ * wall-clock `/ModDate` and `/Producer` into the Info dict, so the same input saved twice
+ * yields different bytes — which broke the P7-10 byte-equivalence guarantee. Disabling it
+ * both makes output deterministic and is the correct behaviour: we should preserve the
+ * dates a user's own document already carries rather than overwrite them with our clock.
+ */
 async function load(bytes: Uint8Array, operation: string): Promise<PDFDocument> {
   try {
-    return await PDFDocument.load(bytes, { ignoreEncryption: false });
+    return await PDFDocument.load(bytes, { ignoreEncryption: false, updateMetadata: false });
   } catch (error) {
     return operationError(operation, error);
   }
@@ -91,7 +98,7 @@ export class MutationGraph {
     const order = options.fileOrder?.length
       ? [...options.fileOrder]
       : inputs.map((_, index) => index);
-    const merged = await PDFDocument.create();
+    const merged = await PDFDocument.create({ updateMetadata: false });
     for (const [position, sourceIndex] of order.entries()) {
       const sourceBytes = inputs[sourceIndex];
       if (!sourceBytes)
@@ -139,7 +146,7 @@ export class MutationGraph {
         remedy: 'Provide each source page exactly once in the new order.',
       });
     }
-    const output = await PDFDocument.create();
+    const output = await PDFDocument.create({ updateMetadata: false });
     const pages = await output.copyPages(
       this.#document,
       order.map((page) => page - 1),
@@ -198,7 +205,7 @@ export class MutationGraph {
     const order = bookletOrder(sourcePages.length, booklet);
     const width = 612;
     const height = 792;
-    const output = await PDFDocument.create();
+    const output = await PDFDocument.create({ updateMetadata: false });
     for (let offset = 0; offset < order.length; offset += columns) {
       const page = output.addPage([width, height]);
       const cellWidth = (width - margin * (cols + 1)) / cols;
@@ -226,7 +233,7 @@ export class MutationGraph {
 
   async halve(direction: 'horizontal' | 'vertical', threshold = 1.25): Promise<void> {
     const source = this.#document;
-    const output = await PDFDocument.create();
+    const output = await PDFDocument.create({ updateMetadata: false });
     for (const sourcePage of source.getPages()) {
       const horizontal = direction === 'horizontal';
       const oversized = horizontal
@@ -349,7 +356,7 @@ export async function splitGraph(
   }
   const outputs: Uint8Array[] = [];
   for (const group of groups) {
-    const output = await PDFDocument.create();
+    const output = await PDFDocument.create({ updateMetadata: false });
     const pages = await output.copyPages(
       graph.document,
       group.map((page) => page - 1),
@@ -554,6 +561,18 @@ export async function applyGraphStep(
         feature: `${step.op} is a read-side or non-PDF-output capability`,
         remedy:
           'Call the typed direct API from the route so its report or non-PDF output is preserved.',
+      });
+    case 'scan-to-pdf':
+      // An input-side capability, not a read-side one, so it gets its own wording rather than
+      // the shared remedy above. This op was previously absent from the switch entirely, so it
+      // fell through to `return undefined` — which the pipeline reads as "this step produced no
+      // new output" and then re-serialises the untouched input, reporting success. A recipe
+      // asking to scan silently produced a document that was never scanned.
+      throw new PdfEngineError({
+        kind: 'unsupported-feature',
+        feature: 'scan-to-pdf is an input-side capability',
+        remedy:
+          'Capture or import pages on the Scan to PDF page, then assemble them there. A recipe step reads PDF inputs, not camera or image files.',
       });
   }
   return undefined;

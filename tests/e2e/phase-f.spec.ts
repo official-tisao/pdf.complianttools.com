@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
@@ -106,10 +108,10 @@ test("a tool route never renders another tool's controls", async ({ page }) => {
     '/e-invoice': /Invoice number/i,
     '/merge': /Merge PDF/i,
     '/qr-code': /Text or URL/i,
-    '/watch': /Choose folder and start watcher/i,
+    '/watch': /Choose folders and start watching/i,
   };
   const FOREIGN: ReadonlyArray<readonly [string, RegExp]> = [
-    ['folder watcher', /Choose folder and start watcher/i],
+    ['folder watcher', /Choose folders and start watching/i],
     // T35's own label, distinct from the invoice builder's "Templates" fieldset.
     ['create-pdf template picker', /Template Grid/i],
     ['Relay endpoint', /Your Relay endpoint/i],
@@ -231,6 +233,146 @@ test('recipe route describes a document-free deterministic share', async ({ page
   await page.goto('/recipe');
   await expect(page.getByText(/document-free recipe/i)).toBeVisible();
   await expect(page.getByRole('button', { name: /Copy document-free recipe link/i })).toBeVisible();
+});
+
+test('a shared recipe link restores the steps it was copied from', async ({ page, context }) => {
+  // The share button wrote a URL fragment but nothing ever read one back, so opening a
+  // shared link silently landed on the default recipe. This is the P7-08 done-when: the
+  // link reproduces the recipe, with no server round-trip.
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/recipe');
+
+  // Wait for the page to be live before interacting. The step list is prerendered, so it
+  // exists before hydration and an early click lands on inert markup. The editor reports
+  // itself hydrated, the same signal the invoice builder uses. Retrying a mutating click
+  // is not an option — a retry landing after hydration would remove a second step.
+  await expect(page.locator('.recipe-editor[data-hydrated="true"]')).toBeVisible({
+    timeout: 30_000,
+  });
+  const steps = page.locator('.recipe-steps li');
+  await expect(steps).toHaveCount(1);
+
+  // Each option is chosen once: the select keeps its value, so re-picking the same one
+  // fires no new change event.
+  await page.getByRole('combobox', { name: /Step/i }).selectOption({ label: 'Bates numbering' });
+  await expect(steps).toHaveCount(2);
+  await page.getByRole('combobox', { name: /Step/i }).selectOption({ label: 'Metadata' });
+  await expect(steps).toHaveCount(3);
+  await page.getByRole('combobox', { name: /Step/i }).selectOption({ label: 'Compress' });
+  await expect(steps).toHaveCount(4);
+
+  await page.getByRole('button', { name: /Copy document-free recipe link/i }).click();
+  // The status line must say something either way. A denied clipboard previously rejected
+  // out of the handler, so the user saw no feedback at all.
+  await expect(
+    page.locator('[role="status"]').filter({ hasText: /Share link|no document bytes/i }),
+  ).toBeVisible();
+  const link = (await page.evaluate(() => navigator.clipboard.readText())) as string;
+  expect(link, 'the copied link must carry a recipe fragment').toMatch(/\/recipe#r1\./u);
+
+  // Open it in a fresh page: a same-page reload would prove nothing about a share.
+  const opened = await context.newPage();
+  await opened.goto(link);
+  await expect(opened.locator('.recipe-steps li')).toHaveCount(4, { timeout: 30_000 });
+  await expect(
+    opened.locator('[role="status"]').filter({ hasText: /Loaded a shared recipe/i }),
+  ).toBeVisible();
+  await opened.close();
+});
+
+test('a corrupt recipe fragment is reported, not thrown away silently', async ({ page }) => {
+  // A link can be truncated by a chat client or an editor. It must say so rather than
+  // leaving the user looking at a default recipe that is not what they were sent.
+  await page.goto('/recipe#r1.not-a-real-fragment');
+  await expect(
+    page.locator('[role="status"]').filter({ hasText: /could not be read/i }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('button', { name: /Copy document-free recipe link/i })).toBeVisible();
+});
+
+test('a saved recipe is restored on reload, not discarded', async ({ page }) => {
+  // The IndexedDB save had no reader anywhere in the app, so the recipe was written on Share
+  // and never read back — a reload silently returned the default. README §4.10 T70 asks for a
+  // save that persists.
+  await page.goto('/recipe');
+  await expect(page.locator('.recipe-editor[data-hydrated="true"]')).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await page.getByRole('button', { name: /Save to this browser/i }).click();
+  await expect(page.locator('[role="status"]').filter({ hasText: /Saved to this browser/i })).toBeVisible();
+
+  // The default recipe has one step. Removing it, then reloading, is the only way to tell a
+  // restored recipe from a fresh default.
+  await page.getByRole('button', { name: /Remove step 1/i }).click();
+  await expect(page.locator('.recipe-steps li')).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('.recipe-editor[data-hydrated="true"]')).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(
+    page.locator('[role="status"]').filter({ hasText: /Restored your last recipe/i }),
+  ).toBeVisible({ timeout: 30_000 });
+});
+
+test('the recipe route offers the export T70 requires', async ({ page }) => {
+  await page.goto('/recipe');
+  await expect(page.getByRole('button', { name: /Export JSON/i })).toBeVisible();
+});
+
+test.describe('P7-07 batch runner', () => {
+  const selectPdfs = async (page: import('@playwright/test').Page, count: number) => {
+    await page.goto('/batch');
+    // The route is prerendered, so its markup accepts a file and then throws it away. This is
+    // silent: the input keeps its file and Playwright reports no error, but the component's own
+    // `files` is empty, so the Run button stays disabled and the failure surfaces 30 seconds
+    // later as an inexplicable timeout. Nothing on this route publishes a hydration signal, so
+    // the gate is the observable consequence of hydration — the live component reacting to input.
+    // Refilling is safe to retry here: `setInputFiles` replaces the selection wholesale, so a
+    // second attempt cannot leave an extra file behind.
+    const payload = Array.from({ length: count }, (_, index) => ({
+      name: `doc-${index + 1}.pdf`,
+      mimeType: 'application/pdf',
+      buffer: readFileSync(join(process.cwd(), 'fixtures', 'pdfs', 'one-page.pdf')),
+    }));
+    const runButton = page.getByRole('button', { name: /Run local batch/i });
+    // Real PDFs, not stubs: the engine inspects each one before running the recipe, and a stub
+    // would fail classification rather than exercising the per-file status path.
+    await expect(async () => {
+      await page.locator('input[type="file"]').setInputFiles(payload);
+      await expect(runButton).toBeEnabled({ timeout: 1000 });
+    }).toPass({ timeout: 30_000 });
+  };
+
+  test('each file gets its own status row naming it', async ({ page }) => {
+    // README §11.5 asks for per-file status rows. The page previously showed one aggregate
+    // count, so a user could not tell which file had failed or why.
+    await selectPdfs(page, 3);
+    await page.getByRole('button', { name: /Run local batch/i }).click();
+
+    const rows = page.locator('[data-testid="batch-rows"] li');
+    await expect(rows).toHaveCount(3, { timeout: 30_000 });
+    await expect(rows.first()).toHaveAttribute('data-status', 'succeeded');
+    await expect(page.getByText('doc-1.pdf')).toBeVisible();
+    await expect(page.getByText('doc-3.pdf')).toBeVisible();
+  });
+
+  test('completed results are downloadable', async ({ page }) => {
+    await selectPdfs(page, 2);
+    await page.getByRole('button', { name: /Run local batch/i }).click();
+    await expect(page.locator('[data-testid="batch-rows"] li')).toHaveCount(2, { timeout: 30_000 });
+    await expect(page.getByRole('button', { name: /Download results as ZIP/i })).toBeVisible();
+  });
+
+  test('a retry control appears only when something failed', async ({ page }) => {
+    await selectPdfs(page, 1);
+    // Before a run there is nothing to retry, so the control must not be offered.
+    await expect(page.getByRole('button', { name: /Retry failed only/i })).toHaveCount(0);
+    await page.getByRole('button', { name: /Run local batch/i }).click();
+    await expect(page.locator('[data-testid="batch-rows"] li')).toHaveCount(1, { timeout: 30_000 });
+    // All succeeded, so there is still nothing to retry.
+    await expect(page.getByRole('button', { name: /Retry failed only/i })).toHaveCount(0);
+  });
 });
 
 test.describe('P7-03 invoice builder', () => {

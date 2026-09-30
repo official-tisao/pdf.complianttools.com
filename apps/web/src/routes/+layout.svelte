@@ -2,8 +2,20 @@
   import '@pdf-complianttools/ui/tokens.css';
   import { page } from '$app/state';
   import { HREFLANG, canonicalUrl } from '$lib/seo';
+  import { configurePdfJs } from '$lib/configure-pdfjs';
 
   let { children } = $props();
+
+  // pdf.js needs its worker URL set by the host before any document can be opened. This lives in
+  // the layout rather than in `PdfViewer` because the engine imports pdf.js for *any* recipe that
+  // inspects a document, and the batch and folder-watcher routes run those recipes. Setting it
+  // only on the viewer left those two routes failing every valid PDF with a `corrupt-structure`
+  // remedy — "Re-export the PDF from its source application" — for a document that was fine.
+  //
+  // `$effect` rather than module scope: this runs client-side only, never during the prerender.
+  $effect(() => {
+    void configurePdfJs();
+  });
 </script>
 
 <svelte:head>

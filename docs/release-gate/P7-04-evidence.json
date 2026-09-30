@@ -1,7 +1,7 @@
 {
   "task": "P7-04",
   "title": "Scan to PDF — deskew measurement over a deliberately skewed fixture set",
-  "date": "2026-09-29",
+  "date": "2026-09-30",
   "evidenceType": "synthetic-fixture-set",
   "doneWhen": "STCC; deskew measurably improves a deliberately-skewed fixture set.",
   "method": "Each fixture is a page of horizontal text rules drawn at a known rotation by scripts/generate-skew-fixtures.mjs. The shipped estimator and correction are run over the decoded pixels; \"detected\" is what the estimator reports for the page as drawn, and \"residual after\" is how far the corrected page still sits from upright.",
@@ -10,7 +10,7 @@
   "skewedFixtures": 7,
   "worstResidualAfterDegrees": 0.05,
   "meanDetectionErrorDegrees": 0.018,
-  "maxDeskewMs": 65.5,
+  "maxDeskewMs": 69.5,
   "status": "PASS",
   "gateUpdateAuthorized": false,
   "knownGaps": [
@@ -28,7 +28,7 @@
       "applied": false,
       "confidence": 0.474,
       "correctedTo": "900x640",
-      "deskewMs": 40.3,
+      "deskewMs": 41.7,
       "pass": true
     },
     {
@@ -40,7 +40,7 @@
       "applied": true,
       "confidence": 0.444,
       "correctedTo": "723x391",
-      "deskewMs": 65.5,
+      "deskewMs": 64.7,
       "pass": true
     },
     {
@@ -52,7 +52,7 @@
       "applied": true,
       "confidence": 0.427,
       "correctedTo": "799x498",
-      "deskewMs": 57.1,
+      "deskewMs": 60.9,
       "pass": true
     },
     {
@@ -64,7 +64,7 @@
       "applied": true,
       "confidence": 0.417,
       "correctedTo": "855x576",
-      "deskewMs": 59.2,
+      "deskewMs": 54.4,
       "pass": true
     },
     {
@@ -76,7 +76,7 @@
       "applied": true,
       "confidence": 0.427,
       "correctedTo": "865x592",
-      "deskewMs": 53.4,
+      "deskewMs": 55.5,
       "pass": true
     },
     {
@@ -88,7 +88,7 @@
       "applied": true,
       "confidence": 0.443,
       "correctedTo": "832x546",
-      "deskewMs": 50.9,
+      "deskewMs": 62.2,
       "pass": true
     },
     {
@@ -100,7 +100,7 @@
       "applied": true,
       "confidence": 0.465,
       "correctedTo": "767x453",
-      "deskewMs": 52.5,
+      "deskewMs": 69.5,
       "pass": true
     },
     {
@@ -112,7 +112,7 @@
       "applied": true,
       "confidence": 0.695,
       "correctedTo": "659x302",
-      "deskewMs": 41.5,
+      "deskewMs": 42.7,
       "pass": true
     }
   ]

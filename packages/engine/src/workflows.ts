@@ -19,7 +19,7 @@ export async function buildDocumentPack(
   let page = 1;
   for (const attachment of attachments) {
     try {
-      const document = await PDFDocument.load(attachment.bytes);
+      const document = await PDFDocument.load(attachment.bytes, { updateMetadata: false });
       const count = document.getPageCount();
       entries.push(`${attachment.name} — pages ${page + 1}-${page + count}`);
       page += count;

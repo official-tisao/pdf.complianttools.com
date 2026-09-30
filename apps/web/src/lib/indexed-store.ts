@@ -6,7 +6,7 @@
  */
 
 const DB_NAME = 'pdf-complianttools';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const SETTINGS = 'settings';
 const TEMPLATES = 'templates';
 
@@ -27,6 +27,18 @@ const MIGRATIONS: Migration[] = [
     run: (db) => {
       if (!db.objectStoreNames.contains(TEMPLATES)) {
         db.createObjectStore(TEMPLATES, { keyPath: 'id' });
+      }
+    },
+  },
+  {
+    // SETTINGS was never created by any migration, so every saveLocalJson call — including
+    // the one behind the recipe share button — failed with "object store was not found" and
+    // the user saw nothing happen. This is its own version step rather than a change to the
+    // v2 step above, because a database already at v2 will never re-run that one.
+    to: 3,
+    run: (db) => {
+      if (!db.objectStoreNames.contains(SETTINGS)) {
+        db.createObjectStore(SETTINGS);
       }
     },
   },

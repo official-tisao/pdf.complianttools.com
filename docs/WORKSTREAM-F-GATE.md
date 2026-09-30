@@ -83,21 +83,25 @@ specific about what is and is not claimed.
 
 ## Deliberate limits
 
-- **Scan corrects rotation, not perspective.** README §4.5 specifies "perspective deskew". What
-  ships detects and corrects in-plane rotation, which covers the dominant phone-scan case — a page
-  photographed slightly askew on a surface — but not a page photographed at an angle to the sensor,
-  which needs four-point document detection and a homography. That is a genuine shortfall against the
-  spec wording, recorded rather than reinterpreted, and it is why T40 is `[/]` and not `[x]` in
-  PLAN.md. It is not built here because corner detection needs a browser CV worker, the same
-  uncleared-runtime boundary that holds P5-04 OCR. The engine performs no projective transform and
-  makes no claim to; the limitation is stated inline in `scan-deskew.ts` and in the P7-04 task.
-  **Follow-up:** implement four-point detection, then re-run `pnpm measure:skew` with perspective
-  fixtures added to the set.
+- **Scan corrects both rotation and perspective now, and is still `[/]`.** README §4.5 specifies
+  "perspective deskew", and `packages/engine/src/scan-perspective.ts` implements it: flood-fill the
+  bright page region, fit a line to each of the four edges, intersect them for the corners, and
+  rectify through an 8-DOF homography solved as target-to-source so every output pixel knows where
+  to read from. T40 is not `[x]` because of STCC, not because of the geometry — the route still has
+  no Zod schema with generated controls, no preview-fidelity path, no i18n message layer, and no
+  measured §19 latency budget for the capture path.
 
-- **The scan fixtures are drawn pages, not photographs.** They exercise the estimator and the
-  correction, not photograph-specific artefacts — lens distortion, uneven lighting, page curl, or
-  sensor noise. The evidence is a claim about the algorithm, not about the tool's behaviour on a real
-  phone. Unlike P7-02, no physical device has photographed a page; `P7-04-deskew-plan.txt` says so.
+- **The perspective detector's assumptions are real limits, not hedges.** It assumes a page that is
+  _brighter_ than its surroundings and that occupies enough of the frame. A page on a dark desk, or
+  one filling the frame edge to edge, is declined with a stated `PerspectiveEstimate.reason` rather
+  than guessed at, and the estimate carries `keystone` and `confidence` so a caller can decide not
+  to trust it. No shadow removal, and no refinement against a torn or curled page edge.
+
+- **The scan fixtures are drawn pages, not photographs.** They exercise the estimator, the rotation
+  correction and the rectifier, not photograph-specific artefacts — lens distortion, uneven lighting,
+  page curl, or sensor noise. The evidence is a claim about the geometry, not about the tool's
+  behaviour on a real phone. Unlike P7-02, no physical device has photographed a page;
+  `P7-04-deskew-plan.txt` says so.
 
 - **Detection and correction are the only deskew-adjacent claims.** No page-boundary detection, no
   shadow removal, no background flattening, and no OCR — a corrected scan is still a scanned image

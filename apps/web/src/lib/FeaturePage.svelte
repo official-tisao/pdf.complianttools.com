@@ -5,11 +5,22 @@
   // module, so importing it eagerly would pull pdfjs, mammoth, exceljs and
   // pptxgenjs into all ten routes that share this component. Heavier ops
   // (scan, pack, batch, relay, folder watch) are loaded inside their handlers.
-  import type { FolderWatcher, Recipe, ScanFrame } from '@pdf-complianttools/engine';
+  import type {
+    BatchItemResult,
+    FolderWatcher,
+    Recipe,
+    ScanFrame,
+    WatchedFileResult,
+  } from '@pdf-complianttools/engine';
   // recipe.ts is zod-only, so importing it eagerly costs nothing and keeps the
   // recipe description in the prerendered HTML.
-  import { describeRecipe, serializeRecipe } from '@pdf-complianttools/engine/recipe';
-  import { saveLocalJson } from '$lib/indexed-store';
+  import {
+    describeRecipe,
+    parseRecipe,
+    parseSerializedRecipe,
+    serializeRecipe,
+  } from '@pdf-complianttools/engine/recipe';
+  import { loadLocalJson, saveLocalJson } from '$lib/indexed-store';
   import ScanCapture from '$lib/ScanCapture.svelte';
   import { downloadBytes } from '$lib/download';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
@@ -64,7 +75,26 @@
     version: 'r1',
     steps: [{ op: 'compress', options: { preset: 'balanced' } }],
   });
+  let batchResults = $state<BatchItemResult[]>([]);
+  // The input bytes alongside the results, so retry-failed-only can re-run just the failures
+  // rather than reprocessing files that already succeeded.
+  let batchInputs: Uint8Array[] = $state([]);
+  let batchNote = $state('');
+  // The recipe fragment already handed to the decoder, so a re-run of the effect below
+  // does not decode the same link twice. Deliberately NOT `$state`: a `$state` write inside
+  // the effect would become a tracked dependency, the effect would invalidate and re-run,
+  // and it would return early on its own marker — never decoding anything.
+  let restoredFragment = '';
+  // Marks the recipe editor live. Set by the effect that reads the shared fragment, so it
+  // only becomes true once this component is interactive on the one route that uses it.
+  let hydrated = $state(false);
   let watcher = $state<FolderWatcher | undefined>();
+  let watchedFiles = $state<WatchedFileResult[]>([]);
+  // Deliberately not `$state`: `watcher.state` is a plain getter on a class instance, so the
+  // template never sees it change. Reading it during render creates no dependency, and the page
+  // used to sit on "stopped" forever while the watcher was actually running.
+  let watcherState = $state('stopped');
+  let watchOutputDir = $state<string | undefined>();
   const structuredData = $derived(
     softwareApplicationLd({ name: title, description, path: page.url.pathname }),
   );
@@ -145,25 +175,199 @@
       files.map((file) => file.arrayBuffer().then((bytes) => new Uint8Array(bytes))),
     );
     const { runBatch } = await import('@pdf-complianttools/engine');
-    const results = await runBatch(inputs, recipe, { concurrency: 2 });
-    status = `${results.filter((item) => item.status === 'succeeded').length}/${results.length} files completed locally.`;
-  }
-  async function shareRecipe() {
-    await saveLocalJson('recipe.current', recipe);
-    const link = `${location.origin}/recipe#${await serializeRecipe(recipe)}`;
-    await navigator.clipboard?.writeText(link);
-    status = `${describeRecipe(recipe)}. Share link copied; it contains no document bytes.`;
-  }
-  async function startWatch() {
-    const { FolderWatcher, pickFolder } = await import('@pdf-complianttools/engine');
-    const directory = await pickFolder();
-    watcher = new FolderWatcher(directory, {
-      onFile: async (file) => {
-        status = `New file detected: ${file.name}`;
+    // The per-file inputs are kept so a retry can re-run only the failures. Without them a
+    // retry-failed-only control has nothing to re-read, and the successes would be reprocessed.
+    batchInputs = inputs;
+    batchResults = await runBatch(inputs, recipe, {
+      concurrency: 2,
+      onItem: (item) => {
+        batchResults = batchResults.map((existing, at) => (at === item.index ? item : existing));
+      },
+      onGovern: (concurrency, projected, max) => {
+        if (concurrency < 2)
+          batchNote = `The memory governor reduced concurrency to ${concurrency} for ${Math.round(projected / 1024 / 1024)} MB of projected working set against a ${Math.round(max / 1024 / 1024)} MB budget.`;
       },
     });
-    await watcher.start();
-    status = 'Folder watcher running. Processing is local and permissioned.';
+    const done = batchResults.filter((item) => item.status === 'succeeded').length;
+    status = `${done}/${batchResults.length} files completed locally. Download the results to retrieve them.`;
+  }
+  async function retryFailed() {
+    const failed = batchResults.filter((item) => item.status === 'failed');
+    if (!failed.length || !batchInputs.length) return;
+    const { runBatch } = await import('@pdf-complianttools/engine');
+    // Only the failures are re-run. Their original indices are preserved so a retry updates the
+    // existing rows rather than appending a second entry for the same file.
+    const indices = failed.map((item) => item.index);
+    const retried = await runBatch(
+      indices.map((index) => batchInputs[index]!),
+      recipe,
+      { concurrency: 2, maxRetries: 2 },
+    );
+    const byOriginal = new Map(indices.map((index, at) => [index, retried[at]!]));
+    batchResults = batchResults.map((item) => byOriginal.get(item.index) ?? item);
+    const stillFailing = batchResults.filter((item) => item.status === 'failed').length;
+    status = stillFailing
+      ? `${stillFailing} file${stillFailing === 1 ? '' : 's'} still failing after a retry.`
+      : 'Every file completed after retrying the failures.';
+  }
+  async function downloadBatch() {
+    if (!batchResults.length) return;
+    // Deep subpath and a dynamic import: the batch route is the only one that needs the ZIP
+    // packer, and keeping it off the eager path is what stops it reaching every other route.
+    const { zipBatchResults } = await import('@pdf-complianttools/engine/batch-zip');
+    const { zipBytes } = zipBatchResults(batchResults);
+    downloadBytes(zipBytes, 'batch-results.zip', 'application/zip');
+    status = 'Downloaded a ZIP of the completed files and a manifest of the rest.';
+  }
+  async function exportRecipe() {
+    // Exported through the same schema as everything else, so a file a user keeps cannot carry
+    // a shape the engine would refuse to run later. README §4.10 T70 requires the export.
+    try {
+      const snapshot = JSON.parse(JSON.stringify(recipe)) as Recipe;
+      const json = JSON.stringify(parseRecipe(snapshot), null, 2);
+      downloadBytes(new TextEncoder().encode(json), 'recipe.json', 'application/json');
+      status = 'Exported recipe.json. It contains no document bytes.';
+    } catch (caught) {
+      status =
+        caught instanceof Error
+          ? `The recipe could not be exported: ${caught.message}`
+          : 'The recipe could not be exported.';
+    }
+  }
+  async function saveRecipe() {
+    try {
+      // A plain snapshot: IndexedDB's structured clone rejects a Svelte 5 `$state` proxy.
+      const snapshot = JSON.parse(JSON.stringify(recipe)) as Recipe;
+      await saveLocalJson('recipe.current', snapshot);
+      status = 'Saved to this browser. It will be here when you come back.';
+    } catch (caught) {
+      // Sharing is not the only thing that saves, so this needed its own reporting: a rejection
+      // here used to leave a blank status line and a button that looked inert.
+      status =
+        caught instanceof Error
+          ? `The recipe could not be saved: ${caught.message}`
+          : 'The recipe could not be saved in this browser.';
+    }
+  }
+  async function shareRecipe() {
+    let link: string;
+    try {
+      // A plain snapshot, never the `$state` proxy. IndexedDB uses the structured clone
+      // algorithm, which rejects a Svelte proxy outright, and the engine's validators walk
+      // the value with `instanceof` checks that a proxy does not answer cleanly.
+      const snapshot = JSON.parse(JSON.stringify(recipe)) as Recipe;
+      await saveLocalJson('recipe.current', snapshot);
+      link = `${location.origin}/recipe#${await serializeRecipe(snapshot)}`;
+    } catch (caught) {
+      // Sharing is the point of this button. A failure anywhere in it used to reject out
+      // of the handler, leaving the status line blank and the button looking inert.
+      status =
+        caught instanceof Error
+          ? `The recipe could not be prepared for sharing: ${caught.message}`
+          : 'The recipe could not be prepared for sharing.';
+      return;
+    }
+    // The clipboard write can be denied — an insecure origin, or a permission the user has
+    // refused. Copying is a convenience; the link is the deliverable, so say so either way.
+    let copied: boolean;
+    try {
+      await navigator.clipboard?.writeText(link);
+      copied = true;
+    } catch {
+      copied = false;
+    }
+    status = copied
+      ? `${describeRecipe(recipe)}. Share link copied; it contains no document bytes.`
+      : `${describeRecipe(recipe)}. Copy this link manually — the browser blocked clipboard access. It contains no document bytes.`;
+  }
+  // Restoring a shared recipe, and reloading the one saved in IndexedDB.
+  //
+  // This reads `location` and IndexedDB, neither of which exists during the prerender this site
+  // is built with, so it runs in an effect rather than at module scope — otherwise the build
+  // would fail or bake in a recipe nobody asked for. Guarded by `kind` because every route
+  // renders this component, and a hash on /merge is not a recipe.
+  //
+  // A shared fragment wins over the stored recipe: it is the more specific instruction, and a
+  // link someone was sent must not be overwritten by what this browser happened to save last.
+  $effect(() => {
+    if (kind !== 'recipe') return;
+    // The editor reports itself live, matching the invoice builder's signal. Its step list is
+    // prerendered, so it exists before hydration and an early click lands on inert markup.
+    hydrated = true;
+    const fragment = location.hash.replace(/^#/, '');
+    if (fragment && fragment !== restoredFragment) {
+      // The decode is async, so the effect cannot await. This deliberately returns no cleanup
+      // function: a cleanup re-arms on every dependency change and would discard its own
+      // result before the decode resolved.
+      restoredFragment = fragment;
+      parseSerializedRecipe(fragment)
+        .then((restored) => {
+          if (restoredFragment !== fragment) return;
+          recipe = restored;
+          status = `Loaded a shared recipe: ${describeRecipe(restored)}`;
+        })
+        .catch(() => {
+          if (restoredFragment !== fragment) return;
+          status = 'That recipe link could not be read. Start a new recipe, or copy a fresh link.';
+        });
+      return;
+    }
+    // No fragment, so fall back to whatever this browser saved last. Without this the save was
+    // write-only — `loadLocalJson` had no caller anywhere in the app — and a reload discarded the
+    // recipe entirely. Read once per mount; `restoredFragment` is a plain let, not `$state`, so
+    // this does not re-arm.
+    if (restoredFragment) return;
+    restoredFragment = 'stored';
+    loadLocalJson<Recipe>('recipe.current')
+      .then((stored) => {
+        if (!stored) return;
+        // Re-validated on read. A record written by an older build, or edited in devtools, must
+        // not be able to put an invalid recipe into the editor.
+        const restored = parseRecipe(stored);
+        recipe = restored;
+        status = `Restored your last recipe: ${describeRecipe(restored)}`;
+      })
+      .catch(() => {
+        // A missing or unreadable store is not a failure worth reporting — the default recipe
+        // is a fine starting point and saying so would be noise.
+      });
+  });
+  async function startWatch() {
+    try {
+      // Deep subpath + dynamic import: only /watch needs the watcher, the folder picker, and the
+      // recipe pipeline. Importing the barrel here would pull the entire engine into this route.
+      const { FolderWatcher, pickFolder } = await import('@pdf-complianttools/engine/watcher');
+      const { watchProcessor, pickOutputFolder } =
+        await import('@pdf-complianttools/engine/watcher-process');
+      const directory = await pickFolder();
+      const output = await pickOutputFolder();
+      watchOutputDir = output.name;
+      // The processor permissiones the output folder and applies the recipe, then writes each
+      // result. Previously this route only *reported* a detected filename and discarded the file.
+      const onFile = await watchProcessor({
+        recipe,
+        output,
+        outputSubdirectory: 'processed',
+        onResult: (result) => {
+          watchedFiles = [...watchedFiles, result];
+          status =
+            result.status === 'succeeded'
+              ? `Processed ${result.name} → ${result.outputName}.`
+              : `${result.name} failed: ${result.error?.remedy ?? 'no remedy was reported.'}`;
+        },
+      });
+      const next = new FolderWatcher(directory, { onFile });
+      await next.start();
+      watcher = next;
+      watcherState = next.state;
+      status = `Watching for PDFs. Results are written to ${output.name}/processed.`;
+    } catch (caught) {
+      // A PdfEngineError's message is its remedy. A denied output permission or a cancelled
+      // picker previously rejected out of the handler, leaving a blank status line.
+      status =
+        caught instanceof Error ? caught.message : 'The folder watcher could not be started.';
+      watcherState = 'stopped';
+    }
   }
 </script>
 
@@ -235,33 +439,108 @@
       >PDFs to process
       <input type="file" accept="application/pdf,.pdf" multiple onchange={selectFiles} /></label
     ><button disabled={!files.length} onclick={batch}>Run local batch</button>
-    <p class="note">
-      Concurrency and memory are bounded; failed files remain individually retryable in the engine
-      API.
-    </p>
-  {:else if kind === 'recipe'}
-    <label
-      >Step <select
-        onchange={(event) => {
-          const op = (event.currentTarget as HTMLSelectElement).value as
-            'compress' | 'bates' | 'metadata';
-          recipe = { ...recipe, steps: [...recipe.steps, { op, options: {} }] };
-        }}
-        ><option value="compress">Compress</option><option value="bates">Bates numbering</option
-        ><option value="metadata">Metadata</option></select
-      ></label
-    >
-    <p class="recipe-description">{describeRecipe(recipe)}</p>
-    <button onclick={shareRecipe}>Copy document-free recipe link</button>
-  {:else if kind === 'watch'}
-    <button onclick={startWatch}>Choose folder and start watcher</button>{#if watcher}<button
-        onclick={() => watcher?.pause()}>Pause</button
-      ><button onclick={() => watcher?.resume()}>Resume</button><button
-        onclick={() => watcher?.stop()}>Stop</button
-      >
+    {#if batchResults.length}
+      <!-- Per-file rows (README §11.5). The page previously showed only an aggregate count, so
+           a user could not tell which file failed or why. -->
+      <ul class="batch-rows" data-testid="batch-rows">
+        {#each batchResults as item, at (at)}
+          <li data-status={item.status}>
+            <span class="batch-name">{files[at]?.name ?? `File ${item.index + 1}`}</span>
+            <span class="batch-state">{item.status}</span>
+            {#if item.attempts > 1}<span class="batch-state">({item.attempts} attempts)</span>{/if}
+            {#if item.error}
+              <span class="batch-error">{item.error.remedy}</span>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+      {#if batchNote}<p class="note">{batchNote}</p>{/if}
+      <div class="batch-actions">
+        {#if batchResults.some((item) => item.status === 'succeeded')}
+          <button onclick={downloadBatch}>Download results as ZIP</button>
+          <!-- Partial download: the ZIP carries whatever has completed so far, so a long
+               batch can be collected mid-run rather than only at the end. -->
+          <button onclick={downloadBatch}>Download completed so far</button>
+        {/if}
+        {#if batchResults.some((item) => item.status === 'failed')}
+          <button onclick={retryFailed}>Retry failed only</button>
+        {/if}
+      </div>
+    {:else}
       <p class="note">
-        State: {watcher.state}. No folder is read before permission is granted.
+        Concurrency and memory are bounded; failed files remain individually retryable in the engine
+        API.
+      </p>
+    {/if}
+  {:else if kind === 'recipe'}
+    <div class="recipe-editor" data-hydrated={hydrated ? 'true' : 'false'}>
+      {#if recipe.steps.length}
+        <ol class="recipe-steps">
+          {#each recipe.steps as step, index (index)}
+            <li>
+              {describeRecipe({ version: 'r1', steps: [step] })}
+              <button
+                aria-label={`Remove step ${index + 1}`}
+                onclick={() => {
+                  recipe = { ...recipe, steps: recipe.steps.filter((_, at) => at !== index) };
+                }}>Remove</button
+              >
+            </li>
+          {/each}
+        </ol>
+      {/if}
+      <label
+        >Step <select
+          onchange={(event) => {
+            const op = (event.currentTarget as HTMLSelectElement).value as
+              'compress' | 'bates' | 'metadata';
+            recipe = { ...recipe, steps: [...recipe.steps, { op, options: {} }] };
+          }}
+          ><option value="compress">Compress</option><option value="bates">Bates numbering</option
+          ><option value="metadata">Metadata</option></select
+        ></label
+      >
+      <p class="recipe-description">{describeRecipe(recipe)}</p>
+      <div class="recipe-actions">
+        <button onclick={shareRecipe}>Copy document-free recipe link</button>
+        <button onclick={saveRecipe}>Save to this browser</button>
+        <button onclick={exportRecipe}>Export JSON</button>
+      </div>
+    </div>
+  {:else if kind === 'watch'}
+    <button onclick={startWatch}>Choose folders and start watching</button>{#if watcher}<button
+        onclick={() => {
+          watcher?.pause();
+          watcherState = watcher?.state ?? 'paused';
+        }}>Pause</button
+      ><button
+        onclick={() => {
+          watcher?.resume();
+          watcherState = watcher?.state ?? 'running';
+        }}>Resume</button
+      ><button
+        onclick={() => {
+          watcher?.stop();
+          watcherState = watcher?.state ?? 'stopped';
+        }}>Stop</button
+      >
+      <p class="note" data-testid="watch-state">
+        State: {watcherState}. {#if watchOutputDir}Results are written to {watchOutputDir}/processed.{/if}
+        No folder is read before permission is granted.
       </p>{/if}
+    {#if watchedFiles.length}
+      <ol class="watch-results">
+        {#each watchedFiles as file, index (index)}
+          <li data-status={file.status}>
+            {#if file.status === 'succeeded'}
+              <span class="ok">{file.name} → {file.outputName}</span>
+            {:else}
+              <span class="bad">{file.name} failed: {file.error?.remedy}</span>
+            {/if}
+          </li>
+        {/each}
+      </ol>
+    {/if}
   {/if}
   {#if !SELF_RENDERED.has(kind) && !children}
     <p class="note">This tool has no controls yet. Nothing was run.</p>
@@ -322,6 +601,50 @@
   .recipe-description {
     color: var(--color-muted);
     line-height: 1.6;
+  }
+  .batch-rows {
+    list-style: none;
+    margin: 20px 0;
+    padding: 0;
+  }
+  .batch-rows li {
+    border-bottom: 1px solid var(--color-hairline);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 10px 0;
+  }
+  .batch-name {
+    color: var(--color-ink);
+    min-width: 180px;
+  }
+  .batch-state,
+  .batch-error {
+    color: var(--color-muted);
+    font-size: 0.875rem;
+  }
+  .batch-actions,
+  .recipe-actions {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .watch-results,
+  .recipe-steps {
+    margin: 16px 0;
+    padding-left: 20px;
+  }
+  .watch-results li,
+  .recipe-steps li {
+    line-height: 1.6;
+  }
+  .watch-results .ok {
+    color: var(--color-ink);
+  }
+  /* No danger token exists in the design system (design.md), so a failure is marked with the
+     muted token and a weight change rather than inventing a red outside it. */
+  .watch-results .bad {
+    color: var(--color-muted);
+    font-weight: 600;
   }
   @media (max-width: 767px) {
     .feature-page {

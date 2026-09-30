@@ -920,26 +920,43 @@ start in parallel with A–E; only their shared engine calls and recipe contract
       correction over every fixture: worst residual after correction **0.05°** against a 0.5°
       tolerance, mean detection error 0.018°. Evidence in
       `docs/release-gate/P7-04-evidence.json`; method and scope in `P7-04-deskew-plan.txt`
-- **Spec:** README §4.5 · **Done when:** STCC; deskew measurably improves a deliberately-skewed
-  fixture set
-- **Still open, and why the box stays `[/]`:** README §4.5 specifies _perspective_ deskew. What ships
-  corrects in-plane **rotation** only, which covers the dominant phone-scan case (a page photographed
-  slightly askew) but not a page photographed at an angle to the sensor. Four-point document
-  detection plus a homography is the missing piece; it needs corner detection, which is a browser CV
-  worker and the same uncleared-runtime boundary that holds P5-04 OCR. This is a genuine shortfall
-  against the spec wording, not a reinterpretation of it, and the route does not claim otherwise.
-  **Follow-up:** implement four-point document detection and projective correction, then re-run
-  `pnpm measure:skew` with perspective fixtures added to the set.
+- [x] **Perspective deskew now ships.** `packages/engine/src/scan-perspective.ts` is the
+      projective half README §4.5 asks for, and it is the reason this task is no longer `[/]`.
+      It is dependency-free and deterministic, so the same code runs in a module worker and in Node
+      (README §8.4), and it is **not** merged into `deskew`: a photo can carry both a tilt and a
+      perspective, the corrections are independent, and a caller may have either or both.
+      The pipeline is three steps: - **Find the page.** Flood-fill the _bright_ region from the frame border. The first attempt
+      used the Otsu ink mask — the dark pixels — which is the text, and the text has no page
+      outline, so it traced glyph strokes and reported the full frame as a rectangle. - **Trace and fit.** Per-row and per-column boundary points, four least-squares lines
+      (implicit `a·x + b·y + c = 0`, not slope form, which is ill-conditioned for a near-vertical
+      edge), corners by intersecting the fitted lines. A single global extreme per axis cannot
+      work: the topmost pixel of a keystone is one _corner_, not an edge, so the extreme yields a
+      bounding box. Each fit also trims 20% of its samples at both ends, because a column that
+      clips only a few rows of a slanted edge reports the bottom of that sliver — measured,
+      `colBottom` read 559 mid-page but 4, 88 and 284 at the ends, enough to drag the "bottom"
+      edge nearly horizontal. - **Rectify.** Solve the 8-DOF homography as **target → source** (the direction it is
+      consumed, so every output pixel knows where to read from) and resample bilinearly.
+- [x] **Measured, and the tests were proven to bite.** `packages/engine/test/scan-perspective.test.mjs`
+      finds all four corners of a synthetic keystone to within 2% of the image's short edge, and
+      shows the rectified text edge spreading **under a third** of the source's page slant.
+      Reverting the homography direction fails it with "rectified text still spreads 59px from a
+      source page slant of 60px" — i.e. the correction having done nothing — and disabling the edge
+      trim fails the detection test as well.
+- **Recorded limits, which is why the box moved but the wording did not.** The detector assumes a
+  page that is **brighter than its surroundings** and that touches enough of the frame; a page on a
+  dark desk, or one filling the frame edge to edge, is declined with a stated `reason` rather than
+  guessed at. There is no shadow removal, no page-boundary refinement against a torn or curled
+  edge, and no photo-realistic evidence: the fixtures are synthetic pages, not photographs, so
+  this is a claim about the geometry and not about lens distortion, uneven lighting or page
+  curl. `PerspectiveEstimate.reason` states every decline, and the estimate carries `keystone`
+  and `confidence` so a caller can decide not to trust it.
 - **Also incomplete against STCC**, recorded rather than glossed: no Zod schema with generated
   controls (the route uses hand-written markup), no preview-fidelity path, no i18n message layer,
   and no measured §19 latency budget for the capture path. These match the other Workstream F tools.
-- **README §4.5 was deliberately left unamended.** The row still reads "perspective deskew", which
-  the shipped code does not do. Rewording the spec to match what was built would make the tracker
-  green by moving the goalposts, which is the opposite of what this file is for. The shortfall is
-  recorded here and in `docs/WORKSTREAM-F-GATE.md` instead. The change-control table in §0.3 lists
-  "changed requirement on unbuilt work → amend the task text; note in §16" — this is not that case,
-  because the requirement was not changed; it was partially met. The box stays `[/]` until
-  perspective ships or the spec is amended deliberately in its own commit.
+- **README §4.5 needed no amendment after all**, and that is the honest outcome here rather than a
+  reworded row. The spec said "perspective deskew"; the shortfall is closed, so the wording is
+  correct and left alone. The earlier note in this task — that the wording was unmet — was true
+  when written and is now history, kept in the §10 change log.
 
 #### P7-05 · Document pack builder (T41)
 
@@ -967,30 +984,133 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 #### P7-07 · Batch runner (T69)
 
 - [x] Concurrency control, per-file status/retry, and memory governor; browser UI reports local completion
-- [x] Partial ZIP download remains a follow-up packaging adapter; engine outputs remain individually
-      available so failed files can be retried without reprocessing successes
+- [x] Outputs are downloadable. The page previously computed every result and discarded it —
+      `runBatch` fills `BatchItemResult.output`, but the UI wrote a status string and the ZIP
+      adapter wrote placeholders, so a user had no way to retrieve anything at all.
+      `zipBatchResults` now packs the real bytes with a `manifest.json` listing every item and its
+      status, and the batch page offers a single ZIP download. It uses fflate and returns a
+      `Uint8Array`: JSZip is CommonJS-only and its `nodebuffer` output does not exist in a
+      browser, which is the constraint the engine's worker-target build imposes.
+- [x] The memory governor now does what README §11.5 asks. It previously did the **opposite** of
+      the requirement: it compared a projected total against the cap and threw
+      `memory-limit-exceeded`, so a large batch refused to start instead of running more slowly.
+      `governConcurrency` uses the same projection as a concurrency divisor — how many items fit
+      the budget at once — and reports the choice through `onGovern` so a slower-than-requested
+      run can be explained rather than silently different. One item larger than the entire budget
+      is the only case that still throws, and its remedy states both figures in MB.
+- [x] The three §11.5 controls the page was missing. It rendered a single aggregate count, so a
+      user could not tell which file failed or why; there was no per-file status row, no
+      retry-failed-only, and no partial download. All three ship, and `retryFailed` re-runs only
+      the failures by keeping the input bytes alongside the results — without them a retry has
+      nothing to re-read and successes would be reprocessed.
+- [x] **The budget clauses are measured, not asserted.** `scripts/measure-batch-budget.mjs` runs
+      real batches and writes `docs/release-gate/P7-07-evidence.json`: 50 files (990 ms, 19.8
+      ms/file, peak RSS 145 MB) and 200 files (1423 ms, 7.1 ms/file, peak RSS 182 MB), both
+      200/200 succeeded, drawn from the real `fixtures/pdfs/` set plus image-bearing PDFs
+      assembled through the shipped `assembleScans`. A third case runs 200 files against a
+      deliberately tight cap so the governor **must** act — it reduced concurrency 8 → 4 and
+      completed 200/200, which is the behaviour README §11.5 actually specifies.
+      `pnpm measure:batch-budget` regenerates it and the `batch-budget` CI job re-runs it, so a
+      regression is a larger number rather than a stale "PASS".
+- This replaced a hand-written `P7-07-200-file-evidence.json` that could not support the box. It
+  recorded 200 inputs totalling 0.8 MB against the 384 MB default cap — **99.6% headroom**, so
+  "never OOMs" was true of a load that stressed nothing — carried no timings, and nothing in
+  the repository could regenerate it. Its own `gateUpdateAuthorized` was `false`. It also
+  carried a note deferring the ZIP "until `BatchItemResult` carries payload", which had been
+  on the type all along and shipped on 2026-09-30. **The measurement was verified to bite**:
+  reverting the governor to its refuse-the-batch behaviour fails the third case with
+  `PdfEngineError` and exits non-zero.
 - **Spec:** README §11.5 · **Done when:** a 50-file batch completes within budget and a
   200-file batch never OOMs
+  _(box earned 2026-09-30 — the ZIP, the governor, the three UI controls, and both budget
+  clauses are now measured rather than claimed)_
+- **Recorded limit of that measurement:** it is single-process Node. A browser tab has its own
+  heap ceiling and a different allocator, so this is evidence for the engine, not for the
+  page. Peak RSS also includes Node's own overhead rather than only the batch working set,
+  which overstates what the engine held — the safe direction for an OOM claim.
 
 #### P7-08 · Recipe builder + sharing (T70)
 
 - [x] Visual pipeline editor, IndexedDB save, document-free JSON/URL-fragment sharing
 - [x] Plain-language description rendered before anything runs; AI steps are outside this deterministic
       Workstream-F recipe schema and cannot be smuggled into a local recipe
+- [x] A shared link restores the recipe it was copied from. The Share button wrote a fragment that
+      **nothing ever read back** — no `location.hash` read site existed anywhere in the app — so
+      opening a shared link silently landed on the default recipe and this Done-when was unmet. The
+      route now decodes the fragment client-side (never during prerender) and shows a per-step list
+      that can be edited. Proven by a real round-trip in `tests/e2e/phase-f.spec.ts`: build four
+      steps, copy the link, open it in a fresh page, assert the steps come back.
+- [x] The IndexedDB save is no longer write-only. `loadLocalJson` had **zero callers** anywhere in
+      the app, so the recipe was saved on Share and never read back — a reload silently returned
+      the default, which made the "save" half of the feature a no-op. The route now restores the
+      stored recipe on mount, re-validating it on read so a record written by an older build
+      cannot put an invalid recipe into the editor. A shared fragment still wins over the stored
+      recipe: a link someone was sent must not be overwritten by what this browser saved last.
+- [x] T70 also asks for "export JSON" and no such control existed. `Export JSON` now runs the
+      recipe through `parseRecipe` before writing, so a file a user keeps cannot carry a shape the
+      engine would later refuse. `Save to this browser` is separate from Share, because sharing
+      was the only thing that saved.
+- [x] "No document data in the link" is now enforced where it actually holds. The invoice op was
+      `z.record(z.string(), z.unknown())` — an unvalidated passthrough — so a hand-written recipe
+      could carry a local `filePath` into the shareable fragment. `assertDocumentFree` never caught
+      it: it rejects `Uint8Array` and four exact key names, not path-shaped strings. A real schema
+      mirroring `createInvoicePdf`'s own validation closes it, because Zod strips every key the
+      schema does not name.
 - **Spec:** README §11.4, §18 · **Done when:** a shared 4-step recipe link reproduces exactly, with no
   server round-trip and no document data in the link
 
 #### P7-09 · Folder watcher (T71)
 
-- [/] File System Access API permission request, local new-file polling, visible pause/resume/stop
-  controls, and an `onFile` callback seam; no directory is read before explicit permission
-- [ ] Auto-processing new files into an output folder is not implemented; the current route only
-      reports detected files and still needs a processor/output-folder adapter
+- [x] File System Access API permission request, local new-file polling, visible pause/resume/stop
+      controls, and an `onFile` callback seam; no directory is read before explicit permission
+- [x] **Auto-processing into an output folder** — the only literal `[ ]` in this Workstream, and
+      the one thing README §4.10 actually specifies. The route previously called `onFile` and
+      then wrote a status string, so a detected file was reported and discarded.
+      `packages/engine/src/watcher-process.ts` applies the recipe and writes the result:
+      `processWatchedFile` runs the shared engine and writes `name.processed.pdf` into a
+      permissioned output folder, and `watchProcessor` builds the `onFile` a `FolderWatcher`
+      needs. The suffix is non-optional — the output can never overwrite the file it came from.
+- [x] The output folder is permissioned **separately** from the input. Asking one handle for both
+      would request write access to a folder the user only meant to read, and a denied write fails
+      at start rather than once per file.
+- [x] One bad file cannot stop the watcher. A per-file failure is returned rather than thrown, so
+      the other files in the folder still process, and the failure names the file — the engine's
+      own errors describe the operation, not the document, so with several files watched a remedy
+      like "Re-export the PDF" gave the user nothing to act on.
+- [x] The state readout is reactive. `watcher.state` is a plain getter on a class instance, so
+      reading it during render created no dependency and the page sat on "stopped" while the
+      watcher was running.
 - **Spec:** README §4.10 · **Done when:** STCC
+  _(box earned 2026-09-30 — the processor, the output-folder adapter, and the reactive state
+  readout all landed; the folder pickers themselves need a Chromium-based browser and cannot be
+  driven from a headless test, so the processing path is covered by unit tests against an
+  injected directory handle rather than by an e2e click-through)_
 
 #### P7-10 · CLI & library (T72)
 
 - [x] `packages/cli` wraps `packages/engine`; the same recipe schema and shared engine run in Node and browser
+- [x] Node output is byte-stable. pdf-lib's `updateMetadata` defaults to true and stamps a
+      wall-clock `/ModDate` on every save, so _every_ op produced different bytes for identical
+      input and the parity test failed intermittently — a flake that was actually a systemic
+      violation of this Done-when. `updateMetadata: false` is now set on every load and create in
+      the engine, which fixes the flake and preserves the dates a user's own document carries. A
+      regression test runs eight ops across a one-second gap, because without crossing that
+      boundary the test passes even when fully broken.
+- [x] **Browser byte-parity is now measured, which closes the Done-when.** The Node-side test
+      compares the CLI against an in-process `run()` — same function, same runtime — so it proved
+      filesystem integrity and could not see a Node-versus-browser divergence. `tests/e2e/
+parity.spec.ts` runs the same recipe through the same engine _inside a real page_ and
+      compares the sha256 against `fixtures/parity/cli-output.sha256`, a reference recorded from
+      the shipped CLI by `scripts/generate-parity-fixture.mjs`. A second assertion runs the
+      recipe twice a second apart in the page, so the wall-clock defect above cannot come back.
+      Both were **proven to bite**: reverting `updateMetadata` to `true` fails them with
+      "does not match the CLI's" and "not byte-stable across a one-second gap".
+- Note for whoever reads that spec next: running the engine from a `page.evaluate` body is not
+  straightforward, and two of the obvious attempts are wrong in ways that _appear_ to work.
+  An evaluate body is not processed by Vite, so a bare specifier cannot resolve in it; and
+  `packages/engine/dist` sits outside Vite's serving allow list, so importing it by absolute
+  path returns an HTML 403 that the browser caches as a module and the import then _looks_
+  fine while failing later. The engine has to be reached through the app's own module graph.
 - **Spec:** README §4.10 · **Done when:** the same recipe JSON produces byte-equivalent output in
   both environments
 
@@ -1000,6 +1120,11 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 - [x] Recipe JSON is document-free and engine execution is shared between browser and Node
 - [x] Relay is opt-in, self-hostable, and never required for local tools
 
+**The document-free claim earned its box on 2026-09-30.** It was not previously true: the invoice op
+was an unvalidated passthrough, so a hand-written recipe carried a local file path into a shareable
+link. The schema now names the real fields and Zod strips the rest, asserted by a full
+`parseRecipe` → `serializeRecipe` → `parseSerializedRecipe` round trip.
+
 **Gate evidence / open questions:** `packages/engine/test/phasef.test.mjs` covers creation, QR matrix/PDF/PNG
 validity, invoice XML and attachment structure, scan assembly, document packs, batch retry/memory behavior,
 recipe document exclusion, folder permission/pause/stop/callback behavior, and Relay opt-in errors. The invoice work additionally
@@ -1008,10 +1133,31 @@ bundles: §19 latency (`docs/release-gate/P7-03-latency-evidence.json`), per-rou
 (`P7-03-bundle-evidence.json`), and Lighthouse mobile across all four categories
 (`P7-03-lighthouse-evidence.json`). It also passes `axe` with zero violations, is keyboard-operable end to
 end, ships prerendered `ar` and `en-XA` variants, and works offline after one visit
-(`tests/e2e/offline.spec.ts`). Physical QR-device scans, full perspective deskew, partial ZIP packaging,
-a real Relay render, and T71's processor/output-folder flow remain explicit release evidence questions
-because those capabilities need external hardware, a browser CV runtime, packaging work, a separately
-installed Playwright browser, or the missing watcher adapter.
+(`tests/e2e/offline.spec.ts`). Physical QR-device scans remain the one explicit release-evidence
+question on this gate: they need three real devices photographing a generated code, and no amount
+of code closes that.
+T71's processor/output-folder flow is no longer an open question — it shipped on 2026-09-30, covered
+by unit tests against an injected directory handle rather than an e2e click-through, because the
+folder pickers need a Chromium-based browser that a headless run cannot drive.
+Partial ZIP packaging is no longer listed here: it shipped on 2026-09-30. `zipBatchResults` packs the
+real `BatchItemResult.output` bytes with a manifest and is downloadable from the batch page, built on
+fflate because JSZip's `nodebuffer` output does not exist in a browser. P7-07's _budget_ Done-when
+is no longer an open question either: `scripts/measure-batch-budget.mjs` measures both named scales
+plus a governor-engaged case, and the `batch-budget` CI job regenerates the evidence
+(`docs/release-gate/P7-07-evidence.json`).
+
+**The batch and folder-watcher routes could not open a valid PDF at all until 2026-09-30.** Found
+while adding per-file status rows: every file came back `failed` with the remedy "Re-export the PDF
+from its source application and retry." Nothing was corrupt. pdf.js needs
+`GlobalWorkerOptions.workerSrc` set by the _host_, and it was set only in `PdfViewer.svelte` — so
+only `/view-pdf` had a working pdf.js. The batch and watcher routes run recipes that inspect
+documents, so pdf.js threw, `classifyPdfInput` caught it, and a `corrupt-structure` error was
+returned for a perfectly good file. It is now configured once in the layout
+(`apps/web/src/lib/configure-pdfjs.ts`), which is where it belonged: the requirement belongs to every
+route that can open a document, not to one component. Worth recording because the failure presented
+as data corruption, and the honest-looking remedy actively sent users to re-export good files.
+`tests/e2e/phase-f.spec.ts` now covers the per-file rows, so a regression fails as a row status
+rather than as a plausible-sounding message.
 Published-schema e-invoice validation is no longer listed here: it was ruled out on the evidence and the
 P7-03 Done-when was amended accordingly on 2026-09-29 (§10), so the tool makes a structural-validation
 claim and says so.
@@ -1028,6 +1174,23 @@ proven in a real browser by `tests/e2e/phase-f.spec.ts`, including that loading 
 reason it is not yet built (four-point corner detection needs the same uncleared browser CV runtime
 that holds P5-04 OCR); the fixtures are drawn pages, not photographs, so the evidence is a claim about
 the algorithm and not about capture on hardware.
+
+**Building the recipe round-trip found three defects that no existing test could see, all now fixed.**
+Worth recording because each was invisible in Node and only appeared in a real browser or a real
+user's history:
+
+- `serializeRecipe` awaited `writer.write()` before reading the stream. In a browser
+  `CompressionStream` does not settle that write while the readable side is unconsumed, so the
+  Share button did nothing at all — silently, since the rejection never arrived either. The read
+  must be started first. `parseSerializedRecipe` had the mirror-image problem on corrupt input,
+  where it hung instead of reporting.
+- The IndexedDB migration ladder never created the `settings` object store, so every
+  `saveLocalJson` call — including the one behind Share — failed with "object store was not
+  found". The store is now created by a v3 migration step, since a database already at v2 never
+  re-runs the earlier one.
+- Both failures escaped the handler, leaving a blank status line and a button that looked inert.
+  Share now reports a typed message for a failed save and distinguishes a denied clipboard from a
+  blocked one.
 
 ## 9. Workstream G — Cross-workstream hardening and launch convergence
 
@@ -1121,6 +1284,10 @@ Empty at genesis; the implementing agent appends an entry per §0.3 as work proc
 | 2026-09-28 | Scope decision: README §23 places `apps/relay` "explicitly out of the P1–P7 default critical path", which contradicted P7-06's Done-when. Resolved by satisfying the Done-when — a real render is now proven in `apps/relay/test/render.test.mjs` — rather than by deferring it. Relay stays opt-in, self-hostable, and never required for local tools.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | 2026-09-29 | P7-03 Done-when amended, then completed (T38, T39 → `[x]`). The original Done-when required the e-invoice XML to "validate against its published schema". That is not achievable by a browser-local tool, and the shortfall was proven rather than assumed: no browser exposes an XSD API; the WASM validator resolves no external `schemaLocation` under Node or the browser; the published npm validators need a Java SDK or a native binding; the pure-JS `xml-xsd-engine` silently compiles the UBL schema to an **empty** model and rejects even a hand-written known-good UBL 2.0 invoice; and inlining yields a derived schema, not the published one. The Done-when now states what the tool does — validate against a documented structural rule set, recover the embedded attachment byte-for-byte, and not attempt to read invoice fields out of a rendered page — and the pages say plainly that published-schema validation is not offered. A server-side validator would satisfy the old wording but break the local-only model this product is sold on (README §25.4), so the wording, not the boundary, was what moved. The five ruled-out routes are recorded inline so the question is not re-litigated from scratch.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | 2026-09-28 | Audited the pulled Workstream-F implementation and tests: the engine suite and sequential CLI parity test pass; corrected the §1 dashboard's merge-conflict residue and counts from the task/appendix checkboxes; kept QR, e-invoice, scan, Relay, batch packaging, and T71 output processing open; and recorded the folder-watcher limitation honestly.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-09-30 | Closed three Workstream-F defects the boxes claimed as done. **P7-08:** the invoice op was an unvalidated passthrough, so a local file path could ride into a shareable link; it now has a real schema mirroring `createInvoicePdf`, and Zod strips what it does not name. A shared link is also read back now — the fragment was written but never read anywhere, so the Done-when was unmet — proven by a real browser round-trip. **P7-07:** batch results were computed and discarded; `zipBatchResults` now packs the real bytes plus a manifest, on fflate rather than the CommonJS-only JSZip whose `nodebuffer` output does not exist in a browser. **P7-10:** the parity "flake" was every op stamping a wall-clock `/ModDate` via pdf-lib's `updateMetadata` default; set to false engine-wide, with a regression test that waits a second because the old one passed even while broken. Boxes re-stated against what is now proven: P7-07 stays `[/]` because its 50/200-file budget clauses have no test at any scale, and P7-10 stays `[/]` because the parity test compares two Node runs, not Node against a browser. Three further bugs surfaced while building the round-trip and were fixed: `serializeRecipe` hung in the browser (the `CompressionStream` read must start before the write is awaited), the IndexedDB ladder never created the `settings` store so Share had never worked, and both failures escaped the handler leaving a blank status line.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 2026-09-30 | Second Gate F pass: five items closed, and the boxes moved to match. **P7-09** was the Workstream's only literal `[ ]` and is now `[x]` — the route reported a detected filename and discarded the file, so `watcher-process.ts` applies the recipe and writes `name.processed.pdf` into a _separately_ permissioned output folder (one handle for both would ask for write access to a folder the user only meant to read); a per-file failure is returned rather than thrown so one bad PDF cannot stop the watcher, and the watcher state readout is now reactive instead of frozen on "stopped". **P7-07:** the memory governor did the exact opposite of README §11.5 — it threw `memory-limit-exceeded` rather than _reducing concurrency_, so a large batch refused to start; it is now a concurrency divisor reporting through `onGovern`, with a single oversized item the only remaining throw. The three missing §11.5 controls ship: per-file status rows, retry-failed-only (which keeps the input bytes, without which a retry has nothing to re-read), and partial download. **P7-10** is now `[x]`: `tests/e2e/parity.spec.ts` runs the recipe in a real page and compares the sha256 against a CLI-recorded reference, which is the only comparison able to see a Node-vs-browser divergence; both assertions were proven to bite by reverting `updateMetadata`. **P7-08** gained the read-back the save always assumed — `loadLocalJson` had zero callers app-wide — plus the export T70 asks for. **Two more bugs found while testing all this:** the batch and watcher routes could not open _any_ valid PDF, because pdf.js's `workerSrc` was set only in `PdfViewer`, so `classifyPdfInput` caught the worker failure and returned a `corrupt-structure` remedy telling users to re-export good files; configuration moved to the layout. And CI ran none of `phase-f`, `workstream-d`, or `design-tokens` — the whole Workstream F e2e suite gated nothing — so a `workflows` job now runs them, the `i18n` job (a copy-paste of `accessibility` running the same file) is gone, and `checks` installs the chromium binary the Relay render tests were silently skipping without. P7-07 stays `[/]` on its 50/200-file budget clauses, which still have no test at either scale.                                                              |
+| 2026-09-30 | **P7-07 → `[x]`.** The budget clauses are now measured rather than asserted. `scripts/measure-batch-budget.mjs` runs real 50- and 200-file batches over the actual `fixtures/pdfs/` set plus image-bearing PDFs assembled through the shipped `assembleScans` — text-only fixtures alone total under 1 MB, which would have measured nothing about memory — and records timings, peak RSS sampled on every item, and the governor's decision into `docs/release-gate/P7-07-evidence.json`. 50 files: 990 ms, 19.8 ms/file, peak 145 MB. 200 files: 1423 ms, 7.1 ms/file, peak 182 MB. A third case runs 200 files against a cap tight enough that the governor must act; it reduced concurrency 8 → 4 and completed 200/200, which is the §11.5 behaviour the old code got backwards. `pnpm measure:batch-budget` regenerates it and a `batch-budget` CI job re-runs it. This replaced a hand-written `P7-07-200-file-evidence.json` committed on 2026-09-28 that recorded 200 inputs totalling 0.8 MB against a 384 MB cap — 99.6% headroom, so "never OOMs" was true of a load that stressed nothing — carried no timings, was unregenerable, and set its own `gateUpdateAuthorized` to `false`. Its note deferring the ZIP "until `BatchItemResult` carries payload" was also stale: that field had been on the type all along. The measurement was **proven to bite** — reverting the governor to its refuse-the-batch behaviour fails the third case with a `PdfEngineError` and a non-zero exit. Recorded limit: single-process Node, so this is evidence for the engine rather than for the browser tab that also runs it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 2026-09-30 | **P7-04 perspective deskew shipped**, closing the geometry shortfall that kept T40 open against README §4.5. `packages/engine/src/scan-perspective.ts` flood-fills the bright page region, traces the boundary per row and per column, fits a line to each edge, intersects them for the corners, and rectifies through an 8-DOF homography. Four things had to be got right, and each was found by measurement rather than by reading the code: the mask must be the **page**, not the ink — an Otsu ink mask traces glyph strokes and reports the full frame as a rectangle; a **global extreme per axis cannot work**, because the topmost pixel of a keystone is one corner rather than an edge, so the extremes yield a bounding box; the line fit has to be **implicit** (`a·x + b·y + c = 0`) with its constant taken against the _normal_, since slope form loses precision on a near-vertical edge and a constant taken against the direction vector yields a plausible angle that does not pass through the points at all; and the homography must be solved **target to source**, the direction it is consumed, since the forward map has to be inverted to fill output pixels. Edge fits also trim 20% of their samples at both ends: a column clipping a slanted edge reports the bottom of its sliver, measured at 4, 88 and 284 against a true 559 mid-page, enough to drag the bottom edge nearly horizontal. `packages/engine/test/scan-perspective.test.mjs` finds all four corners within 2% of the short edge and shows the rectified text edge spreading under a third of the source page slant; **both halves were proven to bite** — reverting the homography direction fails with a rectified spread of 59px against a source slant of 60px, and disabling the trim fails detection. T40 stays `[/]` on STCC, not on geometry: no Zod controls, no preview fidelity, no i18n layer, no §19 latency. Recorded limits: the detector needs a page brighter than its surroundings and large enough in frame, declines everything else with a stated reason, and the fixtures are synthetic pages rather than photographs.                                                                                                                                                                                                                        |
 
 > > > > > > > 023ebd4522e6ee3c35c0d937ded4fe0a82b9360f
 
@@ -1171,7 +1338,7 @@ Mirrors README §4. Checked only when STCC (§0.4) fully holds.
 | T37  | QR Code Generator            | `/qr-code`                     | F          |  [/]   |
 | T38  | Invoice Creator              | `/invoice-creator`             | F          |  [x]   |
 | T39  | Electronic Invoice           | `/e-invoice`                   | F          |  [x]   |
-| T40  | Scan to PDF                  | `/scan-to-pdf`                 | F          |  [/]   | ← rotation deskew shipped and measured; perspective (four-point) correction still open |
+| T40  | Scan to PDF                  | `/scan-to-pdf`                 | F          |  [/]   | ← rotation and perspective deskew both ship and are measured; still short of full STCC (no Zod controls, no preview fidelity, no i18n layer, no §19 latency) |
 | T41  | Document Pack Builder        | `/document-pack-builder`       | F          |  [x]   |
 | T42  | PDF Editor (host)            | `/editor`                      | C          |  [x]   |
 | T43  | Annotator                    | `/annotate`                    | C          |  [x]   |

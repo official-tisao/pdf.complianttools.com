@@ -7,6 +7,46 @@ const pageSelector = z.union([
   z.string().regex(/^(?:(?:\d+(?:-\d+)?)(?:,(?:\d+(?:-\d+)?))*|odd|even|blank)$/u),
 ]);
 
+/**
+ * Mirrors the field list and the constraints `createInvoicePdf` already enforces in
+ * `invoice.ts` — the same ISO-date and ISO-4217 rules, not new ones. It is declared here
+ * rather than imported from `invoice.ts` because this module is imported eagerly by every
+ * route that renders the recipe description, and `invoice.ts` reaches pdf-lib.
+ *
+ * This schema is a privacy boundary, not just a type. It was previously
+ * `z.record(z.string(), z.unknown())`, an unvalidated passthrough, so a hand-written recipe
+ * could carry a local `filePath` or `fileName` straight into the shareable URL fragment.
+ * Zod strips unknown keys by default, so declaring the real fields is what actually closes
+ * that: anything the schema does not name cannot survive `parseRecipe`.
+ */
+const invoiceParty = z.object({
+  name: z.string().min(1),
+  address: z.string().optional(),
+  taxId: z.string().optional(),
+});
+const invoiceSchema = z.object({
+  invoiceNumber: z.string().min(1),
+  issueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u, 'Expected an ISO date (YYYY-MM-DD).'),
+  dueDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/u, 'Expected an ISO date (YYYY-MM-DD).')
+    .optional(),
+  currency: z.string().regex(/^[A-Z]{3}$/u, 'Expected a 3-letter ISO 4217 code.'),
+  supplier: invoiceParty,
+  customer: invoiceParty,
+  lines: z
+    .array(
+      z.object({
+        description: z.string().trim().min(1),
+        quantity: z.number().positive(),
+        unitPrice: z.number().nonnegative(),
+        taxRate: z.number().min(0).max(100).optional(),
+      }),
+    )
+    .min(1),
+  notes: z.string().optional(),
+});
+
 export const operationSchemas = {
   merge: z.object({
     fileOrder: z.array(z.number().int().nonnegative()).optional(),
@@ -140,7 +180,7 @@ export const operationSchemas = {
     email: z.string().optional(),
     organization: z.string().optional(),
   }),
-  invoice: z.object({ invoice: z.record(z.string(), z.unknown()) }),
+  invoice: z.object({ invoice: invoiceSchema }),
   'document-pack': z.object({ title: z.string().default('Document pack') }),
   'scan-to-pdf': z.object({ dpi: z.number().int().min(72).max(600).default(150) }),
   editor: z.object({
@@ -293,21 +333,41 @@ const stepSchema = z.object({
 export const recipeSchema = z.object({ version: z.literal('r1'), steps: z.array(stepSchema) });
 
 export function validateStep(step: Step): Step {
-  const parsed = stepSchema.parse(step);
-  const options = operationSchemas[parsed.op].parse(parsed.options) as StepOptions;
+  const parsed = safeParse(stepSchema, step, 'The recipe step could not be read.');
+  const options = safeParse(
+    operationSchemas[parsed.op],
+    parsed.options,
+    `The ${parsed.op} options could not be read.`,
+  ) as StepOptions;
   return { op: parsed.op, options };
 }
 
 export function parseRecipe(input: unknown): Recipe {
   assertNoCredentials(input);
   assertDocumentFree(input);
-  const parsed = recipeSchema.parse(input);
+  // Zod failures become typed engine errors. A raw ZodError carries a JSON issue list and
+  // no remedy, so it would reach a user as an opaque string — and most ops are now typed
+  // enough to reject input, which is exactly when this path runs.
+  const parsed = safeParse(recipeSchema, input, 'The recipe could not be read.');
   const recipe = {
     version: 'r1' as const,
     steps: parsed.steps.map((step) => validateStep(step as Step)),
   };
   assertDocumentFree(recipe);
   return recipe;
+}
+
+/** Parses, converting a Zod failure into a `PdfEngineError` that names the field to fix. */
+function safeParse<T extends z.ZodTypeAny>(schema: T, input: unknown, remedy: string): z.infer<T> {
+  const result = schema.safeParse(input);
+  if (result.success) return result.data;
+  const issue = result.error.issues[0];
+  const field = issue?.path.length ? ` (${issue.path.join('.')})` : '';
+  throw new PdfEngineError({
+    kind: 'invalid-operation',
+    operation: 'recipe',
+    remedy: `${remedy}${field}: ${issue?.message ?? 'the value is not valid.'}`,
+  });
 }
 
 /** Recipes are shareable parameters only; binary document payloads never belong in them. */
@@ -423,10 +483,15 @@ function fromBase64url(value: string): Uint8Array {
 export async function serializeRecipe(recipe: Recipe): Promise<string> {
   const json = new TextEncoder().encode(JSON.stringify(parseRecipe(recipe)));
   const stream = new CompressionStream('deflate-raw');
+  // The read must be STARTED before the write is awaited. In a browser, `writer.write()`
+  // does not settle while the readable side is unconsumed, so awaiting the write first
+  // hangs forever — the Share button did nothing at all in a real browser, and passed in
+  // Node, where the implementation differs. Same ordering constraint as parse below.
+  const read = new Response(stream.readable).arrayBuffer();
   const writer = stream.writable.getWriter();
   await writer.write(json as Uint8Array<ArrayBuffer>);
   await writer.close();
-  return `r1.${base64url(new Uint8Array(await new Response(stream.readable).arrayBuffer()))}`;
+  return `r1.${base64url(new Uint8Array(await read))}`;
 }
 
 export async function parseSerializedRecipe(value: string): Promise<Recipe> {
@@ -436,10 +501,33 @@ export async function parseSerializedRecipe(value: string): Promise<Recipe> {
       operation: 'recipe',
       remedy: 'Use a recipe link generated by this version of the application.',
     });
+
+  // A truncated or corrupted link makes the WRITE reject, and in a browser the matching
+  // READER then never settles — awaiting the read alone hung forever, so opening a bad link
+  // left the page doing nothing with no error to show. Awaiting the write first turns that
+  // hang into a prompt, typed failure.
   const stream = new DecompressionStream('deflate-raw');
-  const writer = stream.writable.getWriter();
-  await writer.write(fromBase64url(value.slice(3)) as Uint8Array<ArrayBuffer>);
-  await writer.close();
-  const json = await new Response(stream.readable).arrayBuffer();
-  return parseRecipe(JSON.parse(new TextDecoder().decode(json)));
+  const written = (async () => {
+    const writer = stream.writable.getWriter();
+    await writer.write(fromBase64url(value.slice(3)) as Uint8Array<ArrayBuffer>);
+    await writer.close();
+  })();
+  const read = new Response(stream.readable).arrayBuffer();
+  try {
+    await written;
+    return parseRecipe(JSON.parse(new TextDecoder().decode(await read)));
+  } catch {
+    // The read may still be pending; it must not surface as an unhandled rejection.
+    void read.catch(() => undefined);
+    throw undecodableRecipe();
+  }
+}
+
+function undecodableRecipe(): PdfEngineError {
+  return new PdfEngineError({
+    kind: 'invalid-operation',
+    operation: 'recipe',
+    remedy:
+      'That recipe link could not be read; it may have been truncated in transit. Start a new recipe, or copy a fresh link.',
+  });
 }

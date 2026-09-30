@@ -30,7 +30,8 @@
     "verify:latency": "node scripts/measure-latency.mjs",
     "verify:bundle": "node scripts/measure-bundle.mjs",
     "verify:lighthouse": "node scripts/measure-lighthouse.mjs",
-    "verify": "pnpm format:check && pnpm lint && pnpm verify:source-safety && pnpm typecheck && pnpm test && pnpm verify:licenses && pnpm verify:assets && pnpm verify:trademarks && pnpm verify:plan-sync"
+    "verify": "pnpm format:check && pnpm lint && pnpm verify:source-safety && pnpm typecheck && pnpm test && pnpm verify:licenses && pnpm verify:assets && pnpm verify:trademarks && pnpm verify:plan-sync",
+    "measure:batch-budget": "node scripts/measure-batch-budget.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

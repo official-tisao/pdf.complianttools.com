@@ -42,6 +42,18 @@
     "./scan-deskew": {
       "types": "./dist/scan-deskew.d.ts",
       "import": "./dist/scan-deskew.js"
+    },
+    "./batch-zip": {
+      "types": "./dist/batch/zip.d.ts",
+      "import": "./dist/batch/zip.js"
+    },
+    "./watcher": {
+      "types": "./dist/watcher.d.ts",
+      "import": "./dist/watcher.js"
+    },
+    "./watcher-process": {
+      "types": "./dist/watcher-process.d.ts",
+      "import": "./dist/watcher-process.js"
     }
   },
   "scripts": {

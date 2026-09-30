@@ -42,6 +42,42 @@ function toEngineError(error: unknown): EngineError {
   };
 }
 
+/**
+ * The memory governor (README §11.5): "a memory governor that reduces concurrency rather than
+ * crashing on very large document sets."
+ *
+ * It previously did the opposite — it compared a projected total against the cap and threw
+ * `memory-limit-exceeded`, so a 200-file batch refused to start rather than running more slowly.
+ * The projection is now a concurrency divisor instead. Each in-flight item is held as input +
+ * output, and the engine already models that as `byteLength * 2`; dividing the budget by the
+ * largest item gives how many can be resident at once, so the governor narrows the worker pool
+ * until the set fits.
+ *
+ * `floorConcurrency` is returned separately because one item larger than the whole budget still
+ * has to run: the user asked for it, and a batch that cannot run any item is not a batch. That
+ * case is reported through `oversized` rather than silently under-allocating.
+ */
+export function governConcurrency(
+  inputs: readonly Uint8Array[],
+  requested: number,
+  maxMemoryBytes: number,
+): { concurrency: number; projected: number; oversized: Uint8Array[] } {
+  const concurrency = Math.max(1, Math.min(requested, 8));
+  const projected = inputs.reduce((sum, input) => sum + input.byteLength * 2, 0);
+  if (projected <= maxMemoryBytes) return { concurrency, projected, oversized: [] };
+
+  const largest = inputs.reduce((max, input) => Math.max(max, input.byteLength * 2), 0);
+  if (!largest) return { concurrency, projected, oversized: [] };
+  // Every item over budget on its own cannot be made to fit by thinning the pool.
+  const oversized = inputs.filter((input) => input.byteLength * 2 > maxMemoryBytes);
+  const allowed = Math.floor(maxMemoryBytes / largest);
+  return {
+    concurrency: Math.max(1, Math.min(concurrency, allowed)),
+    projected,
+    oversized,
+  };
+}
+
 export async function runBatch(
   inputs: readonly Uint8Array[],
   recipeInput: Recipe,
@@ -49,17 +85,23 @@ export async function runBatch(
   processor = defaultProcessor,
 ): Promise<BatchItemResult[]> {
   const recipe = parseRecipe(recipeInput);
-  const concurrency = Math.max(1, Math.min(options.concurrency ?? 2, 8));
   const retries = Math.max(0, Math.min(options.maxRetries ?? 1, 3));
   const maxMemory = options.maxMemoryBytes ?? 384 * 1024 * 1024;
-  const projected = inputs.reduce((sum, input) => sum + input.byteLength * 2, 0);
-  if (projected > maxMemory)
-    throw new PdfEngineError({
-      kind: 'memory-limit-exceeded',
-      projectedBytes: projected,
-      maxBytes: maxMemory,
-      remedy: 'Reduce the batch size or run it in smaller groups.',
-    });
+  const governed = governConcurrency(inputs, options.concurrency ?? 2, maxMemory);
+  const concurrency = governed.concurrency;
+  // Reported so the page can say why the run is slower than it asked for, rather than the
+  // requested concurrency being silently ignored.
+  options.onGovern?.(governed.concurrency, governed.projected, maxMemory);
+  // An item larger than the whole budget still runs, one at a time. Failing here instead would
+  // refuse a single large PDF outright, which is what the pre-governor code did to every batch.
+  for (const input of governed.oversized)
+    if (input.byteLength * 2 > maxMemory)
+      throw new PdfEngineError({
+        kind: 'memory-limit-exceeded',
+        projectedBytes: input.byteLength * 2,
+        maxBytes: maxMemory,
+        remedy: `This file needs about ${Math.round((input.byteLength * 2) / 1024 / 1024)} MB to process, over the ${Math.round(maxMemory / 1024 / 1024)} MB budget. Process it on its own, or raise maxMemoryBytes.`,
+      });
   const results: BatchItemResult[] = inputs.map((_, index) => ({
     index,
     status: 'queued',

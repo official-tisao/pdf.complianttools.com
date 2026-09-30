@@ -29,7 +29,7 @@ function loadError(operation: string, error: unknown): never {
 
 async function load(bytes: Uint8Array, operation: string): Promise<PDFDocument> {
   try {
-    return await PDFDocument.load(bytes, { ignoreEncryption: false });
+    return await PDFDocument.load(bytes, { ignoreEncryption: false, updateMetadata: false });
   } catch (error) {
     return loadError(operation, error);
   }
