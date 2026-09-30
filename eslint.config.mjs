@@ -38,6 +38,10 @@ export default [
         File: 'readonly',
         FileList: 'readonly',
         MouseEvent: 'readonly',
+        // PageGrid measures its rendered column count so the keyboard handlers
+        // agree with the stylesheet's responsive breakpoints.
+        HTMLDivElement: 'readonly',
+        getComputedStyle: 'readonly',
       },
     },
     rules: {

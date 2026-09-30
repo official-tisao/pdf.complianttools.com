@@ -13,6 +13,7 @@
     options = [],
     actionLabel = 'Export PDF',
     onrun,
+    unavailableReason = '',
   }: {
     title: string;
     eyebrow?: string;
@@ -20,6 +21,17 @@
     options?: OptionField[];
     actionLabel?: string;
     onrun?: (files: File[], values: Record<string, string | number | boolean>) => Promise<void>;
+    /**
+     * States that this tool is intentionally not offered, and why.
+     *
+     * A route sets this when the engine operation behind it does not exist or
+     * cannot honour its own options. That is a better outcome than wiring the
+     * button to a no-op: a disabled control with no explanation reads as a
+     * broken product, whereas a stated capability boundary reads as an honest
+     * one. When set, the file picker is withheld too, because accepting a file
+     * the tool cannot process is the same dead end one step later.
+     */
+    unavailableReason?: string;
   } = $props();
   let files = $state<File[]>([]);
   let values = $state<Record<string, string | number | boolean>>({});
@@ -90,22 +102,26 @@
   <p class="eyebrow">{eyebrow}</p>
   <h1>{title}</h1>
   <p class="lede">{description}</p>
-  <FileDrop accept=".pdf,application/pdf" onchange={selectFiles} />
-  <div class="workspace">
-    <div class="preview">
-      <div class="toolbar">
-        <span>{files.length} file{files.length === 1 ? '' : 's'} ready</span><Button
-          disabled={files.length === 0 || !onrun}
-          onclick={runTool}>{actionLabel}</Button
-        >
+  {#if unavailableReason}
+    <p class="unavailable" role="status">{unavailableReason}</p>
+  {:else}
+    <FileDrop accept=".pdf,application/pdf" onchange={selectFiles} />
+    <div class="workspace">
+      <div class="preview">
+        <div class="toolbar">
+          <span>{files.length} file{files.length === 1 ? '' : 's'} ready</span><Button
+            disabled={files.length === 0 || !onrun}
+            onclick={runTool}>{actionLabel}</Button
+          >
+        </div>
+        {#if pageCount > 0}<PageGrid {pageCount} />{:else}<p class="empty">
+            Page previews appear here after you select a PDF.
+          </p>{/if}
       </div>
-      {#if pageCount > 0}<PageGrid {pageCount} />{:else}<p class="empty">
-          Page previews appear here after you select a PDF.
-        </p>{/if}
+      {#if options.length > 0}<OptionPanel fields={options} onchange={changeOption} />{/if}
     </div>
-    {#if options.length > 0}<OptionPanel fields={options} onchange={changeOption} />{/if}
-  </div>
-  <p class="status" role="status" aria-live="polite">{status}</p>
+    <p class="status" role="status" aria-live="polite">{status}</p>
+  {/if}
 </section>
 
 <style>
@@ -113,6 +129,15 @@
     margin: auto;
     max-width: 1120px;
     padding: 96px 40px 0;
+  }
+
+  .unavailable {
+    border: 1px solid var(--color-hairline, #1c1a171a);
+    border-radius: var(--radius-panel, 8px);
+    color: var(--color-muted, #6b6862);
+    margin: 24px 0;
+    max-width: 62ch;
+    padding: 16px 20px;
   }
   .eyebrow {
     color: var(--color-muted);

@@ -70,6 +70,15 @@ export const toolOptions: Record<string, OptionField[]> = {
       value: '90',
       options: ['90', '180', '270', '-90'],
     },
+    // Both `rotatePages` and `cropPages` accept a page selector; an empty value
+    // means every page, which is the engine's own default.
+    {
+      key: 'pages',
+      label: 'Pages (blank = all)',
+      type: 'text',
+      value: '',
+      advanced: true,
+    },
   ],
   'n-up': [
     {
@@ -96,6 +105,13 @@ export const toolOptions: Record<string, OptionField[]> = {
     { key: 'top', label: 'Top margin', type: 'number', value: 0, min: 0 },
     { key: 'right', label: 'Right margin', type: 'number', value: 0, min: 0 },
     { key: 'bottom', label: 'Bottom margin', type: 'number', value: 0, min: 0 },
+    {
+      key: 'pages',
+      label: 'Pages (blank = all)',
+      type: 'text',
+      value: '',
+      advanced: true,
+    },
   ],
   resize: [
     { key: 'width', label: 'Width (points)', type: 'number', value: 612, min: 1 },
@@ -114,9 +130,10 @@ export const toolOptions: Record<string, OptionField[]> = {
     { key: 'start', label: 'Starting number', type: 'number', value: 1, min: 0 },
     { key: 'padding', label: 'Zero padding', type: 'number', value: 6, min: 1, max: 12, step: 1 },
   ],
-  'optimize-web': [
-    { key: 'progressive', label: 'Progressive delivery', type: 'checkbox', value: true },
-  ],
+  // `optimize-web` intentionally has no options. `optimizeForWeb` ignored its
+  // `progressive` flag and fell through to `compressPdf` with the balanced
+  // preset, so the checkbox it used to expose controlled nothing. The route
+  // applies the balanced preset directly instead.
   repair: [],
   rasterize: [{ key: 'dpi', label: 'DPI', type: 'number', value: 150, min: 72, max: 600 }],
   flatten: [
