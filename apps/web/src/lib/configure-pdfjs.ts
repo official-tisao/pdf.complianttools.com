@@ -2,29 +2,22 @@
  * pdf.js worker configuration, shared by every route that can open a document.
  *
  * `GlobalWorkerOptions.workerSrc` must be set before `getDocument` is called, and it has to be set
- * on the *same* pdf.js module instance the engine will resolve. The engine imports
- * `pdfjs-dist/legacy/build/pdf.mjs` itself, so this module imports that exact specifier and Vite
- * serves both through one module graph — configuring a second copy would leave the engine's copy
- * without a worker.
+ * on the *same* pdf.js module instance the engine resolves. The engine owns that import (see
+ * `$lib/pdfjs-worker-url`), so this module's only job is to hand over the URL.
  *
- * Previously this was a side effect in `PdfViewer.svelte`, so it only happened on `/view-pdf`.
- * The batch and folder-watcher routes run recipes that inspect documents, and with no worker
- * configured pdf.js threw, `classifyPdfInput` caught it, and the user was told their perfectly
- * valid PDF was corrupt. That is why it belongs here, in the layout, and is called from every
- * route.
+ * The tempting version of this file imported pdf.js itself and returned a promise the root layout
+ * awaited from an `$effect`. That put pdf.js — ~144 KB gzipped — in every route's graph, including
+ * the landing page, which never opens a PDF: `/` measured 183 KB against a 60 KB budget and failed
+ * `verify:bundle`. A dynamic import is only lazy while nothing eagerly loaded actually calls it.
+ *
+ * `?url` is the key to doing this cheaply. It resolves to a URL *string* at build time, so
+ * registering the worker costs a string assignment and no pdf.js on any route. The engine applies
+ * it the first time something actually needs pdf.js.
  */
+import workerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
+// The `/pdfjs` subpath, not the barrel: the layout imports this module, and `index.ts` re-exports
+// every entry point, so importing `setPdfJsWorkerUrl` from `.` pulled pdf-lib and jspdf into the
+// landing page and made it heavier than before the fix.
+import { setPdfJsWorkerUrl } from '@pdf-complianttools/engine/pdfjs';
 
-let configured: Promise<void> | undefined;
-
-/**
- * Idempotent, and safe to call from several places: the promise is cached, so concurrent callers
- * share one import and one assignment rather than racing to set the same value.
- */
-export function configurePdfJs(): Promise<void> {
-  configured ??= (async () => {
-    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-    const { default: workerUrl } = await import('pdfjs-dist/build/pdf.worker.mjs?url');
-    pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
-  })();
-  return configured;
-}
+setPdfJsWorkerUrl(workerUrl);

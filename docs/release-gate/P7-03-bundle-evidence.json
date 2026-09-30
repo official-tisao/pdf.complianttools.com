@@ -9,36 +9,36 @@
   "results": [
     {
       "route": "/",
-      "files": 13,
-      "gzippedKb": 39,
+      "files": 7,
+      "gzippedKb": 22,
       "budgetKb": 60,
       "status": "PASS"
     },
     {
       "route": "/invoice-creator",
-      "files": 20,
-      "gzippedKb": 255,
+      "files": 8,
+      "gzippedKb": 49,
       "budgetKb": 275,
       "status": "PASS"
     },
     {
       "route": "/e-invoice",
-      "files": 20,
-      "gzippedKb": 258,
+      "files": 10,
+      "gzippedKb": 224,
       "budgetKb": 275,
       "status": "PASS"
     },
     {
       "route": "/merge",
-      "files": 17,
-      "gzippedKb": 43,
+      "files": 9,
+      "gzippedKb": 23,
       "budgetKb": 470,
       "status": "PASS"
     },
     {
       "route": "/view-pdf",
-      "files": 28,
-      "gzippedKb": 573,
+      "files": 21,
+      "gzippedKb": 377,
       "budgetKb": 625,
       "status": "PASS"
     }

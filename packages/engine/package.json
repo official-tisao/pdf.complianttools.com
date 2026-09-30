@@ -11,6 +11,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./pdfjs": {
+      "types": "./dist/pdf/pdfjs.d.ts",
+      "import": "./dist/pdf/pdfjs.js"
+    },
     "./invoice": {
       "types": "./dist/invoice.d.ts",
       "import": "./dist/invoice.js"

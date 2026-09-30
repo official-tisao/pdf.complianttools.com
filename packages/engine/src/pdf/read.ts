@@ -2,6 +2,7 @@ import type { DocMeta } from '../types.js';
 import type { EngineError } from '../errors.js';
 import { runInModuleWorker } from '../runtime/module-worker.js';
 import { extractPdfTextPages } from '../conversion/pdf-text.js';
+import { loadPdfJs } from './pdfjs.js';
 
 export type PdfOutlineItem = {
   readonly title: string;
@@ -18,7 +19,7 @@ export type PdfSearchMatch = {
 };
 
 export async function inspectWithPdfJs(bytes: Uint8Array): Promise<DocMeta> {
-  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const pdfjs = await loadPdfJs();
   // pdf.js may transfer/detach its input buffer while destroying the worker. Keep the
   // engine's immutable source bytes usable for the subsequent mutation graph and CLI parity.
   const loadingTask = pdfjs.getDocument({ data: bytes.slice() });
@@ -81,7 +82,7 @@ export async function getPdfJsPageDimensions(
   bytes: Uint8Array,
   pageNumber = 1,
 ): Promise<{ width: number; height: number }> {
-  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const pdfjs = await loadPdfJs();
   const loadingTask = pdfjs.getDocument({ data: bytes.slice() });
   const document = await loadingTask.promise;
   const page = await document.getPage(pageNumber);
@@ -139,7 +140,7 @@ async function resolveOutlineDestination(
 
 /** Read outline entries and resolve their destinations to one-based page numbers. */
 export async function getPdfOutline(bytes: Uint8Array): Promise<readonly PdfOutlineItem[]> {
-  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const pdfjs = await loadPdfJs();
   const loadingTask = pdfjs.getDocument({ data: bytes.slice() });
   const document = await loadingTask.promise;
   try {

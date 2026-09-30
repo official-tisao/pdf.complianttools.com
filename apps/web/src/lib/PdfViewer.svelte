@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
-  import { configurePdfJs } from '$lib/configure-pdfjs';
+  import '$lib/configure-pdfjs';
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import {
     extractPdfTextPages,
@@ -10,12 +10,16 @@
     type PdfOutlineItem,
     type PdfTextPage,
   } from '@pdf-complianttools/engine';
-  import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+  import { loadPdfJs } from '@pdf-complianttools/engine/pdfjs';
+  // Type-only: the value is reached through `loadPdfJs()`, which applies the host's worker URL
+  // before returning. Importing pdf.js as a value here would work but would duplicate the one
+  // sanctioned entry point, and `getDocument` would race the worker assignment.
+  import type * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 
-  // The worker URL is set in the layout (see `$lib/configure-pdfjs`) because every route that
-  // opens a document needs it, not just this one. Awaiting it here is what keeps the viewer's own
-  // `getDocument` call below from racing that assignment.
-  void configurePdfJs();
+  // The worker URL is registered by `$lib/configure-pdfjs`, imported above. It only costs a string
+  // assignment, so importing it here keeps this component correct even if it is ever rendered
+  // outside the root layout.
+  //
   // The parity harness runs a recipe with no UI of its own; installing it from a component means
   // it enters the app's module graph, which is what lets `tests/e2e/parity.spec.ts` reach the
   // engine without importing it by a path Vite refuses to serve.
@@ -64,7 +68,7 @@
     try {
       bytes = new Uint8Array(await file.arrayBuffer());
       loadingTask?.destroy();
-      loadingTask = pdfjs.getDocument({ data: bytes });
+      loadingTask = (await loadPdfJs()).getDocument({ data: bytes });
       document = await loadingTask.promise;
       pages = [...(await extractPdfTextPages(bytes))];
       outline = flatten(await getPdfOutline(bytes));
