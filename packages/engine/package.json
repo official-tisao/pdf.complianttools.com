@@ -11,6 +11,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./pdfjs": {
+      "types": "./dist/pdf/pdfjs.d.ts",
+      "import": "./dist/pdf/pdfjs.js"
+    },
     "./invoice": {
       "types": "./dist/invoice.d.ts",
       "import": "./dist/invoice.js"
@@ -34,13 +38,37 @@
     "./recipe": {
       "types": "./dist/recipe.d.ts",
       "import": "./dist/recipe.js"
+    },
+    "./scan": {
+      "types": "./dist/scan.d.ts",
+      "import": "./dist/scan.js"
+    },
+    "./scan-camera": {
+      "types": "./dist/scan-camera.d.ts",
+      "import": "./dist/scan-camera.js"
+    },
+    "./scan-deskew": {
+      "types": "./dist/scan-deskew.d.ts",
+      "import": "./dist/scan-deskew.js"
+    },
+    "./batch-zip": {
+      "types": "./dist/batch/zip.d.ts",
+      "import": "./dist/batch/zip.js"
+    },
+    "./watcher": {
+      "types": "./dist/watcher.d.ts",
+      "import": "./dist/watcher.js"
+    },
+    "./watcher-process": {
+      "types": "./dist/watcher-process.d.ts",
+      "import": "./dist/watcher-process.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "node -e \"fs.rmSync('dist',{recursive:true,force:true})\"",
     "lint": "eslint src test --max-warnings=0",
-    "test": "pnpm build && node --test test/*.test.mjs",
+    "test": "pnpm build && node --test --test-timeout=120000 --test-force-exit test/*.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

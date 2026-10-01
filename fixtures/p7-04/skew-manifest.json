@@ -1,0 +1,71 @@
+{
+  "task": "P7-04",
+  "purpose": "Known-rotation pages for the deskew Done-when: measurable improvement over a deliberately skewed set.",
+  "source": "Synthetic text rules drawn by scripts/generate-skew-fixtures.mjs. No real document, no user data.",
+  "pageModel": {
+    "width": 900,
+    "height": 640,
+    "lineHeight": 34,
+    "fontSize": 11
+  },
+  "toleranceDegrees": 0.5,
+  "regeneration": "node scripts/generate-skew-fixtures.mjs",
+  "fixtures": [
+    {
+      "file": "skew-upright.png",
+      "appliedDegrees": 0,
+      "width": 900,
+      "height": 640,
+      "bytes": 2520
+    },
+    {
+      "file": "skew-neg8.png",
+      "appliedDegrees": -8,
+      "width": 802,
+      "height": 508,
+      "bytes": 6298
+    },
+    {
+      "file": "skew-neg4_5.png",
+      "appliedDegrees": -4.5,
+      "width": 847,
+      "height": 567,
+      "bytes": 6219
+    },
+    {
+      "file": "skew-neg2.png",
+      "appliedDegrees": -2,
+      "width": 877,
+      "height": 608,
+      "bytes": 4522
+    },
+    {
+      "file": "skew-pos1_5.png",
+      "appliedDegrees": 1.5,
+      "width": 882,
+      "height": 616,
+      "bytes": 4062
+    },
+    {
+      "file": "skew-pos3.png",
+      "appliedDegrees": 3,
+      "width": 865,
+      "height": 592,
+      "bytes": 5235
+    },
+    {
+      "file": "skew-pos6.png",
+      "appliedDegrees": 6,
+      "width": 828,
+      "height": 542,
+      "bytes": 6898
+    },
+    {
+      "file": "skew-pos11.png",
+      "appliedDegrees": 11,
+      "width": 761,
+      "height": 456,
+      "bytes": 6609
+    }
+  ]
+}

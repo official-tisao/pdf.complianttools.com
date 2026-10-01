@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import type { ConversionOptions } from '../types.js';
+import { loadPdfJs } from '../pdf/pdfjs.js';
 
 export type PdfTextPage = {
   readonly pageNumber: number;
@@ -10,7 +11,7 @@ export type PdfTextPage = {
 type TextItem = { str?: string; transform?: readonly number[]; hasEOL?: boolean };
 
 export async function extractPdfTextPages(bytes: Uint8Array): Promise<readonly PdfTextPage[]> {
-  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const pdfjs = await loadPdfJs();
   // pdf.js may transfer/detach the supplied buffer when the loading task is destroyed.
   // Keep caller-owned document bytes immutable for subsequent mutation steps.
   const loadingTask = pdfjs.getDocument({ data: bytes.slice() });

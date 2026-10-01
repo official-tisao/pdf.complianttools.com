@@ -151,20 +151,13 @@ test.describe('keyboard operability', () => {
   });
 
   test('the typed signature path is operable without a pointer', async ({ page }) => {
-    // README §20 asks for "the signature pad (an alternate type-to-sign path
-    // for users who cannot draw)". There is no pad: `/sign-pdf` renders a plain
-    // text input and the engine stamps that text (PhaseCTool.svelte, the
-    // `sign` operation). So type-to-sign is not an alternate here — it is the
-    // only path, and it is natively keyboard-operable. This test asserts the
-    // capability that actually exists; see P7-13's evidence note for the spec
-    // gap it records.
+    // README §20 asks for a real signature pad plus an alternate type-to-sign
+    // path. The canvas is pointer-oriented, while the text field remains a
+    // fully keyboard-operable alternative.
     await openHydrated(page, '/sign-pdf');
+    await expect(page.getByRole('group', { name: 'Draw a signature' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Clear drawing' })).toBeDisabled();
     const field = page.getByLabel('Signature text');
-    // The field must start empty. It shipped pre-filled with `'Added locally'`,
-    // so a keyboard user typing into it produced `Added locallyA. Signer` —
-    // the keyboard path was genuinely broken, and this assertion is what caught
-    // it. The empty-value fallbacks live at each call site (`text || 'Signed
-    // locally'`), so an empty field still exports something sensible.
     await expect(field).toHaveValue('');
     await field.focus();
     await page.keyboard.type('A. Signer');
@@ -172,15 +165,23 @@ test.describe('keyboard operability', () => {
   });
 
   test('the diff view exposes its changes as readable text, not a canvas', async ({ page }) => {
-    // README §20 asks for "a keyboard-navigable change list, not just a visual
-    // heatmap". The shipped view is a text `<ul>` of changes with no canvas and
-    // no heatmap, so it is natively screen-reader navigable. This asserts the
-    // list is real text in a list role rather than pixels — which is what the
-    // requirement is protecting.
+    // README §20 requires a keyboard-navigable change list, not only a visual
+    // heatmap. Use two real fixtures so the list is exercised rather than merely
+    // inspecting the empty route shell.
     await openHydrated(page, '/compare-pdf');
-    // Two labelled file inputs and a status region must be reachable by Tab.
-    await page.getByRole('button', { name: 'Compare locally' }).focus();
-    await expect(page.getByRole('status')).toHaveText(/Choose the original and revised PDF/u);
+    const inputs = page.locator('input[type="file"]');
+    await inputs.nth(0).setInputFiles('fixtures/pdfs/one-page.pdf');
+    await inputs.nth(1).setInputFiles('fixtures/pdfs/two-page.pdf');
+    await page.getByRole('button', { name: 'Compare locally' }).click();
+    const list = page.getByRole('listbox', { name: 'Text changes' });
+    await expect(list).toBeVisible();
+    const changes = list.getByRole('option');
+    await changes.first().focus();
+    await expect(changes.first()).toBeFocused();
+    if ((await changes.count()) > 1) {
+      await page.keyboard.press('ArrowDown');
+      await expect(changes.nth(1)).toBeFocused();
+    }
   });
 
   test('the viewer canvas is labelled for assistive technology', async ({ page }) => {

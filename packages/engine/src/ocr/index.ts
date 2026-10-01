@@ -187,7 +187,7 @@ export async function ocrPdf(
       remedy: `${model.label} is not installed. Review the disclosed model size, then explicitly download and cache it locally.`,
     });
   const modelBytes = await readStoredModel(models, language);
-  const source = await PDFDocument.load(bytes);
+  const source = await PDFDocument.load(bytes, { updateMetadata: false });
   const pageNumbers = options.pageRange?.length
     ? options.pageRange
     : Array.from({ length: source.getPageCount() }, (_, index) => index + 1);

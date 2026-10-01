@@ -30,6 +30,7 @@ export type EngineError =
   | { kind: 'cancelled'; remedy: string }
   | { kind: 'invalid-operation'; operation: string; remedy: string }
   | { kind: 'permission-denied'; resource: string; remedy: string }
+  | { kind: 'camera-unavailable'; remedy: string }
   | { kind: 'relay-not-configured'; remedy: string }
   | { kind: 'relay-failed'; endpoint: string; cause: string; remedy: string }
   | { kind: 'watcher-stopped'; remedy: string }

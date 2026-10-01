@@ -1,31 +1,23 @@
-import * as pdfjs from 'pdfjs-dist';
-import workerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
-
 /**
- * Configures pdf.js's worker once, for every route.
+ * pdf.js worker configuration, shared by every route that can open a document.
  *
- * `GlobalWorkerOptions.workerSrc` must be set by the **host application** before
- * `getDocument` — the engine imports pdf.js itself but deliberately does not
- * configure the worker, because it has no bundler context to resolve a worker
- * URL against.
+ * `GlobalWorkerOptions.workerSrc` must be set before `getDocument` is called, and it has to be set
+ * on the *same* pdf.js module instance the engine resolves. The engine owns that import (see
+ * `$lib/pdfjs-worker-url`), so this module's only job is to hand over the URL.
  *
- * This lived in `PdfViewer.svelte` alone, so it applied to exactly one route.
- * That is invisible until a *different* route opens a document and fails:
- * `/organize` counts pages with its own `await import('pdfjs-dist')` and
- * `getDocument` never resolved, so the thumbnail grid silently never rendered
- * — no error, no remedy, just a page whose file input accepts a document and
- * then does nothing with it.
+ * The tempting version of this file imported pdf.js itself and returned a promise the root layout
+ * awaited from an `$effect`. That put pdf.js — ~144 KB gzipped — in every route's graph, including
+ * the landing page, which never opens a PDF: `/` measured 183 KB against a 60 KB budget and failed
+ * `verify:bundle`. A dynamic import is only lazy while nothing eagerly loaded actually calls it.
  *
- * The failure is easy to misread. A `catch` around a library call turns "the
- * worker was never configured" into whatever data-shaped error the caller
- * invents, which is how an earlier version of this turned into "Re-export the
- * PDF from its source application" for files that were perfectly fine. So the
- * worker is configured at the layout, where every route inherits it.
- *
- * It must be the *same* module instance the caller uses. `pdfjs-dist` and
- * `pdfjs-dist/legacy/build/pdf.mjs` resolve to different module graphs in some
- * bundler configurations, so this sets both.
+ * `?url` is the key to doing this cheaply. It resolves to a URL *string* at build time, so
+ * registering the worker costs a string assignment and no pdf.js on any route. The engine applies
+ * it the first time something actually needs pdf.js.
  */
-export function configurePdfjs(): void {
-  pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
-}
+import workerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
+// The `/pdfjs` subpath, not the barrel: the layout imports this module, and `index.ts` re-exports
+// every entry point, so importing `setPdfJsWorkerUrl` from `.` pulled pdf-lib and jspdf into the
+// landing page and made it heavier than before the fix.
+import { setPdfJsWorkerUrl } from '@pdf-complianttools/engine/pdfjs';
+
+setPdfJsWorkerUrl(workerUrl);

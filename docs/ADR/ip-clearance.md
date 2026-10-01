@@ -28,6 +28,7 @@ build.
 | D18 | Relay headless-browser runtime         | User-run only                    | Separate optional service; never a default network call from the static app    |
 | D19 | `qrcode` 1.5.4 + `@types/qrcode` 1.5.5 | MIT / MIT                        | Pinned deterministic local QR matrix encoder; no network/API call              |
 | D20 | Playwright 1.63.0 in Relay             | Apache-2.0                       | User-run optional capture runtime; browser binaries are not bundled by the app |
+| D21 | `unzipper` 0.11.3 override             | MIT                              | Removes unlabelled `buffers` from the shipped graph; no exception is added     |
 
 ## Verification procedure
 

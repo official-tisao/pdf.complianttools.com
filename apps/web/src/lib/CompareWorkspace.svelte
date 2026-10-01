@@ -1,4 +1,5 @@
 <script lang="ts">
+  /* global HTMLElement, KeyboardEvent */
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import { comparePdfs, type CompareReport } from '@pdf-complianttools/engine';
@@ -7,6 +8,7 @@
   let after = $state<File>();
   let report = $state<CompareReport>();
   let status = $state('Choose the original and revised PDF locally.');
+  let activeChange = $state(0);
 
   function takeBefore(files: FileList | null) {
     before = files?.[0];
@@ -25,12 +27,28 @@
         new Uint8Array(await before.arrayBuffer()),
         new Uint8Array(await after.arrayBuffer()),
       );
+      activeChange = 0;
       status = report.text.identical
         ? 'No text changes found.'
         : `${report.text.changes.length} text change${report.text.changes.length === 1 ? '' : 's'} found.`;
     } catch (error) {
       status = error instanceof Error ? error.message : 'The PDFs could not be compared locally.';
     }
+  }
+
+  function moveChange(event: KeyboardEvent) {
+    if (!report || report.text.identical || !report.text.changes.length) return;
+    const current = Number((event.target as HTMLElement).dataset.changeIndex ?? activeChange);
+    const last = report.text.changes.length - 1;
+    let next: number;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') next = Math.min(last, current + 1);
+    else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') next = Math.max(0, current - 1);
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = last;
+    else return;
+    event.preventDefault();
+    activeChange = next;
+    document.getElementById(`change-${next}`)?.focus();
   }
 
   /** Hydration readiness — see the note in `ToolWorkspace.svelte`. */
@@ -96,8 +114,13 @@
         >. Text comparison is complete and does not require a network or model.
       </p>
       {#if report.text.identical}<p>No added, removed, replaced, or moved lines were found.</p>
-      {:else}<ul class="changes">
+      {:else}<ul class="changes" role="listbox" aria-label="Text changes" onkeydown={moveChange}>
           {#each report.text.changes as change, index (change.pageNumber + '-' + change.lineNumber + '-' + index)}<li
+              id={`change-${index}`}
+              data-change-index={index}
+              role="option"
+              aria-selected={activeChange === index}
+              tabindex={activeChange === index ? 0 : -1}
             >
               <span class={`kind ${change.kind}`}>{change.kind}</span><span
                 >page {change.pageNumber}, line {change.lineNumber}: {change.text}</span
@@ -175,6 +198,12 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    outline: none;
+    padding: 6px;
+  }
+  .changes li:focus-visible {
+    box-shadow: 0 0 0 3px var(--color-focus, #6a8f72);
+    border-radius: 6px;
   }
   .changes small {
     color: var(--color-muted);

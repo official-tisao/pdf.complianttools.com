@@ -37,6 +37,7 @@ export default [
         Event: 'readonly',
         File: 'readonly',
         FileList: 'readonly',
+        MediaProvider: 'readonly',
         MouseEvent: 'readonly',
         // PageGrid measures its rendered column count so the keyboard handlers
         // agree with the stylesheet's responsive breakpoints.

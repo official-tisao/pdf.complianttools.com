@@ -2,15 +2,22 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    branches:
+      - master
   pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
   checks:
+    name: lint, typecheck, test, build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,6 +30,11 @@ jobs:
           node-version: 22.22.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The Relay render tests self-skip when the chromium binary is absent, so without
+      # this they report green in CI while asserting nothing. The other three skip
+      # conditions are `which` probes against a real install; this is the only one
+      # that fires here.
+      - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm verify:source-safety
@@ -53,6 +65,33 @@ jobs:
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm exec playwright test tests/e2e/no-network.spec.ts
+
+  batch-budget:
+    # P7-07's Done-when — "a 50-file batch completes within budget and a 200-file
+    # batch never OOMs" — is a claim about a load, so it has to be re-measured
+    # rather than asserted once. This replaces a hand-written bundle that recorded
+    # a 0.8 MB load against a 384 MB cap (99.6% headroom) and that nothing in the
+    # repository could regenerate. The third case deliberately tightens the cap
+    # until the governor must reduce concurrency, which is the behaviour README
+    # §11.5 specifies; the previous implementation threw instead and fails here.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm measure:batch-budget
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p7-07-batch-budget-evidence
+          path: docs/release-gate/P7-07-evidence.json
 
   latency:
     # The README §19 budgets are only meaningful as a measured, repeated
@@ -191,6 +230,27 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm verify:locales
       - run: pnpm exec playwright test tests/e2e/i18n.spec.ts
+
+  workflows:
+    # Every remaining e2e spec. `phase-f.spec.ts` is the largest file in the
+    # suite and was previously run by no CI job at all — the recipe round-trip,
+    # batch, scan and Relay coverage in it gated nothing. These four specs have
+    # no browser-binary or service-worker requirement of their own beyond what
+    # the dev server provides, so they share one build and one server.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test tests/e2e/design-tokens.spec.ts tests/e2e/workstream-d.spec.ts tests/e2e/phase-f.spec.ts tests/e2e/parity.spec.ts
 
   offline:
     # STCC #12: the service worker only exists in a production build, so this

@@ -3,14 +3,8 @@
   import '@pdf-complianttools/ui/tokens.css';
   import { page } from '$app/state';
   import { canonicalPath, canonicalUrl, hreflangLinks } from '$lib/seo';
-  import { configurePdfjs } from '$lib/configure-pdfjs';
+  import '$lib/configure-pdfjs';
   import ToolDirectory from '$lib/ToolDirectory.svelte';
-
-  // Every route inherits this. Configuring the worker inside the one component
-  // that happens to open a document is how it came to be set for `/view-pdf`
-  // only, leaving every other route's `getDocument` to fail on a document that
-  // was fine. See `$lib/configure-pdfjs`.
-  configurePdfjs();
 
   let { children } = $props();
 

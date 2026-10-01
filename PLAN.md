@@ -125,7 +125,7 @@ task; they do not hold the entire workstream hostage.
 | Tools (Appendix A)               |   72   |  62  |
 | Formats & standards (Appendix B) |   34   |  25  |
 | AI adapters (Appendix C)         |   8    |  8   |
-| Clearance items (Appendix D)     |   19   |  1   |
+| Clearance items (Appendix D)     |   21   |  1   |
 | Prerendered pages                |  ~250  | 458  |
 | Routes in the manifest           |  126   | 126  |
 
@@ -911,10 +911,68 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 
 #### P7-04 · Scan to PDF, local (T40)
 
-- [/] Explicit `getUserMedia` permission seam, image-file multi-page assembly, and classical skew-estimate
-  seam are implemented; full perspective warp requires a browser CV worker and remains typed/unclaimed
-- **Spec:** README §4.5 · **Done when:** STCC; deskew measurably improves a deliberately-skewed
-  fixture set
+- [x] `getUserMedia` permission seam, image-file multi-page assembly, and an explicit camera
+      capture route: Start-camera requests permission on that gesture only (never on load, never on
+      mount), the stream is released on Stop and on unmount, and frames can be reordered and removed
+      before export. Camera frames and imported images compose into one local document
+- [x] Rotation deskew is real, not a seam. `scan-deskew.ts` implements the classical
+      projection-profile method (Otsu binarization → ink projection → variance sweep over ±15° at
+      0.1° → parabolic sub-step refinement) with a bilinear crop-to-fit correction. It is
+      dependency-free, deterministic, and touches no DOM, so the same code runs in a module worker
+      and in Node (README §8.4)
+- [x] Deskew runs off the main thread in the browser (`deskewInWorker` → `scan-deskew.worker.ts`),
+      transferring the pixel buffer rather than copying it. Where no `Worker` exists it falls back
+      to the same synchronous code and reports `ranInWorker: false` rather than implying off-thread
+      work it did not do
+- [x] Every failure the route can reach is typed and carries a remedy. A denied permission
+      (`permission-denied`) is now distinguished from a device with no camera
+      (`camera-unavailable`) — telling someone to grant permission on a camera that does not exist
+      sends them where they cannot succeed. Corrupt page bytes previously escaped as raw decoder
+      errors, including a non-`Error` with no message that reached the user as a blank status line;
+      they are now re-thrown as `unsupported-format` naming the page position and format
+- [x] **Done-when met by measurement:** `fixtures/p7-04/` is 8 pages at known rotations
+      (−8, −4.5, −2, 0, +1.5, +3, +6, +11°) generated with the ground truth written by the generator
+      rather than derived from the estimator. `scripts/measure-skew.mjs` runs the shipped estimator and
+      correction over every fixture: worst residual after correction **0.05°** against a 0.5°
+      tolerance, mean detection error 0.018°. Evidence in
+      `docs/release-gate/P7-04-evidence.json`; method and scope in `P7-04-deskew-plan.txt`
+- [x] **Perspective deskew now ships.** `packages/engine/src/scan-perspective.ts` is the
+      projective half README §4.5 asks for, and it is the reason this task is no longer `[/]`.
+      It is dependency-free and deterministic, so the same code runs in a module worker and in Node
+      (README §8.4), and it is **not** merged into `deskew`: a photo can carry both a tilt and a
+      perspective, the corrections are independent, and a caller may have either or both.
+      The pipeline is three steps: - **Find the page.** Flood-fill the _bright_ region from the frame border. The first attempt
+      used the Otsu ink mask — the dark pixels — which is the text, and the text has no page
+      outline, so it traced glyph strokes and reported the full frame as a rectangle. - **Trace and fit.** Per-row and per-column boundary points, four least-squares lines
+      (implicit `a·x + b·y + c = 0`, not slope form, which is ill-conditioned for a near-vertical
+      edge), corners by intersecting the fitted lines. A single global extreme per axis cannot
+      work: the topmost pixel of a keystone is one _corner_, not an edge, so the extreme yields a
+      bounding box. Each fit also trims 20% of its samples at both ends, because a column that
+      clips only a few rows of a slanted edge reports the bottom of that sliver — measured,
+      `colBottom` read 559 mid-page but 4, 88 and 284 at the ends, enough to drag the "bottom"
+      edge nearly horizontal. - **Rectify.** Solve the 8-DOF homography as **target → source** (the direction it is
+      consumed, so every output pixel knows where to read from) and resample bilinearly.
+- [x] **Measured, and the tests were proven to bite.** `packages/engine/test/scan-perspective.test.mjs`
+      finds all four corners of a synthetic keystone to within 2% of the image's short edge, and
+      shows the rectified text edge spreading **under a third** of the source's page slant.
+      Reverting the homography direction fails it with "rectified text still spreads 59px from a
+      source page slant of 60px" — i.e. the correction having done nothing — and disabling the edge
+      trim fails the detection test as well.
+- **Recorded limits, which is why the box moved but the wording did not.** The detector assumes a
+  page that is **brighter than its surroundings** and that touches enough of the frame; a page on a
+  dark desk, or one filling the frame edge to edge, is declined with a stated `reason` rather than
+  guessed at. There is no shadow removal, no page-boundary refinement against a torn or curled
+  edge, and no photo-realistic evidence: the fixtures are synthetic pages, not photographs, so
+  this is a claim about the geometry and not about lens distortion, uneven lighting or page
+  curl. `PerspectiveEstimate.reason` states every decline, and the estimate carries `keystone`
+  and `confidence` so a caller can decide not to trust it.
+- **Also incomplete against STCC**, recorded rather than glossed: no Zod schema with generated
+  controls (the route uses hand-written markup), no preview-fidelity path, no i18n message layer,
+  and no measured §19 latency budget for the capture path. These match the other Workstream F tools.
+- **README §4.5 needed no amendment after all**, and that is the honest outcome here rather than a
+  reworded row. The spec said "perspective deskew"; the shortfall is closed, so the wording is
+  correct and left alone. The earlier note in this task — that the wording was unmet — was true
+  when written and is now history, kept in the §10 change log.
 
 #### P7-05 · Document pack builder (T41)
 
@@ -942,30 +1000,133 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 #### P7-07 · Batch runner (T69)
 
 - [x] Concurrency control, per-file status/retry, and memory governor; browser UI reports local completion
-- [x] Partial ZIP download remains a follow-up packaging adapter; engine outputs remain individually
-      available so failed files can be retried without reprocessing successes
+- [x] Outputs are downloadable. The page previously computed every result and discarded it —
+      `runBatch` fills `BatchItemResult.output`, but the UI wrote a status string and the ZIP
+      adapter wrote placeholders, so a user had no way to retrieve anything at all.
+      `zipBatchResults` now packs the real bytes with a `manifest.json` listing every item and its
+      status, and the batch page offers a single ZIP download. It uses fflate and returns a
+      `Uint8Array`: JSZip is CommonJS-only and its `nodebuffer` output does not exist in a
+      browser, which is the constraint the engine's worker-target build imposes.
+- [x] The memory governor now does what README §11.5 asks. It previously did the **opposite** of
+      the requirement: it compared a projected total against the cap and threw
+      `memory-limit-exceeded`, so a large batch refused to start instead of running more slowly.
+      `governConcurrency` uses the same projection as a concurrency divisor — how many items fit
+      the budget at once — and reports the choice through `onGovern` so a slower-than-requested
+      run can be explained rather than silently different. One item larger than the entire budget
+      is the only case that still throws, and its remedy states both figures in MB.
+- [x] The three §11.5 controls the page was missing. It rendered a single aggregate count, so a
+      user could not tell which file failed or why; there was no per-file status row, no
+      retry-failed-only, and no partial download. All three ship, and `retryFailed` re-runs only
+      the failures by keeping the input bytes alongside the results — without them a retry has
+      nothing to re-read and successes would be reprocessed.
+- [x] **The budget clauses are measured, not asserted.** `scripts/measure-batch-budget.mjs` runs
+      real batches and writes `docs/release-gate/P7-07-evidence.json`: 50 files (990 ms, 19.8
+      ms/file, peak RSS 145 MB) and 200 files (1423 ms, 7.1 ms/file, peak RSS 182 MB), both
+      200/200 succeeded, drawn from the real `fixtures/pdfs/` set plus image-bearing PDFs
+      assembled through the shipped `assembleScans`. A third case runs 200 files against a
+      deliberately tight cap so the governor **must** act — it reduced concurrency 8 → 4 and
+      completed 200/200, which is the behaviour README §11.5 actually specifies.
+      `pnpm measure:batch-budget` regenerates it and the `batch-budget` CI job re-runs it, so a
+      regression is a larger number rather than a stale "PASS".
+- This replaced a hand-written `P7-07-200-file-evidence.json` that could not support the box. It
+  recorded 200 inputs totalling 0.8 MB against the 384 MB default cap — **99.6% headroom**, so
+  "never OOMs" was true of a load that stressed nothing — carried no timings, and nothing in
+  the repository could regenerate it. Its own `gateUpdateAuthorized` was `false`. It also
+  carried a note deferring the ZIP "until `BatchItemResult` carries payload", which had been
+  on the type all along and shipped on 2026-09-30. **The measurement was verified to bite**:
+  reverting the governor to its refuse-the-batch behaviour fails the third case with
+  `PdfEngineError` and exits non-zero.
 - **Spec:** README §11.5 · **Done when:** a 50-file batch completes within budget and a
   200-file batch never OOMs
+  _(box earned 2026-09-30 — the ZIP, the governor, the three UI controls, and both budget
+  clauses are now measured rather than claimed)_
+- **Recorded limit of that measurement:** it is single-process Node. A browser tab has its own
+  heap ceiling and a different allocator, so this is evidence for the engine, not for the
+  page. Peak RSS also includes Node's own overhead rather than only the batch working set,
+  which overstates what the engine held — the safe direction for an OOM claim.
 
 #### P7-08 · Recipe builder + sharing (T70)
 
 - [x] Visual pipeline editor, IndexedDB save, document-free JSON/URL-fragment sharing
 - [x] Plain-language description rendered before anything runs; AI steps are outside this deterministic
       Workstream-F recipe schema and cannot be smuggled into a local recipe
+- [x] A shared link restores the recipe it was copied from. The Share button wrote a fragment that
+      **nothing ever read back** — no `location.hash` read site existed anywhere in the app — so
+      opening a shared link silently landed on the default recipe and this Done-when was unmet. The
+      route now decodes the fragment client-side (never during prerender) and shows a per-step list
+      that can be edited. Proven by a real round-trip in `tests/e2e/phase-f.spec.ts`: build four
+      steps, copy the link, open it in a fresh page, assert the steps come back.
+- [x] The IndexedDB save is no longer write-only. `loadLocalJson` had **zero callers** anywhere in
+      the app, so the recipe was saved on Share and never read back — a reload silently returned
+      the default, which made the "save" half of the feature a no-op. The route now restores the
+      stored recipe on mount, re-validating it on read so a record written by an older build
+      cannot put an invalid recipe into the editor. A shared fragment still wins over the stored
+      recipe: a link someone was sent must not be overwritten by what this browser saved last.
+- [x] T70 also asks for "export JSON" and no such control existed. `Export JSON` now runs the
+      recipe through `parseRecipe` before writing, so a file a user keeps cannot carry a shape the
+      engine would later refuse. `Save to this browser` is separate from Share, because sharing
+      was the only thing that saved.
+- [x] "No document data in the link" is now enforced where it actually holds. The invoice op was
+      `z.record(z.string(), z.unknown())` — an unvalidated passthrough — so a hand-written recipe
+      could carry a local `filePath` into the shareable fragment. `assertDocumentFree` never caught
+      it: it rejects `Uint8Array` and four exact key names, not path-shaped strings. A real schema
+      mirroring `createInvoicePdf`'s own validation closes it, because Zod strips every key the
+      schema does not name.
 - **Spec:** README §11.4, §18 · **Done when:** a shared 4-step recipe link reproduces exactly, with no
   server round-trip and no document data in the link
 
 #### P7-09 · Folder watcher (T71)
 
-- [/] File System Access API permission request, local new-file polling, visible pause/resume/stop
-  controls, and an `onFile` callback seam; no directory is read before explicit permission
-- [ ] Auto-processing new files into an output folder is not implemented; the current route only
-      reports detected files and still needs a processor/output-folder adapter
+- [x] File System Access API permission request, local new-file polling, visible pause/resume/stop
+      controls, and an `onFile` callback seam; no directory is read before explicit permission
+- [x] **Auto-processing into an output folder** — the only literal `[ ]` in this Workstream, and
+      the one thing README §4.10 actually specifies. The route previously called `onFile` and
+      then wrote a status string, so a detected file was reported and discarded.
+      `packages/engine/src/watcher-process.ts` applies the recipe and writes the result:
+      `processWatchedFile` runs the shared engine and writes `name.processed.pdf` into a
+      permissioned output folder, and `watchProcessor` builds the `onFile` a `FolderWatcher`
+      needs. The suffix is non-optional — the output can never overwrite the file it came from.
+- [x] The output folder is permissioned **separately** from the input. Asking one handle for both
+      would request write access to a folder the user only meant to read, and a denied write fails
+      at start rather than once per file.
+- [x] One bad file cannot stop the watcher. A per-file failure is returned rather than thrown, so
+      the other files in the folder still process, and the failure names the file — the engine's
+      own errors describe the operation, not the document, so with several files watched a remedy
+      like "Re-export the PDF" gave the user nothing to act on.
+- [x] The state readout is reactive. `watcher.state` is a plain getter on a class instance, so
+      reading it during render created no dependency and the page sat on "stopped" while the
+      watcher was running.
 - **Spec:** README §4.10 · **Done when:** STCC
+  _(box earned 2026-09-30 — the processor, the output-folder adapter, and the reactive state
+  readout all landed; the folder pickers themselves need a Chromium-based browser and cannot be
+  driven from a headless test, so the processing path is covered by unit tests against an
+  injected directory handle rather than by an e2e click-through)_
 
 #### P7-10 · CLI & library (T72)
 
 - [x] `packages/cli` wraps `packages/engine`; the same recipe schema and shared engine run in Node and browser
+- [x] Node output is byte-stable. pdf-lib's `updateMetadata` defaults to true and stamps a
+      wall-clock `/ModDate` on every save, so _every_ op produced different bytes for identical
+      input and the parity test failed intermittently — a flake that was actually a systemic
+      violation of this Done-when. `updateMetadata: false` is now set on every load and create in
+      the engine, which fixes the flake and preserves the dates a user's own document carries. A
+      regression test runs eight ops across a one-second gap, because without crossing that
+      boundary the test passes even when fully broken.
+- [x] **Browser byte-parity is now measured, which closes the Done-when.** The Node-side test
+      compares the CLI against an in-process `run()` — same function, same runtime — so it proved
+      filesystem integrity and could not see a Node-versus-browser divergence. `tests/e2e/
+parity.spec.ts` runs the same recipe through the same engine _inside a real page_ and
+      compares the sha256 against `fixtures/parity/cli-output.sha256`, a reference recorded from
+      the shipped CLI by `scripts/generate-parity-fixture.mjs`. A second assertion runs the
+      recipe twice a second apart in the page, so the wall-clock defect above cannot come back.
+      Both were **proven to bite**: reverting `updateMetadata` to `true` fails them with
+      "does not match the CLI's" and "not byte-stable across a one-second gap".
+- Note for whoever reads that spec next: running the engine from a `page.evaluate` body is not
+  straightforward, and two of the obvious attempts are wrong in ways that _appear_ to work.
+  An evaluate body is not processed by Vite, so a bare specifier cannot resolve in it; and
+  `packages/engine/dist` sits outside Vite's serving allow list, so importing it by absolute
+  path returns an HTML 403 that the browser caches as a module and the import then _looks_
+  fine while failing later. The engine has to be reached through the app's own module graph.
 - **Spec:** README §4.10 · **Done when:** the same recipe JSON produces byte-equivalent output in
   both environments
 
@@ -975,6 +1136,11 @@ start in parallel with A–E; only their shared engine calls and recipe contract
 - [x] Recipe JSON is document-free and engine execution is shared between browser and Node
 - [x] Relay is opt-in, self-hostable, and never required for local tools
 
+**The document-free claim earned its box on 2026-09-30.** It was not previously true: the invoice op
+was an unvalidated passthrough, so a hand-written recipe carried a local file path into a shareable
+link. The schema now names the real fields and Zod strips the rest, asserted by a full
+`parseRecipe` → `serializeRecipe` → `parseSerializedRecipe` round trip.
+
 **Gate evidence / open questions:** `packages/engine/test/phasef.test.mjs` covers creation, QR matrix/PDF/PNG
 validity, invoice XML and attachment structure, scan assembly, document packs, batch retry/memory behavior,
 recipe document exclusion, folder permission/pause/stop/callback behavior, and Relay opt-in errors. The invoice work additionally
@@ -983,13 +1149,64 @@ bundles: §19 latency (`docs/release-gate/P7-03-latency-evidence.json`), per-rou
 (`P7-03-bundle-evidence.json`), and Lighthouse mobile across all four categories
 (`P7-03-lighthouse-evidence.json`). It also passes `axe` with zero violations, is keyboard-operable end to
 end, ships prerendered `ar` and `en-XA` variants, and works offline after one visit
-(`tests/e2e/offline.spec.ts`). Physical QR-device scans, full perspective deskew, partial ZIP packaging,
-a real Relay render, and T71's processor/output-folder flow remain explicit release evidence questions
-because those capabilities need external hardware, a browser CV runtime, packaging work, a separately
-installed Playwright browser, or the missing watcher adapter.
+(`tests/e2e/offline.spec.ts`). Physical QR-device scans remain the one explicit release-evidence
+question on this gate: they need three real devices photographing a generated code, and no amount
+of code closes that.
+T71's processor/output-folder flow is no longer an open question — it shipped on 2026-09-30, covered
+by unit tests against an injected directory handle rather than an e2e click-through, because the
+folder pickers need a Chromium-based browser that a headless run cannot drive.
+Partial ZIP packaging is no longer listed here: it shipped on 2026-09-30. `zipBatchResults` packs the
+real `BatchItemResult.output` bytes with a manifest and is downloadable from the batch page, built on
+fflate because JSZip's `nodebuffer` output does not exist in a browser. P7-07's _budget_ Done-when
+is no longer an open question either: `scripts/measure-batch-budget.mjs` measures both named scales
+plus a governor-engaged case, and the `batch-budget` CI job regenerates the evidence
+(`docs/release-gate/P7-07-evidence.json`).
+
+**The batch and folder-watcher routes could not open a valid PDF at all until 2026-09-30.** Found
+while adding per-file status rows: every file came back `failed` with the remedy "Re-export the PDF
+from its source application and retry." Nothing was corrupt. pdf.js needs
+`GlobalWorkerOptions.workerSrc` set by the _host_, and it was set only in `PdfViewer.svelte` — so
+only `/view-pdf` had a working pdf.js. The batch and watcher routes run recipes that inspect
+documents, so pdf.js threw, `classifyPdfInput` caught it, and a `corrupt-structure` error was
+returned for a perfectly good file. It is now configured once in the layout
+(`apps/web/src/lib/configure-pdfjs.ts`), which is where it belonged: the requirement belongs to every
+route that can open a document, not to one component. Worth recording because the failure presented
+as data corruption, and the honest-looking remedy actively sent users to re-export good files.
+`tests/e2e/phase-f.spec.ts` now covers the per-file rows, so a regression fails as a row status
+rather than as a plausible-sounding message.
 Published-schema e-invoice validation is no longer listed here: it was ruled out on the evidence and the
 P7-03 Done-when was amended accordingly on 2026-09-29 (§10), so the tool makes a structural-validation
 claim and says so.
+The scan work adds `packages/engine/test/scan-deskew.test.mjs` (estimator and correction, including a
+real load of the emitted worker module), `scan-camera.test.mjs` (every `requestScanCamera` and
+`assembleScans` error branch), and `scan-fixtures.test.mjs`, which measures the `fixtures/p7-04/` set
+through a strict PNG reader written for the test rather than the generator's own inverse. Evidence:
+`docs/release-gate/P7-04-evidence.json` (worst residual after correction 0.05°, tolerance 0.5°),
+regenerated by `pnpm measure:skew` — `scripts/measure-skew.mjs` runs the shipped estimator, so a
+regression surfaces as a larger residual instead of a stale "PASS". The camera permission seam is
+proven in a real browser by `tests/e2e/phase-f.spec.ts`, including that loading the route never calls
+`getUserMedia` and that a denied permission and an absent camera produce different remedies.
+**Perspective deskew remains the open item on this gate**, now recorded as a P7-04 follow-up with the
+reason it is not yet built (four-point corner detection needs the same uncleared browser CV runtime
+that holds P5-04 OCR); the fixtures are drawn pages, not photographs, so the evidence is a claim about
+the algorithm and not about capture on hardware.
+
+**Building the recipe round-trip found three defects that no existing test could see, all now fixed.**
+Worth recording because each was invisible in Node and only appeared in a real browser or a real
+user's history:
+
+- `serializeRecipe` awaited `writer.write()` before reading the stream. In a browser
+  `CompressionStream` does not settle that write while the readable side is unconsumed, so the
+  Share button did nothing at all — silently, since the rejection never arrived either. The read
+  must be started first. `parseSerializedRecipe` had the mirror-image problem on corrupt input,
+  where it hung instead of reporting.
+- The IndexedDB migration ladder never created the `settings` object store, so every
+  `saveLocalJson` call — including the one behind Share — failed with "object store was not
+  found". The store is now created by a v3 migration step, since a database already at v2 never
+  re-runs the earlier one.
+- Both failures escaped the handler, leaving a blank status line and a button that looked inert.
+  Share now reports a typed message for a failed save and distinguishes a denied clipboard from a
+  blocked one.
 
 ## 9. Workstream G — Cross-workstream hardening and launch convergence
 
@@ -1179,8 +1396,8 @@ including `/crop-pdf`. Fifteen were marked `[x]` in Appendix A as STCC-complete.
 
 - [x] `axe` zero violations across every route; keyboard-operability pass on every interactive
       surface that exists
-- [ ] README §20 reconciles with what was actually built: it requires a keyboard pass on "the
-      signature pad" and "the diff view", and neither widget exists in that form
+- [x] README §20 reconciles with the shipped signature pad and diff view: both widgets have
+      explicit keyboard-accessible paths and are covered by the accessibility contract tests
 - **Spec:** README §20 · **Done when:** the audit passes on every shipped route
 - Evidence: `tests/e2e/accessibility.spec.ts` — **133 tests, 126 routes audited** (was 2 routes / 8
   tests). The routes are enumerated from `docs/route-manifest.json` at import time, so a new page is
@@ -1222,28 +1439,33 @@ including `/crop-pdf`. Fifteen were marked `[x]` in Appendix A as STCC-complete.
 - **Proven non-vacuous, not just green:** injecting an unlabelled `<img>` into `ToolWorkspace`
   turns `/crop-pdf` red with `image-alt`; restoring it returns green. A gate proven only by passing
   is not proven.
-- **⚠ Scope recorded, not closed — README §20 and README §4 disagree with the code.**
-  §20 requires a keyboard pass on "the signature pad (an alternate type-to-sign path for users who
-  cannot draw)". There is no pad: `/sign-pdf` renders one plain text input and the engine stamps
-  that text. Type-to-sign is therefore not an _alternate_ — it is the only path, and it is natively
-  keyboard-operable, which the new test asserts. Separately, README §4's tool catalogue claims
-  "Draw, type, or upload signature/initials" and only the type half exists. §20's "diff view
-  (keyboard-navigable change list, not just a visual heatmap)" is satisfied in the weaker sense
-  that `/compare-pdf` renders a real text `<ul>` with no heatmap at all, so there is nothing a
-  screen reader cannot read; arrow-key navigation of the change list does not exist. **Building the
-  pad and the keyboard-navigable list is feature work, not an audit**, so it is left as the open
-  box above rather than being ticked by a test that passes against widgets that were never built.
+- **2026-10-01 implementation:** `/sign-pdf` now provides a pointer-driven canvas that exports a
+  local PNG, a local image upload alternative, and the existing keyboard text path. `/compare-pdf`
+  exposes each textual change as a focused `role="option"` in a `role="listbox"`; ArrowUp,
+  ArrowDown, Home, and End move focus without requiring a pointer. `tests/e2e/accessibility.spec.ts`
+  exercises both controls with real fixtures, and the canvas is grouped with a label rather than
+  assigning an invalid image role to the interactive HTML canvas.
 
 #### P7-14 · Performance budget verification, full app
 
 - [ ] Every budget in README §19 measured and green across the full tool set, not just A.1
 - **Spec:** README §19 · **Done when:** the measured table matches or beats every budget row
+- Evidence so far: `pnpm verify:latency` re-measures the four invoice rows in a real Chromium
+  session; the latest p95 values are 16.1 ms, 270 ms, 25.34 ms, and 8.31 ms respectively, all
+  within budget. `verify:bundle` and `verify:lighthouse` are separate green gates. The remaining
+  six rows still need dedicated representative fixtures and a browser/renderer harness: 20-page
+  first-page render, live option preview, 10 × 5-page merge, 20 MB compression, OCR with an
+  installed approved model, and 500-page virtualized scrolling. They stay unchecked rather than
+  being inferred from unrelated measurements.
 
 #### P7-15 · Branch protection + required-check enforcement
 
 - [ ] All CI checks (license, asset, trademark, no-network, credential-leak, plan-sync) made
       required checks blocking merge
 - **Spec:** README §23 · **Done when:** a red check blocks merge on a real PR
+- Evidence so far: the workflow has one canonical push/PR definition and a required-quality job
+  named exactly `lint, typecheck, test, build`; GitHub branch-protection settings remain external
+  repository state and are not claimed as changed by this branch.
 
 #### P7-16 · Legal review pass
 
@@ -1266,17 +1488,13 @@ including `/crop-pdf`. Fifteen were marked `[x]` in Appendix A as STCC-complete.
       exception list. The new closure (`fs-extra`, `node-int64`, `jsonfile`, `universalify`) is all
       MIT. It was never browser-reachable: exceljs ships a self-contained `browser` bundle, and
       `buffers` appeared in no chunk of the production build.
-- [ ] The four actionable ⚠ VERIFY items closed: pdfium wrapper licence (needs a human read of the
-      pinned binary — no script can read a WASM blob's licence), pdf-lib maintenance, PDF/X demand,
-      and the ADR↔Appendix D row drift. **Verified 2026-10-01:** the two tables hold 19 rows each,
-      so the counts agree while the _contents_ do not. Appendix D lists D01–D18 plus **D21**
-      (`unzipper` override); the ADR lists D01–D18 plus **D19** (`qrcode` 1.5.4) and **D20**
-      (Playwright in Relay). D21 appears in the ADR only as a sentence in the `buffers` narrative,
-      never as a row. So three rows are unrecorded in one direction and two in the other. Also
-      noted: D14 claims Tesseract is adopted, but it is in no `package.json` and no model is
-      registered — the same row is wrong in both tables. Reconciling them is a decision (which
-      document is authoritative), not a mechanical merge, so it is left for an owner rather than
-      renumbered here.
+- [ ] Three human/legal questions remain: pdfium wrapper licence evidence (read the pinned WASM
+      build and record its URL and sha256), pdf-lib maintenance review, and whether PDF/X support is
+      actually required. **Reconciled 2026-10-01:** Appendix D and `docs/ADR/ip-clearance.md` now
+      contain the same D01–D21 rows; D14 is consistently Reserved until a model is registered, and
+      D19 (qrcode), D20 (Relay Playwright), and D21 (unzipper override) are explicit rows in both.
+      The row drift is closed; the three human decisions remain open and are recorded in
+      `docs/OPEN-QUESTIONS.md` rather than being silently treated as cleared.
 - **Spec:** README §25 · **Done when:** zero unresolved ⚠ VERIFY items block launch
 - Evidence: `pnpm verify:licenses` reports `shipped dependency set: 187 packages, all allowlisted`
   and exits 0. Closing the violation also exposed a real defect in the gate's store lookup, now
@@ -1287,6 +1505,10 @@ including `/crop-pdf`. Fifteen were marked `[x]` in Appendix A as STCC-complete.
 - [ ] Full Appendix A (72 tools) and Appendix B (34 formats/standards) checked or explicitly and
       honestly marked unavailable
 - **Spec:** README §27 · **Done when:** the Definition of Done (README §27) holds for every shipped tool
+- Current evidence: `pnpm progress` is internally consistent, and the generated route, locale, and
+  tool-directory ledgers are current. The appendix still contains intentionally open capability and
+  legal rows, so Gate G remains open until those owner decisions and the six missing §19 measurements
+  are completed.
 
 ### 🚦 Gate G — launch
 
@@ -1327,6 +1549,10 @@ Empty at genesis; the implementing agent appends an entry per §0.3 as work proc
 | 2026-10-01 | **A second, unrelated CI failure: the generated-file gates compared bytes, so a CRLF checkout read as stale.** With the licence gate green, `checks` advanced and failed at the next step, `verify:routes`, with `docs/route-manifest.json is stale`. The manifest was not stale. `generate-route-manifest.mjs` compared the committed file to freshly generated JSON with `existing !== serialized`, and this repo sets `core.autocrlf=true` with **no `.gitattributes`**, so git hands back CRLF while the generator emits LF — a correctly committed file failed a byte comparison. It passed locally and failed in CI for exactly that reason. Fixed by comparing on content, matching the guard `verify-licenses.mjs` has carried for its two manifests since it hit the same trap. **The same defect was live in `verify:locales`**, which compares generated `+page.svelte`/`+page.ts` templates the same way: I reproduced it (CRLF-ifying one generated route made the gate report `localized routes are stale for 1 route(s)`), so it was fixed in the same pass rather than left to surface as the next red pipeline. Both fixes are deliberately narrow — a real content change and a missing file still fail, which I verified by tampering with `routeCount` and by deleting a generated route. The CRLF tolerance is proven not to blunt the check: a real content change and a missing file still fail, verified by tampering with `routeCount` and by deleting a generated route. Worth noting the ordering: this was never reachable before, because the licence gate failed first and `verify:routes`/`verify:locales` are later in the same job. **The first version of the regression test was itself platform-dependent and had to be rewritten:** it built its fixture from the live committed manifest and called `generateManifest()` with no root, so what it asserted depended on the line endings of the machine running it — green on a Windows checkout, red on the Linux runner, for no reason connected to the bug under test. A regression test for a checkout-dependent defect must itself be checkout-independent, so the fixture is now a fixed string and the property (`manifestIsCurrent` accepts either spelling) is asserted directly; the live-tree staleness check moved to its own test, which resolves the repository root from the module URL rather than `process.cwd()`. `manifestIsCurrent` now normalizes **both** sides rather than only the committed one. Verified by running the file with all 202 route files and the manifest forced to LF, and again with them all forced to CRLF — 15/15 in both.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 2026-10-01 | **`pnpm progress` reconciled — and 9 of its 11 findings were its own bugs.** The drift gate had never been run to green, and the reason turned out to be that it could not be: the check requires every format the engine registry marks `unavailable()` to be left unchecked in Appendix B, and eight rows (doc, xls, ppt, cbr, publisher, hwp, tiff, indd) are `[x]` because SFCC (§0.4) admits an unavailable format that has "an honest, specific 'unsupported' page" — which P3-11 and P3-12 were explicitly built on, and which `/convert` renders as user-visible copy, verified in the **prerendered HTML**, not just the source. So the ledger was right and the gate was wrong, and editing the ledger to satisfy it would have meant downgrading eight honestly-handled rows to chase a gate. The rule now asks SFCC's actual question — does the entry carry a **specific** reason — which is checkable in a way the old rule was not. Second bug: the dead-control line was an unconditional string push into the findings array, so it reported "3 routes have a disabled primary action" as drift on every run forever, even though all three (`/bookmarks`, `/pdf-to-pdfa`, `/rasterize-pdf`) state their reason in the served HTML and are allow-listed by `tests/contracts/dead-control-gate.test.mjs`; it now reports only disabled actions _absent_ from that list. **A gate that can never go green gets ignored**, which is a worse outcome than the gate it was meant to replace. **A third bug was introduced by the first fix and caught before it shipped:** the fixed-offset parse for `unavailableReason` stopped its match at the first argument, so every entry read back its own id as its reason and the new reason check passed **vacuously across all 42 formats** — green because it was broken, the exact failure mode this project keeps catching. The test now asserts the real sentence, and the dead-control check was proven non-vacuous by adding `/crop-pdf` to `deadControls` and watching it go red. Real ledger drift, all now corrected: §1 said 61 tools (62), showed Workstream F at 4/10 (7), Workstream G at 7/0 (10/5), totals 95/79 (98/87), prerendered pages ~250/0 (458), routes 78 (126), and showed Workstream A ✅ against a Gate A with two open boxes. Two drifts the checker never saw and still cannot: Appendix D and `docs/ADR/ip-clearance.md` hold 19 rows each but **list different rows** — Appendix D has D21 (`unzipper` override) while the ADR has D19 (`qrcode`) and D20 (Playwright), with D21 appearing in the ADR only as prose inside the `buffers` narrative; and D14 claims Tesseract is adopted while it is in no `package.json`. Recorded on P7-16 rather than mechanically merged, because deciding which document is authoritative is an owner's call, not a renumbering. `pnpm progress` now exits 0, and the P7-11a evidence block that recorded the original 11 is corrected in place so it cannot mislead a later reader.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 2026-10-01 | **P7-13: the accessibility audit now covers every route, and found four real defects on the way.** The gate covered **2 of 126 routes** — the same defect class P7-11a exists to end, one gate still holding a private list. The spec now enumerates `docs/route-manifest.json` at import time, so a new route is audited when added and there is no list to forget to extend; `pnpm verify:routes` runs first in the job so a stale manifest cannot make the sweep quietly cover less than the site ships. **133 tests, up from 8**; the job shards four ways and the shards were verified to partition exactly (133 unique, zero duplicates). **A hydration signal had to be built first**, because `axe` can only see the DOM the browser built and every route is prerendered — auditing the served HTML measures markup the browser discards on mount. Only `InvoiceBuilder` had one; the layout now sets it on `<body>` via an action (the eleven bespoke routes mount no shell, so no per-shell signal can cover them) and each shell sets it on its own root. Proven non-vacuous: blocking scripts leaves the flag absent. **`$derived(true)` would have been wrong** — a constant is also true during prerendering, so it would bake `data-hydrated="true"` into the served HTML; the lint rule pushes exactly that rewrite, and the build output is what proved it wrong (all 458 prerendered pages carry `data-hydrated="false"`), so the rule is disabled with that reason inline. **Four defects found and fixed:** (1) `/view-pdf` shipped `aria-label` on a bare `<div>`, where no role can carry a name, so the label was silently dropped and the canvas — the page's entire content — was unnamed to a screen reader (`aria-prohibited-attr`, serious); (2) **the thumbnail grid never rendered at all** — `/organize` calls `getDocument` through its own `import('pdfjs-dist')` and `workerSrc` was configured in `PdfViewer.svelte` alone, so the call never resolved and the file input accepted a valid PDF then did nothing, with no error and no remedy. This is the defect the pdf.js-worker note describes, and **the shared `configure-pdfjs.ts` that note says was created never existed** — the fix had been written up but not applied; it now exists and is called from the layout; (3) `/sign-pdf`'s shared text field shipped pre-filled with `'Added locally'`, so a keyboard user typing got `Added locallyA. Signer` (an input appends at the caret), and that placeholder was passed straight through as document content by `add-text`, `watermark`, and `fill-form` — a user who never touched the field exported a PDF stamped with it; (4) the audit's own dead-control assertion filtered on `opBinding === null`, which matches every route that mounts no shell rather than the three that disable a button. **Proven non-vacuous:** injecting an unlabelled `<img>` into `ToolWorkspace` turns `/crop-pdf` red with `image-alt`; restoring returns green. **Scope recorded rather than ticked:** README §20 requires a keyboard pass on "the signature pad" and "the diff view", and **neither widget exists as described** — `/sign-pdf` is one plain text input (so type-to-sign is the only path, not an alternate, and is natively keyboard-operable), and `/compare-pdf` renders a plain text `<ul>` with no heatmap and no arrow-key model. README §4 also claims "Draw, type, or upload signature" and only the type half exists. The tests assert what is actually there; building the pad and the keyboard-navigable list is feature work, so P7-13 keeps a second, unchecked box for it rather than passing a test against a widget that was never built. |
+| 2026-09-30 | P7-04 perspective deskew is implemented and measured with synthetic skew fixtures; T40 remains `[/]` because full STCC, preview fidelity, i18n, and latency evidence are still open.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-09-30 | P7-07 batch budgets are measured at 50 and 200 files with a governor-engaged case; the evidence is regenerated by `pnpm measure:batch-budget` and gated in CI.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 2026-09-30 | Gate F second pass closed the watcher processor/output-folder flow, retry-failed-only, partial downloads, and browser/CLI parity; remaining limitations stay explicit in the ledger.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-10-01 | Phase G convergence: pulled current master, removed duplicate push/PR workflow runs, retained the required `lint, typecheck, test, build` check, and resolved the PR conflict set without discarding either workstream.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 ---
 
@@ -1375,7 +1601,7 @@ Mirrors README §4. Checked only when STCC (§0.4) fully holds.
 | T37  | QR Code Generator            | `/qr-code`                     | F          |  [/]   |
 | T38  | Invoice Creator              | `/invoice-creator`             | F          |  [x]   |
 | T39  | Electronic Invoice           | `/e-invoice`                   | F          |  [x]   |
-| T40  | Scan to PDF                  | `/scan-to-pdf`                 | F          |  [/]   |
+| T40  | Scan to PDF                  | `/scan-to-pdf`                 | F          |  [/]   | ← rotation and perspective deskew both ship and are measured; still short of full STCC (no Zod controls, no preview fidelity, no i18n layer, no §19 latency) |
 | T41  | Document Pack Builder        | `/document-pack-builder`       | F          |  [x]   |
 | T42  | PDF Editor (host)            | `/editor`                      | C          |  [x]   |
 | T43  | Annotator                    | `/annotate`                    | C          |  [x]   |
@@ -1465,7 +1691,7 @@ Mirrors README §14. One row per capability × provider-family pairing shipped a
 | A7  | Generic-HTTP-template / chat     | `chat`      | User-defined endpoint | E          |  [x]   |
 | A8  | Generic-HTTP-template / generate | `generate`  | User-defined endpoint | E          |  [x]   |
 
-## Appendix D — Clearance register (19 items)
+## Appendix D — Clearance register (21 items)
 
 Mirrors README §25. "No decision = excluded" is the standing rule.
 
@@ -1484,11 +1710,13 @@ Mirrors README §25. "No decision = excluded" is the standing rule.
 | D11 | pptxgenjs                                   | MIT                                   | Adopted                                                       |  [ ]   |
 | D12 | jszip                                       | MIT                                   | Adopted                                                       |  [ ]   |
 | D13 | fflate                                      | MIT                                   | Adopted                                                       |  [ ]   |
-| D14 | Tesseract.js                                | Apache-2.0                            | Adopted; models registered as static assets                   |  [ ]   |
+| D14 | Tesseract.js and models                     | Apache-2.0                            | Reserved; register a pinned model before shipping             |  [ ]   |
 | D15 | Legacy `.doc`/`.xls`/`.ppt` binary readers  | Build vs. buy                         | Build ourselves (OLE2/CFB is publicly documented)             |  [ ]   |
 | D16 | Root-certificate trust program              | Cannot bundle/claim authority         | Verify against browser/OS trust or user-supplied CA only      |  [ ]   |
 | D17 | E-signature request flow naming             | Trademark risk                        | Generic naming; no vendor-specific verb                       |  [ ]   |
 | D18 | Relay headless-browser runtime              | Self-hosted, not a service we operate | User-run only; never bundled as a default network call        |  [ ]   |
+| D19 | `qrcode` 1.5.4 + `@types/qrcode`            | MIT / MIT                             | Adopted; deterministic local QR matrix encoder                |  [ ]   |
+| D20 | Playwright 1.63.0 in Relay                  | Apache-2.0                            | User-run optional capture runtime; not bundled by the app     |  [ ]   |
 | D21 | `unzipper` pin (drops unlabelled `buffers`) | Transitive shipped unlabelled         | Overridden to `0.11.3` (MIT); `buffers` removed, not excepted |  [x]   |
 
 ## Appendix E — SEO landing-page checklist (SPCC)

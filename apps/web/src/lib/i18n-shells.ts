@@ -82,6 +82,12 @@ export const shellArabic: Readonly<Record<string, string>> = {
   'feature.batch.action': 'تشغيل دفعة محلية',
   'feature.batch.note':
     'التوازي والذاكرة محدودان، وتبقى الملفات الفاشلة قابلة لإعادة المحاولة فرديًا.',
+  'feature.batch.download': 'تنزيل النتائج كملف مضغوط',
+  'feature.batch.downloadPartial': 'تنزيل المكتمل حتى الآن',
+  'feature.batch.retry': 'إعادة محاولة الملفات الفاشلة فقط',
+  'feature.recipe.remove': 'إزالة',
+  'feature.recipe.save': 'حفظ في هذا المتصفح',
+  'feature.recipe.export': 'تصدير بيانات الوصفة',
   'feature.recipe.step': 'الخطوة',
   'feature.recipe.compress': 'ضغط',
   'feature.recipe.bates': 'ترقيم Bates',
@@ -92,6 +98,7 @@ export const shellArabic: Readonly<Record<string, string>> = {
   'feature.watch.resume': 'استئناف',
   'feature.watch.stop': 'إيقاف',
   'feature.watch.note': 'الحالة: {value}. لا تُقرأ أي مجلدات قبل منح الإذن.',
+  'feature.watch.output': 'تُكتب النتائج في مجلد المعالجة داخل {value}.',
   'feature.noControls': 'لا توجد أدوات تحكم لهذه الأداة بعد. لم يُشغَّل أي شيء.',
 
   // ConversionTool chrome.
@@ -123,6 +130,20 @@ export const shellArabic: Readonly<Record<string, string>> = {
   'feature.status.failed': 'تعذّر إتمام العملية.',
   'feature.status.files': 'رُصد ملف جديد: {value}',
   'feature.status.batch': 'اكتمل {value} من {total} ملفًا محليًا.',
+  'feature.status.scanEmpty': 'التقط صفحة أو أضف ملفات صور أولًا.',
+  'feature.status.scanAssembled': 'جُمّعت {value} صفحة محليًا. لم يُرفع شيء.',
+  'feature.status.scanFailed': 'تعذّر تجميع المسح.',
+  'feature.batch.governor':
+    'خفّضت حدود الذاكرة التزامن إلى {value}؛ حجم العمل المتوقع {total} ميغابايت مقابل ميزانية {extra} ميغابايت.',
+  'feature.status.batchRetryFailed': 'لا يزال {value} ملفًا يفشل بعد إعادة المحاولة.',
+  'feature.status.batchRetryComplete': 'اكتملت كل الملفات بعد إعادة محاولة الإخفاقات.',
+  'feature.status.batchDownload': 'نُزّل ملف مضغوط للملفات المكتملة وبيان بالباقي.',
+  'feature.status.recipeExported': 'صُدّرت بيانات الوصفة؛ لا تحتوي بايتات المستند.',
+  'feature.status.recipeSaved': 'حُفظ في هذا المتصفح وسيبقى عند عودتك.',
+  'feature.status.recipeLoadFailed':
+    'تعذرت قراءة رابط الوصفة. ابدأ وصفة جديدة أو انسخ رابطًا جديدًا.',
+  'feature.batch.attempts': '{value} محاولات',
+  'feature.watch.failed': '{value} فشل: {total}',
   'feature.status.recipe': 'نُسخ رابط المشاركة؛ وهو لا يحتوي بايتات المستند.',
   'feature.status.watch': 'مراقب المجلد يعمل. المعالجة محلية وبإذن صريح.',
   'phase.trust.body': 'لا يرفع هذا المسار بايتات المستند أو بيانات الاعتماد.',
@@ -140,6 +161,10 @@ export const shellArabic: Readonly<Record<string, string>> = {
   // note" it replaced: a screen-reader user is told what the field is for.
   'phase.sign.label': 'نص التوقيع',
   'phase.sign.page': 'الصفحة',
+  'phase.sign.pad': 'ارسم توقيعًا',
+  'phase.sign.clear': 'مسح الرسم',
+  'phase.sign.padHelp': 'ارسم بمؤشر، أو استخدم حقل النص أدناه عبر لوحة المفاتيح.',
+  'phase.sign.upload': 'تحميل توقيع بصيغة PNG أو JPEG',
   'phase.signatureBackground.threshold': 'عتبة الخلفية',
   // PhaseCTool engine-result messages, one per operation.
   'phase.error.noFile': 'اختر ملفًا محليًا أولًا. لا يُرفع أي شيء.',

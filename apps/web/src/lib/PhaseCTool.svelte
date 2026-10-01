@@ -1,6 +1,7 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import SignaturePad from '$lib/SignaturePad.svelte';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
   // Aliased: this component already uses `page` for the target PDF page number.
   import { page as route } from '$app/state';
@@ -57,6 +58,8 @@
   let downloadName = $state('edited.pdf');
   let find = $state('');
   let replacement = $state('');
+  let signatureImage = $state<Uint8Array | undefined>();
+  let uploadedSignature = $state<File>();
   /**
    * Shared by the `sign`, `watermark`, `fill-form`, and `add-text` tools.
    *
@@ -86,6 +89,11 @@
       : '';
     error = '';
     downloadHref = undefined;
+  }
+
+  function selectSignature(list: FileList | null) {
+    uploadedSignature = list?.[0];
+    signatureImage = undefined;
   }
 
   function save(bytes: Uint8Array, name: string, type: string) {
@@ -221,10 +229,14 @@
           'Accessibility audit complete. Authoring still requires manual review where tags are missing.',
         );
       } else if (operation === 'sign') {
+        const uploadedBytes = uploadedSignature
+          ? new Uint8Array(await uploadedSignature.arrayBuffer())
+          : undefined;
         save(
           await engine.signPdf(bytes!, {
             page,
             text: text || 'Signed locally',
+            imageBytes: uploadedBytes ?? signatureImage,
             x: 72,
             y: 72,
             width: 160,
@@ -376,6 +388,25 @@
           'This is a read-only evidence report. Unsupported cryptographic or authoring claims remain visible as remedies.',
         )}
       </p>
+    {:else if operation === 'sign'}
+      <SignaturePad
+        label={t('phase.sign.pad', 'Draw a signature')}
+        clearLabel={t('phase.sign.clear', 'Clear drawing')}
+        help={t(
+          'phase.sign.padHelp',
+          'Draw with a pointer, or use the text field below with a keyboard.',
+        )}
+        onchange={(bytes) => {
+          signatureImage = bytes;
+          uploadedSignature = undefined;
+        }}
+      />
+      <FileDrop
+        accept=".png,.jpg,.jpeg,image/png,image/jpeg"
+        onchange={selectSignature}
+        label={t('phase.sign.upload', 'Upload a PNG or JPEG signature')}
+      />
+      <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
     {:else if operation !== 'password-generator'}
       <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
     {/if}
