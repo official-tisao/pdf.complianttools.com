@@ -2,15 +2,22 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    branches:
+      - master
   pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
   checks:
+    name: lint, typecheck, test, build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
