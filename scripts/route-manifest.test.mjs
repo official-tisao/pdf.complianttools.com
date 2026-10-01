@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { buildManifest, classifyRoute, deadControlRoutes } from './route-manifest.mjs';
 
@@ -168,29 +169,45 @@ test('a CRLF checkout of the committed manifest is not reported as stale', async
   // This repository has `core.autocrlf=true` and no `.gitattributes`, so git
   // hands back a CRLF copy of the manifest on a Windows checkout while the
   // generator emits LF. Comparing the two byte-for-byte reported a correctly
-  // committed manifest as stale, which failed `verify:routes` in CI. The
-  // comparison is on content, so both spellings must be accepted.
+  // committed manifest as stale, which failed `verify:routes` in CI.
+  //
+  // Deliberately hermetic: the fixture is a fixed string rather than the live
+  // manifest. An earlier version of this test built its fixture from the
+  // committed file and called `generateManifest()` with no root, so the
+  // assertion depended on the line endings of the machine running it — it
+  // passed on a Windows checkout and failed on the Linux runner for that reason
+  // alone, which is precisely backwards for a regression test of this bug.
+  const { manifestIsCurrent } = await import('./generate-route-manifest.mjs');
+  const generated = '{\n  "routeCount": 76,\n  "routes": []\n}\n';
+  const crlf = generated.replace(/\n/gu, '\r\n');
+  assert.notEqual(crlf, generated, 'fixture must actually differ to be meaningful');
+
+  assert.equal(manifestIsCurrent(generated, generated), true, 'LF is current');
+  assert.equal(
+    manifestIsCurrent(crlf, generated),
+    true,
+    'a CRLF checkout of the same manifest must not be reported as stale',
+  );
+  // Both directions: the generator writes LF today, but a generator that wrote
+  // CRLF must not start reporting every file as stale either.
+  assert.equal(manifestIsCurrent(generated, crlf), true, 'normalizes the generated side too');
+});
+
+test('the committed manifest matches what the generator produces, in either spelling', async () => {
+  // The live-tree half of the check, kept separate from the hermetic test above
+  // so genuine staleness is still caught — `verify:routes` failing is the
+  // signal, and this is what keeps that signal honest. The repository root is
+  // derived from the module URL rather than `process.cwd()`, so the assertion
+  // holds wherever the runner was invoked from.
   const committed = await readFile(new URL('../docs/route-manifest.json', import.meta.url), 'utf8');
-  // This checkout is already CRLF (core.autocrlf=true), so normalize to LF
-  // first — the generator's own output — and then build the CRLF spelling that
-  // a Linux runner or a differently-configured checkout would see.
-  const lf = committed.replace(/\r\n/gu, '\n');
-  const crlf = lf.replace(/\n/gu, '\r\n');
-  assert.notEqual(crlf, lf, 'fixture must actually differ to be meaningful');
-
   const { generateManifest, manifestIsCurrent } = await import('./generate-route-manifest.mjs');
-  const regenerated = `${JSON.stringify(await generateManifest(), null, 2)}\n`;
+  const root = fileURLToPath(new URL('../', import.meta.url));
+  const regenerated = `${JSON.stringify(await generateManifest(root), null, 2)}\n`;
 
-  assert.equal(manifestIsCurrent(lf, regenerated), true, 'LF checkout is current');
   assert.equal(
     manifestIsCurrent(committed, regenerated),
     true,
-    'the committed file as checked out on this machine is current',
-  );
-  assert.equal(
-    manifestIsCurrent(crlf, regenerated),
-    true,
-    'a CRLF checkout of the same manifest must not be reported as stale',
+    'docs/route-manifest.json is stale; run `pnpm generate:routes -- --write`',
   );
 });
 

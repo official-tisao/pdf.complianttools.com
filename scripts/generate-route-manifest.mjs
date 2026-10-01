@@ -19,7 +19,13 @@ import { buildManifest, deadControlRoutes } from './route-manifest.mjs';
  */
 export function manifestIsCurrent(existing, serialized) {
   if (existing === undefined) return false;
-  return existing.replace(/\r\n/gu, '\n') === serialized;
+  // Both sides are normalized, not just the committed one: the generator writes
+  // LF today, but a checkout, an editor, or a future generator running on
+  // Windows can hand back CRLF on either side, and the comparison should answer
+  // "is the content the same?" rather than "were the bytes spelled the same
+  // way?".
+  const normalize = (value) => value.replace(/\r\n/gu, '\n');
+  return normalize(existing) === normalize(serialized);
 }
 
 /**
