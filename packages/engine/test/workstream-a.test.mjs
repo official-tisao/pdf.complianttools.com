@@ -5,6 +5,7 @@ import { PDFDocument } from 'pdf-lib';
 import {
   addBatesNumbering,
   compile,
+  compressPdf,
   createPdfProxy,
   extractPages,
   mergePdfBuffers,
@@ -114,6 +115,34 @@ test('proxy preview is one-page and compression prediction is bounded', async ()
   );
   assert.equal(frame.pageNumber, 1);
   assert.ok(predictCompressedSize(20_000_000, { preset: 'balanced' }) < 20_000_000);
+});
+
+test('compression invokes the image adapter at the preset quality and preserves pages', async () => {
+  // A tiny valid JPEG keeps this test deterministic while exercising the same
+  // DCTDecode image path used by camera/scanner PDFs in the browser.
+  const jpeg = Uint8Array.from(
+    Buffer.from(
+      '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABBQJ//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPyF//9k=',
+      'base64',
+    ),
+  );
+  const sourceDocument = await PDFDocument.create();
+  const page = sourceDocument.addPage([200, 200]);
+  const image = await sourceDocument.embedJpg(jpeg);
+  page.drawImage(image, { x: 0, y: 0, width: 200, height: 200 });
+  const source = new Uint8Array(await sourceDocument.save());
+  let requestedQuality = 0;
+  const compressed = await compressPdf(source, {
+    preset: 'extreme',
+    quality: 90,
+    reencodeImage: ({ bytes, quality }) => {
+      requestedQuality = quality;
+      return bytes.slice(0, Math.floor(bytes.length / 2));
+    },
+  });
+  assert.equal(requestedQuality, 45);
+  assert.ok(compressed.byteLength < source.byteLength);
+  assert.equal(await pages(compressed), 1);
 });
 
 test('order-independent recipes stay equivalent across 200 generated page pairs', () => {

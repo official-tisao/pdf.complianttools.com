@@ -28,7 +28,10 @@
     description: string;
     options?: OptionField[];
     actionLabel?: string;
-    onrun?: (files: File[], values: Record<string, string | number | boolean>) => Promise<void>;
+    onrun?: (
+      files: File[],
+      values: Record<string, string | number | boolean>,
+    ) => Promise<void | string>;
     /**
      * States that this tool is intentionally not offered, and why.
      *
@@ -152,8 +155,8 @@
     if (!onrun || files.length === 0) return;
     status = t('shell.status.working', 'Working locally…');
     try {
-      await onrun(files, values);
-      status = t('shell.status.done', 'Done. Your original files were not changed.');
+      const result = await onrun(files, values);
+      status = result ?? t('shell.status.done', 'Done. Your original files were not changed.');
     } catch (error) {
       status =
         error instanceof Error

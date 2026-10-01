@@ -1,4 +1,14 @@
-import { PDFDocument, PDFName, StandardFonts, degrees } from 'pdf-lib';
+import {
+  PDFArray,
+  PDFDocument,
+  PDFName,
+  PDFNumber,
+  PDFRawStream,
+  StandardFonts,
+  decodePDFRawStream,
+  degrees,
+} from 'pdf-lib';
+import { zlibSync } from 'fflate';
 import { PdfEngineError } from '../errors.js';
 
 export type PageSelector = number[] | string;
@@ -304,16 +314,147 @@ export async function addBatesNumbering(
   return document.save();
 }
 
+export type CompressionPreset = 'extreme' | 'balanced' | 'high-quality' | 'custom';
+
+export type PdfImageForCompression = {
+  bytes: Uint8Array;
+  width: number;
+  height: number;
+  quality: number;
+};
+
+export type CompressPdfOptions = {
+  preset?: CompressionPreset | string;
+  quality?: number;
+  imageQuality?: number;
+  stripMetadata?: boolean;
+  /**
+   * Optional browser adapter for lossy JPEG recompression. Keeping this out of
+   * the engine core preserves the Node/CLI and offline paths, where Canvas is
+   * unavailable; those paths still get lossless stream optimization.
+   */
+  reencodeImage?: (
+    image: PdfImageForCompression,
+  ) => Promise<Uint8Array | undefined> | Uint8Array | undefined;
+};
+
+const FILTER = PDFName.of('Filter');
+const DECODE_PARMS = PDFName.of('DecodeParms');
+const SUBTYPE = PDFName.of('Subtype');
+const TYPE = PDFName.of('Type');
+type ZlibLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+
+function nameValue(value: unknown): string | undefined {
+  return value instanceof PDFName ? value.asString().replace(/^\//u, '') : undefined;
+}
+
+function singleFilter(stream: PDFRawStream): string | undefined {
+  const filter = stream.dict.get(FILTER);
+  if (filter instanceof PDFName) return nameValue(filter);
+  if (filter instanceof PDFArray && filter.size() === 1)
+    return nameValue(filter.lookupMaybe(0, PDFName));
+  return undefined;
+}
+
+function compressionProfile(options: CompressPdfOptions): {
+  level: ZlibLevel;
+  imageQuality: number;
+} {
+  const preset = options.preset ?? 'balanced';
+  const requested = Math.max(1, Math.min(100, options.imageQuality ?? options.quality ?? 75));
+  const imageQuality =
+    preset === 'extreme'
+      ? Math.min(requested, 45)
+      : preset === 'high-quality'
+        ? Math.max(requested, 90)
+        : requested;
+  const level =
+    preset === 'extreme'
+      ? 9
+      : preset === 'high-quality'
+        ? 3
+        : preset === 'custom'
+          ? (Math.max(1, Math.min(9, Math.round(10 - imageQuality / 12.5))) as ZlibLevel)
+          : 6;
+  return { level, imageQuality };
+}
+
+function imageDimensions(stream: PDFRawStream): { width: number; height: number } | undefined {
+  const width = stream.dict.lookupMaybe(PDFName.of('Width'), PDFNumber)?.asNumber();
+  const height = stream.dict.lookupMaybe(PDFName.of('Height'), PDFNumber)?.asNumber();
+  if (!width || !height) return undefined;
+  return { width, height };
+}
+
+/**
+ * Recompresses streams without flattening the document. This covers text and
+ * vector content as well as uncompressed image streams. Existing JPEG bytes
+ * are handed to the browser adapter separately because re-encoding JPEG is
+ * the only intentionally lossy operation in this pipeline.
+ */
+async function optimizeStreams(
+  document: PDFDocument,
+  options: CompressPdfOptions,
+  profile: { level: ZlibLevel; imageQuality: number },
+): Promise<void> {
+  for (const [ref, object] of document.context.enumerateIndirectObjects()) {
+    if (!(object instanceof PDFRawStream)) continue;
+
+    const subtype = nameValue(object.dict.get(SUBTYPE));
+    const type = nameValue(object.dict.get(TYPE));
+    const isImage = subtype === 'Image' && (type === undefined || type === 'XObject');
+    const filter = singleFilter(object);
+
+    if (
+      isImage &&
+      filter === 'DCTDecode' &&
+      !object.dict.has(DECODE_PARMS) &&
+      !object.dict.has(PDFName.of('SMask')) &&
+      !object.dict.has(PDFName.of('Mask'))
+    ) {
+      const dimensions = imageDimensions(object);
+      if (dimensions && options.reencodeImage) {
+        const replacement = await options.reencodeImage({
+          bytes: object.getContents(),
+          ...dimensions,
+          quality: profile.imageQuality,
+        });
+        if (replacement && replacement.length < object.getContents().length) {
+          const dict = object.dict.clone(document.context);
+          document.context.assign(ref, PDFRawStream.of(dict, replacement));
+        }
+      }
+      continue;
+    }
+
+    // Only rewrite streams with no filter or a plain FlateDecode. Filters such
+    // as DCTDecode, JPXDecode, predictors, and encryption have semantics that
+    // must not be guessed at by a generic optimizer.
+    if (object.dict.has(DECODE_PARMS) || (filter && filter !== 'FlateDecode')) continue;
+
+    let decoded: Uint8Array;
+    try {
+      decoded =
+        filter === 'FlateDecode' ? decodePDFRawStream(object).decode() : object.getContents();
+    } catch {
+      continue;
+    }
+    const compressed = zlibSync(decoded, { level: profile.level });
+    if (compressed.length >= object.getContents().length) continue;
+
+    const dict = object.dict.clone(document.context);
+    dict.set(FILTER, PDFName.FlateDecode);
+    document.context.assign(ref, PDFRawStream.of(dict, compressed));
+  }
+}
+
 export async function compressPdf(
   bytes: Uint8Array,
-  options: {
-    preset?: string;
-    quality?: number;
-    imageQuality?: number;
-    stripMetadata?: boolean;
-  } = {},
+  options: CompressPdfOptions = {},
 ): Promise<Uint8Array> {
   const document = await load(bytes, 'compress the PDF');
+  const profile = compressionProfile(options);
+  await optimizeStreams(document, options, profile);
   if (options.stripMetadata) {
     document.setTitle('');
     document.setAuthor('');
