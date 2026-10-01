@@ -31,6 +31,7 @@
   eyebrow="ORGANIZE"
   description="Combine files, preview the page order, and export one PDF without uploading your documents."
   options={fieldsFor('merge')}
+  actionKey="shell.action.merge"
   actionLabel="Merge files"
   onrun={merge}
 />

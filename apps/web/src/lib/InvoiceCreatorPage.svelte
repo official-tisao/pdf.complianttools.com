@@ -9,8 +9,14 @@
   import InvoiceBuilder from '$lib/InvoiceBuilder.svelte';
   import FaqSection from '$lib/FaqSection.svelte';
   import { translate, type Locale } from '$lib/i18n';
+  import { getLocaleContext } from '../routes/__locale/context';
 
-  let { locale = 'en' }: { locale?: Locale } = $props();
+  let { locale: localeProp }: { locale?: Locale } = $props();
+
+  // Explicit prop wins; otherwise the `[locale]` layout's context supplies it,
+  // so a generated `[locale]` route renders this component translated without
+  // re-declaring its props. English routes fall back to the `en` source.
+  const locale = $derived(localeProp ?? getLocaleContext());
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
 
   const faq = [

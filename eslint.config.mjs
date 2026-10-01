@@ -2,7 +2,7 @@ import eslint from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import svelte from 'eslint-plugin-svelte';
 import tseslint from 'typescript-eslint';
-import { noEngineFetch, noUnsafeDom } from './scripts/eslint-rules.mjs';
+import { noEngineFetch, noUntranslatedCopy, noUnsafeDom } from './scripts/eslint-rules.mjs';
 
 export default [
   {
@@ -103,12 +103,17 @@ export default [
         rules: {
           'no-unsafe-dom': noUnsafeDom,
           'no-engine-fetch': noEngineFetch,
+          'no-untranslated-copy': noUntranslatedCopy,
         },
       },
     },
     rules: {
       'project-security/no-unsafe-dom': 'error',
       'project-security/no-engine-fetch': 'error',
+      // STCC #11: `en-XA` cannot detect a literal typed straight into a template,
+      // because pseudo() is applied to the fallback passed to translate(). This
+      // catches that at authorship instead of after it ships.
+      'project-security/no-untranslated-copy': 'error',
     },
   },
   prettier,

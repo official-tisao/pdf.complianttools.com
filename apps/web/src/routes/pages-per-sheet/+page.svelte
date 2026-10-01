@@ -28,6 +28,7 @@
   eyebrow="ORGANIZE"
   description="Impose several pages onto each sheet, optionally in booklet order."
   options={fieldsFor('n-up')}
+  actionKey="shell.action.nup"
   actionLabel="Impose pages"
   onrun={nUp}
 />

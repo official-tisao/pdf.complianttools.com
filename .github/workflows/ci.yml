@@ -148,9 +148,10 @@ jobs:
       - run: pnpm exec playwright test tests/e2e/accessibility.spec.ts
 
   i18n:
-    # STCC #11: the `ar` and `en-XA` variants are prerendered, so a build that
-    # breaks a translated route or introduces overflow fails here rather than in
-    # production. The catalogue contract itself is covered by the unit suite.
+    # STCC #11. This job used to run the identical command as `accessibility`,
+    # so nothing about i18n was actually gated. It now runs its own spec, which
+    # asserts translated copy on `/ar` and padding/overflow behaviour on
+    # `/en-XA` across every localizable route.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -164,7 +165,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm exec playwright test tests/e2e/accessibility.spec.ts
+      - run: pnpm verify:locales
+      - run: pnpm exec playwright test tests/e2e/i18n.spec.ts
 
   offline:
     # STCC #12: the service worker only exists in a production build, so this

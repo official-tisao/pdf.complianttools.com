@@ -34,6 +34,7 @@
   eyebrow="ORGANIZE"
   description="Stamp a sequential, configurable number on every page, entirely in your browser."
   options={fieldsFor('bates')}
+  actionKey="shell.action.bates"
   actionLabel="Add Bates numbers"
   onrun={bates}
 />

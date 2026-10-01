@@ -12,6 +12,8 @@
  * rendered without a catalogue still reads correctly — the catalogue adds
  * translation, it does not supply the copy.
  */
+import { shellArabic } from './i18n-shells';
+
 export type Locale = 'en' | 'en-XA' | 'ar';
 
 /** Translators: keep product and format names unchanged; preserve {value}. */
@@ -149,15 +151,40 @@ function pseudo(value: string): string {
   return `［${expanded} ${'~'.repeat(Math.max(2, Math.ceil(value.length / 5)))}］`;
 }
 
+/**
+ * Every Arabic entry, from both catalogues. They are merged here rather than
+ * exposed as two functions so a call site has one `translate(locale, key,
+ * fallback)` and one `locale`; a component never needs to know which module a
+ * string lives in.
+ *
+ * Shell keys are listed first because they are the ones every tool page
+ * renders, so a reviewer scanning this file sees the common copy before the
+ * invoice-specific tail.
+ */
+const catalogue: Readonly<Record<string, string>> = { ...shellArabic, ...arabic };
+
 export function translate(
   locale: Locale,
   key: string,
   fallback: string,
-  value?: string | number,
+  ...values: Array<string | number | undefined>
 ): string {
   const message =
-    locale === 'ar' ? (arabic[key] ?? fallback) : locale === 'en-XA' ? pseudo(fallback) : fallback;
-  return message.replace('{value}', value !== undefined ? String(value) : '');
+    locale === 'ar'
+      ? (catalogue[key] ?? fallback)
+      : locale === 'en-XA'
+        ? pseudo(fallback)
+        : fallback;
+  // Placeholders are `{value}` then `{total}`, in the order they are supplied.
+  // Substituting every occurrence rather than the first is deliberate: a
+  // message may repeat a count, and a half-substituted string is worse than an
+  // empty one because it looks translated while still carrying English.
+  let index = 0;
+  return message.replace(/\{[a-zA-Z]+\}/gu, () => {
+    const supplied = values[index];
+    index += 1;
+    return supplied !== undefined ? String(supplied) : '';
+  });
 }
 
 /** `<html lang>` and `<main dir>` for a locale, per the sibling project's markup. */
@@ -166,4 +193,9 @@ export function localeAttributes(locale: Locale): { lang: string; dir: 'ltr' | '
 }
 
 /** The catalogue's key set, for the test that proves no string was left behind. */
-export const messageKeys: readonly string[] = Object.keys(arabic);
+export const messageKeys: readonly string[] = Object.keys(catalogue);
+
+/** True when the key has a real Arabic entry rather than silently falling back. */
+export function hasTranslation(key: string): boolean {
+  return key in catalogue;
+}

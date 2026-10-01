@@ -27,6 +27,7 @@
   eyebrow="OPTIMIZE"
   description="Reduce PDF size with a bounded, local export and an honest quality preset."
   options={fieldsFor('compress')}
+  actionKey="shell.action.compress"
   actionLabel="Compress PDF"
   onrun={compress}
 />

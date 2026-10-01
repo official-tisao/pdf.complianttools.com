@@ -12,6 +12,8 @@
   import { saveLocalJson } from '$lib/indexed-store';
   import { downloadBytes } from '$lib/download';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
+  import { translate, type Locale } from '$lib/i18n';
+  import { getLocaleContext } from '../routes/__locale/context';
   import { page } from '$app/state';
 
   let {
@@ -19,6 +21,7 @@
     title,
     description,
     children,
+    locale: localeProp,
   }: {
     kind:
       | 'create'
@@ -34,7 +37,13 @@
     title: string;
     description: string;
     children?: import('svelte').Snippet;
+    /** The active UI locale; every string below resolves through `translate`. */
+    locale?: Locale;
   } = $props();
+
+  const locale = $derived(localeProp ?? getLocaleContext());
+  const t = (key: string, fallback: string, ...values: Array<string | number | undefined>) =>
+    translate(locale, key, fallback, ...values);
   let status = $state('');
   // Every kind that renders its own control block in the markup below. The
   // invoice kinds deliberately aren't here: they supply their UI via `children`
@@ -80,13 +89,13 @@
       pages: [{ title: 'Local PDF', lines: ['Created in your browser.', 'No file was uploaded.'] }],
     });
     download(bytes, 'created.pdf');
-    status = 'Created locally.';
+    status = t('feature.status.created', 'Created locally.');
   }
   async function qr() {
     const { generateQr } = await import('@pdf-complianttools/engine/qr');
     const result = await generateQr({ kind: 'text', value: text });
     download(result.pdf, 'qr-code.pdf');
-    status = `Generated deterministic QR version ${result.version}.`;
+    status = t('feature.status.qr', 'Generated deterministic QR version {value}.', result.version);
   }
   async function scan() {
     const frames = files.map(async (file) => ({
@@ -96,8 +105,10 @@
     const { assembleScans } = await import('@pdf-complianttools/engine');
     const result = await assembleScans(await Promise.all(frames));
     download(result, 'scan.pdf');
-    status =
-      'Scan assembled locally; camera permission is only requested after an explicit capture action.';
+    status = t(
+      'feature.status.scan',
+      'Scan assembled locally; camera permission is only requested after an explicit capture action.',
+    );
   }
   async function pack() {
     const attachments = await Promise.all(
@@ -108,19 +119,25 @@
     );
     const { buildDocumentPack } = await import('@pdf-complianttools/engine');
     download(await buildDocumentPack('Document pack', attachments), 'document-pack.pdf');
-    status = 'Document pack built locally with a generated table of contents.';
+    status = t(
+      'feature.status.pack',
+      'Document pack built locally with a generated table of contents.',
+    );
   }
   async function webpage() {
     try {
       const { captureWebpageToPdf } = await import('@pdf-complianttools/engine');
       const result = await captureWebpageToPdf(text, endpoint);
       download(result.bytes, 'webpage.pdf');
-      status = 'Relay capture completed.';
+      status = t('feature.status.relay', 'Relay capture completed.');
     } catch (caught) {
       // PdfEngineError sets message to its remedy, so this surfaces the Relay's
       // own guidance — a blocked URL, a missing browser binary — rather than a
       // bare failure.
-      status = caught instanceof Error ? caught.message : 'The operation could not be completed.';
+      status =
+        caught instanceof Error
+          ? caught.message
+          : t('feature.status.failed', 'The operation could not be completed.');
     }
   }
   async function batch() {
@@ -129,24 +146,32 @@
     );
     const { runBatch } = await import('@pdf-complianttools/engine');
     const results = await runBatch(inputs, recipe, { concurrency: 2 });
-    status = `${results.filter((item) => item.status === 'succeeded').length}/${results.length} files completed locally.`;
+    status = t(
+      'feature.status.batch',
+      '{value} of {total} files completed locally.',
+      results.filter((item) => item.status === 'succeeded').length,
+      results.length,
+    );
   }
   async function shareRecipe() {
     await saveLocalJson('recipe.current', recipe);
     const link = `${location.origin}/recipe#${await serializeRecipe(recipe)}`;
     await navigator.clipboard?.writeText(link);
-    status = `${describeRecipe(recipe)}. Share link copied; it contains no document bytes.`;
+    status = t('feature.status.recipe', 'Share link copied; it contains no document bytes.');
   }
   async function startWatch() {
     const { FolderWatcher, pickFolder } = await import('@pdf-complianttools/engine');
     const directory = await pickFolder();
     watcher = new FolderWatcher(directory, {
       onFile: async (file) => {
-        status = `New file detected: ${file.name}`;
+        status = t('feature.status.files', 'New file detected: {value}', file.name);
       },
     });
     await watcher.start();
-    status = 'Folder watcher running. Processing is local and permissioned.';
+    status = t(
+      'feature.status.watch',
+      'Folder watcher running. Processing is local and permissioned.',
+    );
   }
 </script>
 
@@ -163,76 +188,104 @@
 </svelte:head>
 
 <section class="feature-page">
-  <p class="eyebrow">LOCAL WORKFLOW</p>
+  <p class="eyebrow">{t('feature.eyebrow', 'LOCAL WORKFLOW')}</p>
   <h1>{title}</h1>
   <p class="lede">{description}</p>
   {#if kind === 'create'}
     <label
-      >Template <select bind:value={template}
-        ><option value="blank">Blank</option><option value="grid">Grid</option><option value="lined"
-          >Lined</option
-        ><option value="dot">Dot</option></select
+      >{t('feature.template.label', 'Template')}
+      <select bind:value={template}
+        ><option value="blank">{t('feature.template.blank', 'Blank')}</option><option value="grid"
+          >{t('feature.template.grid', 'Grid')}</option
+        ><option value="lined">{t('feature.template.lined', 'Lined')}</option><option value="dot"
+          >{t('feature.template.dot', 'Dot')}</option
+        ></select
       ></label
-    ><button onclick={create}>Create PDF</button>
+    ><button onclick={create}>{t('feature.action.create', 'Create PDF')}</button>
   {:else if kind === 'qr'}
-    <label>Text or URL <input bind:value={text} /></label><button onclick={qr}>Export QR PDF</button
+    <label>{t('feature.qr.label', 'Text or URL')} <input bind:value={text} /></label><button
+      onclick={qr}>{t('feature.qr.action', 'Export QR PDF')}</button
     >
   {:else if kind === 'scan'}
     <label
-      >Scan images
+      >{t('feature.scan.label', 'Scan images')}
       <input type="file" accept="image/png,image/jpeg" multiple onchange={selectFiles} /></label
-    ><button disabled={!files.length} onclick={scan}>Assemble scan to PDF</button>
+    ><button disabled={!files.length} onclick={scan}
+      >{t('feature.scan.action', 'Assemble scan to PDF')}</button
+    >
   {:else if kind === 'pack'}
     <label
-      >Documents to pack
+      >{t('feature.pack.label', 'Documents to pack')}
       <input type="file" accept="application/pdf,.pdf" multiple onchange={selectFiles} /></label
-    ><button disabled={!files.length} onclick={pack}>Build document pack</button>
+    ><button disabled={!files.length} onclick={pack}
+      >{t('feature.pack.action', 'Build document pack')}</button
+    >
   {:else if kind === 'webpage'}
-    <label>Public webpage URL <input bind:value={text} /></label><label
-      >Your Relay endpoint <input
-        bind:value={endpoint}
-        placeholder="http://127.0.0.1:8787"
-      /></label
+    <label>{t('feature.webpage.label', 'Public webpage URL')} <input bind:value={text} /></label
+    ><label
+      >{t('feature.webpage.endpoint', 'Your Relay endpoint')}
+      <input bind:value={endpoint} placeholder="http://127.0.0.1:8787" /></label
     >
     <p class="note">
-      Webpage capture is explicit Relay mode. Local PDF tools do not need this endpoint.
+      {t(
+        'feature.webpage.note',
+        'Webpage capture is explicit Relay mode. Local PDF tools do not need this endpoint.',
+      )}
     </p>
-    <button disabled={!endpoint.trim()} onclick={webpage}>Capture with Relay</button>
+    <button disabled={!endpoint.trim()} onclick={webpage}
+      >{t('feature.webpage.action', 'Capture with Relay')}</button
+    >
   {:else if kind === 'batch'}
     <label
-      >PDFs to process
+      >{t('feature.batch.label', 'PDFs to process')}
       <input type="file" accept="application/pdf,.pdf" multiple onchange={selectFiles} /></label
-    ><button disabled={!files.length} onclick={batch}>Run local batch</button>
+    ><button disabled={!files.length} onclick={batch}
+      >{t('feature.batch.action', 'Run local batch')}</button
+    >
     <p class="note">
-      Concurrency and memory are bounded; failed files remain individually retryable in the engine
-      API.
+      {t(
+        'feature.batch.note',
+        'Concurrency and memory are bounded; failed files remain individually retryable in the engine API.',
+      )}
     </p>
   {:else if kind === 'recipe'}
     <label
-      >Step <select
+      >{t('feature.recipe.step', 'Step')}
+      <select
         onchange={(event) => {
           const op = (event.currentTarget as HTMLSelectElement).value as
             'compress' | 'bates' | 'metadata';
           recipe = { ...recipe, steps: [...recipe.steps, { op, options: {} }] };
         }}
-        ><option value="compress">Compress</option><option value="bates">Bates numbering</option
-        ><option value="metadata">Metadata</option></select
+        ><option value="compress">{t('feature.recipe.compress', 'Compress')}</option><option
+          value="bates">{t('feature.recipe.bates', 'Bates numbering')}</option
+        >
+        ><option value="metadata">{t('feature.recipe.metadata', 'Metadata')}</option></select
       ></label
     >
     <p class="recipe-description">{describeRecipe(recipe)}</p>
-    <button onclick={shareRecipe}>Copy document-free recipe link</button>
+    <button onclick={shareRecipe}
+      >{t('feature.recipe.action', 'Copy document-free recipe link')}</button
+    >
   {:else if kind === 'watch'}
-    <button onclick={startWatch}>Choose folder and start watcher</button>{#if watcher}<button
-        onclick={() => watcher?.pause()}>Pause</button
-      ><button onclick={() => watcher?.resume()}>Resume</button><button
-        onclick={() => watcher?.stop()}>Stop</button
+    <button onclick={startWatch}
+      >{t('feature.watch.start', 'Choose folder and start watcher')}</button
+    >{#if watcher}<button onclick={() => watcher?.pause()}
+        >{t('feature.watch.pause', 'Pause')}</button
+      >
+      ><button onclick={() => watcher?.resume()}>{t('feature.watch.resume', 'Resume')}</button
+      >><button onclick={() => watcher?.stop()}>{t('feature.watch.stop', 'Stop')}</button>
       >
       <p class="note">
-        State: {watcher.state}. No folder is read before permission is granted.
+        {t(
+          'feature.watch.note',
+          'State: {value}. No folder is read before permission is granted.',
+          watcher.state,
+        )}
       </p>{/if}
   {/if}
   {#if !SELF_RENDERED.has(kind) && !children}
-    <p class="note">This tool has no controls yet. Nothing was run.</p>
+    <p class="note">{t('feature.noControls', 'This tool has no controls yet. Nothing was run.')}</p>
   {/if}
   {#if children}{@render children()}{/if}
   <p class="status" role="status" aria-live="polite">{status}</p>

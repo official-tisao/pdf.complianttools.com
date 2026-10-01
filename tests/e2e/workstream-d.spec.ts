@@ -1,7 +1,15 @@
 import { expect, test } from '@playwright/test';
 
-test('Workstream D routes expose local file controls and honest capability copy', async ({ page }) => {
-  for (const route of ['/view-pdf', '/compare-pdf', '/pdf-metadata', '/pdf-inspector', '/ocr-pdf']) {
+test('Workstream D routes expose local file controls and honest capability copy', async ({
+  page,
+}) => {
+  for (const route of [
+    '/view-pdf',
+    '/compare-pdf',
+    '/pdf-metadata',
+    '/pdf-inspector',
+    '/ocr-pdf',
+  ]) {
     await page.goto(route);
     await expect(page.locator('input[type="file"]')).toHaveCount(route === '/compare-pdf' ? 2 : 1);
     await expect(page.getByText(/locally|local/i).first()).toBeVisible();

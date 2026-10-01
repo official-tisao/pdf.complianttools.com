@@ -18,6 +18,7 @@
   eyebrow="ORGANIZE"
   description="Bake form fields and annotations into page content so they can no longer be edited."
   options={fieldsFor('flatten')}
+  actionKey="shell.action.flatten"
   actionLabel="Flatten PDF"
   onrun={flatten}
 />

@@ -22,6 +22,7 @@
   eyebrow="ORGANIZE"
   description="Rotate every page or a selection of pages, entirely in your browser."
   options={fieldsFor('rotate')}
+  actionKey="shell.action.rotate"
   actionLabel="Rotate pages"
   onrun={rotate}
 />

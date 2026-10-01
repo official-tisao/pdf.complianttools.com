@@ -24,14 +24,16 @@
     "verify:licenses": "node scripts/verify-licenses.mjs",
     "verify:plan-sync": "node scripts/check-plan-sync.mjs",
     "verify:routes": "node scripts/generate-route-manifest.mjs --check",
+    "verify:locales": "node scripts/generate-locale-routes.mjs --check",
     "verify:source-safety": "node scripts/source-safety.mjs",
     "verify:trademarks": "node scripts/verify-trademarks.mjs",
     "verify:latency": "node scripts/measure-latency.mjs",
     "verify:bundle": "node scripts/measure-bundle.mjs",
     "verify:lighthouse": "node scripts/measure-lighthouse.mjs",
     "generate:routes": "node scripts/generate-route-manifest.mjs",
+    "generate:locales": "node scripts/generate-locale-routes.mjs",
     "progress": "node scripts/plan-truth.mjs",
-    "verify": "pnpm format:check && pnpm lint && pnpm verify:source-safety && pnpm typecheck && pnpm test && pnpm verify:licenses && pnpm verify:assets && pnpm verify:trademarks && pnpm verify:routes && pnpm verify:plan-sync"
+    "verify": "pnpm format:check && pnpm lint && pnpm verify:source-safety && pnpm typecheck && pnpm test && pnpm verify:licenses && pnpm verify:assets && pnpm verify:trademarks && pnpm verify:routes && pnpm verify:locales && pnpm verify:plan-sync"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

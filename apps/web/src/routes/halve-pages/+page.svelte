@@ -22,6 +22,7 @@
   eyebrow="ORGANIZE"
   description="Split oversized pages in half along the long or short edge."
   options={fieldsFor('halve')}
+  actionKey="shell.action.halve"
   actionLabel="Halve pages"
   onrun={halve}
 />

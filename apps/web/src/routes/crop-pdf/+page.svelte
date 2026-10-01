@@ -29,6 +29,7 @@
   eyebrow="ORGANIZE"
   description="Trim pages with numeric margins while keeping your original file untouched."
   options={fieldsFor('crop')}
+  actionKey="shell.action.crop"
   actionLabel="Crop pages"
   onrun={crop}
 />

@@ -7,16 +7,22 @@
    */
   import { JSONLD_CLOSE, JSONLD_OPEN, faqPageLd } from '$lib/seo';
   import { translate } from '$lib/i18n';
+  import { getLocaleContext } from '../routes/__locale/context';
 
   let {
     entries,
     heading = 'Frequently asked questions',
-    locale = 'en',
+    locale: localeProp,
   }: {
     entries: ReadonlyArray<{ key: string; question: string; answer: string }>;
     heading?: string;
     locale?: import('$lib/i18n').Locale;
   } = $props();
+
+  // Explicit prop wins; otherwise the `[locale]` layout's context supplies it,
+  // so a generated `[locale]` route renders this component translated without
+  // re-declaring its props. English routes fall back to the `en` source.
+  const locale = $derived(localeProp ?? getLocaleContext());
 
   // The same entries feed the FAQPage JSON-LD, so a localised page still
   // describes the questions it actually shows.

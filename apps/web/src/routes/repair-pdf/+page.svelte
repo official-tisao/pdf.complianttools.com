@@ -18,6 +18,7 @@
   eyebrow="ORGANIZE"
   description="Re-save a damaged PDF's object structure locally, or get a typed reason why it cannot."
   options={fieldsFor('repair')}
+  actionKey="shell.action.repair"
   actionLabel="Repair PDF"
   onrun={repair}
 />

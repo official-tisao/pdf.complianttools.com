@@ -23,6 +23,7 @@
   eyebrow="ORGANIZE"
   description="Compress a PDF with the balanced preset for fast delivery over the web."
   options={[]}
+  actionKey="shell.action.optimize"
   actionLabel="Optimize for web"
   onrun={optimize}
 />

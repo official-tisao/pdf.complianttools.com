@@ -15,6 +15,7 @@
   eyebrow="ORGANIZE"
   description="Keep only the pages you choose — ranges, lists, and odd/even selectors."
   options={fieldsFor('extract-pages')}
+  actionKey="shell.action.extract"
   actionLabel="Extract pages"
   onrun={extract}
 />

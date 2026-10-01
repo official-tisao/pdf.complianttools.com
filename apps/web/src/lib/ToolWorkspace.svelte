@@ -4,6 +4,8 @@
   import OptionPanel, { type OptionField } from '@pdf-complianttools/ui/OptionPanel.svelte';
   import PageGrid from '@pdf-complianttools/ui/PageGrid.svelte';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
+  import { translate, type Locale } from '$lib/i18n';
+  import { getLocaleContext } from '../routes/__locale/context';
   import { page } from '$app/state';
 
   let {
@@ -14,6 +16,10 @@
     actionLabel = 'Export PDF',
     onrun,
     unavailableReason = '',
+    locale: localeProp,
+    unavailableKey = '',
+    actionKey = '',
+    eyebrowKey = '',
   }: {
     title: string;
     eyebrow?: string;
@@ -32,7 +38,41 @@
      * the tool cannot process is the same dead end one step later.
      */
     unavailableReason?: string;
+    /**
+     * The active UI locale. Every string this shell renders is resolved through
+     * `translate`, so `en-XA` accents and pads the copy (which is what makes
+     * layout overflow visible) and `ar` renders RTL.
+     *
+     * Left unset on most routes: the locale comes from context, which the
+     * `[locale]` layout sets. The prop is an explicit override, used by the two
+     * invoice routes that pass their own locale down.
+     */
+    locale?: Locale;
+    /**
+     * Catalogue key for the capability-boundary copy. Preferred over writing
+     * `unavailableReason` inline, because an inline reason cannot be
+     * pseudo-localised and so escapes the overflow check entirely.
+     */
+    unavailableKey?: string;
+    /** Catalogue key for the primary action label. */
+    actionKey?: string;
+    /** Catalogue key for the small eyebrow above the title. */
+    eyebrowKey?: string;
   } = $props();
+
+  // An explicit `locale` prop wins; otherwise the `[locale]` layout's context
+  // supplies it, and an English route outside that tree resolves to `en`.
+  const locale = $derived(localeProp ?? getLocaleContext());
+  const t = (key: string, fallback: string, ...values: Array<string | number | undefined>) =>
+    translate(locale, key, fallback, ...values);
+  const action = $derived(actionKey ? t(actionKey, actionLabel) : actionLabel);
+  const eyebrowText = $derived(
+    eyebrowKey ? t(eyebrowKey, eyebrow) : t('shell.eyebrow.default', eyebrow),
+  );
+  /** The boundary copy: a catalogue entry when given, else the inline reason. */
+  const reason = $derived(
+    unavailableKey ? t(unavailableKey, unavailableReason) : unavailableReason,
+  );
   let files = $state<File[]>([]);
   let values = $state<Record<string, string | number | boolean>>({});
   let seeded = false;
@@ -52,7 +92,11 @@
   async function selectFiles(list: FileList | null) {
     files = list ? Array.from(list) : [];
     status = files.length
-      ? `${files.length} file${files.length === 1 ? '' : 's'} ready locally.`
+      ? t(
+          files.length === 1 ? 'shell.files.ready' : 'shell.files.readyPlural',
+          files.length === 1 ? '1 file ready locally.' : `${files.length} files ready locally.`,
+          files.length,
+        )
       : '';
     const first = files[0];
     if (!first) {
@@ -74,12 +118,15 @@
   }
   async function runTool() {
     if (!onrun || files.length === 0) return;
-    status = 'Working locally…';
+    status = t('shell.status.working', 'Working locally…');
     try {
       await onrun(files, values);
-      status = 'Done. Your original files were not changed.';
+      status = t('shell.status.done', 'Done. Your original files were not changed.');
     } catch (error) {
-      status = error instanceof Error ? error.message : 'The operation could not be completed.';
+      status =
+        error instanceof Error
+          ? error.message
+          : t('shell.status.failed', 'The operation could not be completed.');
     }
   }
 </script>
@@ -99,23 +146,26 @@
 </svelte:head>
 
 <section class="tool-page">
-  <p class="eyebrow">{eyebrow}</p>
+  <p class="eyebrow">{eyebrowText}</p>
   <h1>{title}</h1>
   <p class="lede">{description}</p>
-  {#if unavailableReason}
-    <p class="unavailable" role="status">{unavailableReason}</p>
+  {#if reason}
+    <p class="unavailable" role="status">{reason}</p>
   {:else}
     <FileDrop accept=".pdf,application/pdf" onchange={selectFiles} />
     <div class="workspace">
       <div class="preview">
         <div class="toolbar">
-          <span>{files.length} file{files.length === 1 ? '' : 's'} ready</span><Button
-            disabled={files.length === 0 || !onrun}
-            onclick={runTool}>{actionLabel}</Button
-          >
+          <span
+            >{t(
+              files.length === 1 ? 'shell.files.ready' : 'shell.files.readyPlural',
+              files.length === 1 ? '1 file ready locally.' : `${files.length} files ready locally.`,
+              files.length,
+            )}</span
+          ><Button disabled={files.length === 0 || !onrun} onclick={runTool}>{action}</Button>
         </div>
         {#if pageCount > 0}<PageGrid {pageCount} />{:else}<p class="empty">
-            Page previews appear here after you select a PDF.
+            {t('shell.preview.empty', 'Page previews appear here after you select a PDF.')}
           </p>{/if}
       </div>
       {#if options.length > 0}<OptionPanel fields={options} onchange={changeOption} />{/if}

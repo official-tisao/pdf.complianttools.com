@@ -27,6 +27,7 @@
   eyebrow="ORGANIZE"
   description="Insert blank pages, or pages from another PDF, at any position."
   options={fieldsFor('insert')}
+  actionKey="shell.action.insert"
   actionLabel="Insert pages"
   onrun={insert}
 />

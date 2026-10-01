@@ -14,6 +14,7 @@
   import type { InvoiceData, InvoiceLine } from '@pdf-complianttools/engine';
   import { downloadBytes } from '$lib/download';
   import { localeAttributes, translate, type Locale } from '$lib/i18n';
+  import { getLocaleContext } from '../routes/__locale/context';
   import {
     deleteTemplate,
     listTemplates,
@@ -24,8 +25,13 @@
 
   let {
     variant = 'creator',
-    locale = 'en',
+    locale: localeProp,
   }: { variant?: 'creator' | 'e-invoice'; locale?: Locale } = $props();
+
+  // Explicit prop wins; otherwise the `[locale]` layout's context supplies it,
+  // so a generated `[locale]` route renders this builder translated without
+  // re-declaring its props. English routes fall back to the `en` source.
+  const locale = $derived(localeProp ?? getLocaleContext());
 
   // Every user-facing string goes through the message boundary: the English
   // text is the fallback, and the key selects a translation. A missing

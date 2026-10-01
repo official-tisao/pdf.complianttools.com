@@ -18,6 +18,7 @@
   eyebrow="ORGANIZE"
   description="Delete the pages you select — ranges, lists, and odd/even selectors."
   options={fieldsFor('remove-pages')}
+  actionKey="shell.action.remove"
   actionLabel="Remove pages"
   onrun={remove}
 />

@@ -110,10 +110,16 @@ test('an invoice can be created using only the keyboard', async ({ page }) => {
 test('the Arabic locale renders RTL with translated copy', async ({ page }) => {
   // STCC #11: `ar` catches directional bugs. The direction must come from the
   // catalogue, not be hardcoded, and the copy must actually be Arabic.
+  //
+  // `lang`/`dir` are asserted on `.locale-root`, the wrapper the `[locale]`
+  // layout renders. They used to sit on the invoice component's own root, which
+  // only covered the two hand-written localized routes; a generated localized
+  // route has no such wrapper of its own, so the layout is now the single place
+  // that declares direction.
   await page.goto('/ar/invoice-creator');
-  const builder = page.locator('.builder');
-  await expect(builder).toHaveAttribute('dir', 'rtl');
-  await expect(builder).toHaveAttribute('lang', 'ar');
+  const root = page.locator('.locale-root');
+  await expect(root).toHaveAttribute('dir', 'rtl');
+  await expect(root).toHaveAttribute('lang', 'ar');
   // The invoice number field is labelled in Arabic, not left as English.
   await expect(page.locator('.builder')).toContainText('رقم الفاتورة');
 });
@@ -124,7 +130,7 @@ test('the pseudo-locale lengthens the copy so overflow is visible', async ({ pag
   // asserts the markers are actually present in the served DOM.
   await page.goto('/en-XA/invoice-creator');
   const builder = page.locator('.builder');
-  await expect(builder).toHaveAttribute('lang', 'en-XA');
+  await expect(page.locator('.locale-root')).toHaveAttribute('lang', 'en-XA');
   const text = (await builder.textContent()) ?? '';
   expect(text).toMatch(/[ÁÉÏÓÜÁ]/u);
   expect(text).toMatch(/~/u);

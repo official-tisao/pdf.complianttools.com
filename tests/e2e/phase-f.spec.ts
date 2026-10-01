@@ -95,7 +95,7 @@ test('an unreachable Relay still produces an actionable message', async ({ page 
   );
 });
 
-test('a tool route never renders another tool\'s controls', async ({ page }) => {
+test("a tool route never renders another tool's controls", async ({ page }) => {
   // Regression guard. FeaturePage once fell through to a catch-all `{:else}`,
   // so /invoice-creator and /e-invoice served the folder watcher — controls
   // those tools were never built for. Each route is checked only against
@@ -157,7 +157,10 @@ test('the invoice tools are reachable from the site chrome', async ({ page }) =>
     '/e-invoice',
   );
 
-  await page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('link', { name: 'Invoices' }).click();
+  await page
+    .getByRole('navigation', { name: 'Primary navigation' })
+    .getByRole('link', { name: 'Invoices' })
+    .click();
   await expect(page.getByRole('heading', { name: 'Invoice creator' })).toBeVisible();
 
   await page.goto('/');
@@ -175,14 +178,13 @@ test('a page ships exactly one meta description', async ({ page }) => {
   for (const route of ['/invoice-creator', '/e-invoice', '/merge', '/']) {
     await page.goto(route);
     const descriptions = page.locator('meta[name="description"]');
-    await expect(
-      descriptions,
-      `${route} must ship exactly one meta description`,
-    ).toHaveCount(1);
+    await expect(descriptions, `${route} must ship exactly one meta description`).toHaveCount(1);
   }
 });
 
-test('every prerendered page carries canonical, hreflang, and structured data', async ({ page }) => {
+test('every prerendered page carries canonical, hreflang, and structured data', async ({
+  page,
+}) => {
   // Appendix E / §7.6. Canonical and hreflang come from the layout so a new
   // route cannot ship without them; JSON-LD is per route. Checked on a spread
   // of component families: FeaturePage, ToolWorkspace, and a bespoke route.
@@ -216,9 +218,7 @@ test('the JSON-LD is valid, factual structured data', async ({ page }) => {
 test('the invoice FAQ is in the served HTML, not produced by hydration', async ({ page }) => {
   // §7.6 requires the answer to exist without JavaScript.
   await page.goto('/e-invoice');
-  await expect(
-    page.getByRole('heading', { name: 'Frequently asked questions' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Frequently asked questions' })).toBeVisible();
   await expect(page.getByText(/published OASIS UBL schema/u)).toBeAttached();
 
   // And the zero-JS reference is present, so the page is honest about needing JS.
@@ -257,7 +257,9 @@ test.describe('P7-03 invoice builder', () => {
     await expect(totals.nth(2)).toHaveText('220.00 CAD');
   });
 
-  test('an invalid invoice reports the engine remedy instead of failing silently', async ({ page }) => {
+  test('an invalid invoice reports the engine remedy instead of failing silently', async ({
+    page,
+  }) => {
     // A tax rate above 100 is rejected by the engine. The input's own max
     // attribute is only a hint, so this proves the engine is the real guard and
     // that its remedy reaches the user instead of a broken download.
@@ -291,7 +293,9 @@ test.describe('P7-03 invoice builder', () => {
 
   test('e-invoice offers the XML-to-PDF direction and refuses invalid XML', async ({ page }) => {
     await openBuilder(page, '/e-invoice');
-    await expect(page.getByRole('heading', { name: 'Existing e-invoice XML to PDF' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Existing e-invoice XML to PDF' }),
+    ).toBeVisible();
 
     // The page has two conversion sections, each with its own file input and
     // status line, so both are scoped rather than matched globally.
@@ -304,7 +308,9 @@ test.describe('P7-03 invoice builder', () => {
     await expect(toPdf.locator('[role="status"]')).toHaveText(/not a usable e-invoice/);
   });
 
-  test('a PDF with no embedded XML is refused honestly rather than guessed at', async ({ page }) => {
+  test('a PDF with no embedded XML is refused honestly rather than guessed at', async ({
+    page,
+  }) => {
     // Recovery reads the structured attachment only. A PDF without one must say
     // so, never invent invoice fields from the rendered page.
     await openBuilder(page, '/e-invoice');
@@ -318,4 +324,3 @@ test.describe('P7-03 invoice builder', () => {
     await expect(page.getByText(/carries no embedded e-invoice XML/)).toBeVisible();
   });
 });
-

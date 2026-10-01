@@ -23,6 +23,7 @@
   eyebrow="ORGANIZE"
   description="Set every page to a new size, scaling the content or cropping to fit."
   options={fieldsFor('resize')}
+  actionKey="shell.action.resize"
   actionLabel="Change page size"
   onrun={resize}
 />
