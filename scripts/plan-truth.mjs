@@ -127,13 +127,22 @@ export function compareGateGlyphs(markdown) {
 /**
  * Compares Appendix B against the engine's own format registry.
  *
- * Appendix B can be wrong in both directions: rows marked `[x]` for formats the
- * registry marks `unavailable()`, and rows marked `[ ]` for formats that ship.
- * The registry is the source of truth because it is what the user actually
- * hits — it supplies the typed `unavailableReason` a route surfaces.
+ * The registry is the source of truth about capability, because it is what the
+ * user actually hits — it supplies the typed `unavailableReason` a route
+ * surfaces. But `status: 'unavailable'` does NOT mean a row must be left
+ * unchecked, and an earlier version of this check reported exactly that,
+ * producing eight false findings on formats the project ships honestly.
+ *
+ * SFCC (§0.4) admits an unavailable format: "a fixture round-trip test (or an
+ * honest, specific 'unsupported' page)". P3-11 and P3-12 were built on that
+ * clause — DOC/XLS/PPT/TIFF/CBR/PUB/HWP/INDD are best-effort or typed
+ * unavailable by design, and `/convert` renders every registry entry's
+ * `unavailableReason` as user-visible copy. So the honest question is not
+ * "is it unavailable?" but "does it say so specifically?" — which is
+ * checkable, and is what this compares instead.
  *
  * @param {string} markdown PLAN.md contents
- * @param {ReadonlyArray<{ id: string, status: string }>} formats registry entries
+ * @param {ReadonlyArray<{ id: string, status: string, reason: string }>} formats
  */
 export function compareAppendixBToRegistry(markdown, formats) {
   const findings = [];
@@ -161,13 +170,15 @@ export function compareAppendixBToRegistry(markdown, formats) {
     for (const line of rows) {
       if (!pattern.test(line)) continue;
       const checked = /\|\s*\[x\]\s*\|/u.test(line);
-      if (format.status === 'unavailable' && checked) {
-        findings.push(
-          `Appendix B marks ${format.id} as [x], but the engine registry marks it unavailable`,
-        );
-      }
       if (format.status === 'supported' && !checked) {
         findings.push(`Appendix B leaves ${format.id} unchecked, but the registry supports it`);
+      }
+      // SFCC's unavailable clause requires a *specific* reason. An entry with
+      // an empty one is not an honest unsupported page, it is a silent gap.
+      if (format.status === 'unavailable' && !format.reason?.trim()) {
+        findings.push(
+          `the registry marks ${format.id} unavailable with no stated reason, so no honest unsupported page can exist`,
+        );
       }
     }
   }
@@ -175,21 +186,73 @@ export function compareAppendixBToRegistry(markdown, formats) {
 }
 
 /**
- * Extracts `{ id, status }` for every format from the engine registry source.
+ * Extracts `{ id, status, reason }` for every format from the engine registry.
  *
  * The registry is TypeScript and cannot be imported into `node --test` (the
  * same constraint that made `scripts/i18n.test.mjs` grep source text instead),
  * so its `supported(` / `unavailable(` calls are read directly. The format id
- * is always the first string argument, so this is a narrow, stable parse.
+ * is always the first string argument and an unavailable entry's reason is its
+ * LAST string argument, so this reads two known positions.
+ *
+ * `reason` is read for unavailable entries only. For `supported(` the trailing
+ * string is the note and the one before it is the direction list, so reading a
+ * "reason" there would pick up unrelated prose.
  */
 export function parseFormatRegistry(source) {
   const formats = [];
-  const call = /\b(supported|unavailable)\(\s*\n?\s*'([a-z0-9-]+)'/gu;
+  // The match must span the WHOLE call, not stop at the first argument: the
+  // reason is the final string literal, so a lazy match that ends early reads
+  // the id back as the reason and the SFCC reason check silently passes on
+  // every entry. Entries are formatted one argument per line and closed by
+  // `\n  ),`, which is an unambiguous terminator — labels contain parentheses
+  // (`'Legacy Word (DOC)'`) but never a line-leading `  )`.
+  const call = /\b(supported|unavailable)\(\s*\n?\s*'([a-z0-9-]+)'([\s\S]*?)\n\s*\)/gu;
   for (const match of source.matchAll(call)) {
-    formats.push({ id: match[2], status: match[1] === 'supported' ? 'supported' : 'unavailable' });
+    const entry = { id: match[2], status: match[1] === 'supported' ? 'supported' : 'unavailable' };
+    if (entry.status === 'unavailable') {
+      // The last string literal in an `unavailable(...)` call is the reason;
+      // it is always the final argument.
+      const literals = [...match[3].matchAll(/'([^']*)'/gu)].map((m) => m[1]);
+      entry.reason = literals.at(-1) ?? '';
+    }
+    formats.push(entry);
   }
   return formats;
 }
+
+/**
+ * Reports routes whose primary action is disabled **and** which do not say why.
+ *
+ * A disabled Run button is only a defect when nothing on the page explains it.
+ * `/bookmarks`, `/pdf-to-pdfa`, and `/rasterize-pdf` render a stated
+ * `unavailableReason` in the served HTML, which is the honest answer — the
+ * dead-control contract test (`tests/contracts/dead-control-gate.test.mjs`)
+ * keeps its own allow-list of exactly those, and this reads the same signal
+ * rather than restating the count as drift.
+ *
+ * Reporting every disabled action as a finding — which an earlier version did,
+ * as an unconditional line in the findings list — makes `pnpm progress`
+ * permanently red on a repository whose three remaining disabled actions are
+ * all intentional. A gate that can never go green gets ignored, which is worse
+ * than the gate it was added to replace.
+ */
+export function compareDeadControlsToManifest(manifest, allowList = DEFAULT_UNAVAILABLE_ROUTES) {
+  const silent = (manifest.deadControls ?? []).filter((path) => !allowList.has(path));
+  if (silent.length === 0) return [];
+  return [
+    `${silent.length} route(s) have a disabled primary action and no stated reason: ${silent.join(', ')}`,
+  ];
+}
+
+/**
+ * Routes that disable their primary action on purpose.
+ *
+ * Kept here as well as in the contract test because the two are different
+ * assertions: the contract test proves the routes still state a reason, and
+ * this list is the drift gate. Both read the same three names so neither can
+ * silently grow.
+ */
+export const DEFAULT_UNAVAILABLE_ROUTES = new Set(['/bookmarks', '/pdf-to-pdfa', '/rasterize-pdf']);
 
 /** Reads PLAN.md and the registry, and reports every drift found. */
 export async function checkTruth(root = process.cwd()) {
@@ -202,7 +265,7 @@ export async function checkTruth(root = process.cwd()) {
     ...compareDashboardToAppendices(markdown),
     ...compareGateGlyphs(markdown),
     ...compareAppendixBToRegistry(markdown, formats),
-    `route manifest covers ${manifest.routeCount} routes; ${manifest.deadControls.length} have a disabled primary action`,
+    ...compareDeadControlsToManifest(manifest),
   ];
   return { findings, manifest, formats };
 }

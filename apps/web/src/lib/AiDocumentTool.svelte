@@ -171,6 +171,18 @@
       busy = false;
     }
   }
+
+  /** Hydration readiness — see the note in `ToolWorkspace.svelte`. */
+  // NOT `$derived(true)`, which the linter prefers: a constant derived value
+  // is also true during prerendering, so `data-hydrated="true"` would be
+  // baked into the served HTML and the flag would mean nothing. Verified in
+  // the build output — all 458 prerendered pages carry `data-hydrated="false"`.
+  // The flag has to flip on the client, which needs an effect.
+  // eslint-disable-next-line svelte/prefer-writable-derived
+  let hydrated = $state(false);
+  $effect(() => {
+    hydrated = true;
+  });
 </script>
 
 <svelte:head>
@@ -185,7 +197,7 @@
   {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
 </svelte:head>
 
-<section class="page">
+<section class="page" data-hydrated={hydrated ? 'true' : 'false'}>
   <p class="eyebrow">BYOK AI · LOCAL FIRST</p>
   <h1>{title}</h1>
   <p class="lede">{description}</p>

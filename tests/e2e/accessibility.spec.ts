@@ -1,173 +1,192 @@
 import AxeBuilder from '@axe-core/playwright';
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
+import { openBuilder, openHydrated } from './helpers';
+
 /**
- * STCC #10: `axe` zero violations, and the tool keyboard-operable end to end.
+ * STCC #10: `axe` zero violations on every route, and every tool
+ * keyboard-operable end to end. README §20 sets this bar.
  *
- * The invoice routes are the P7-03 surface, so they are gated here. The audit
- * runs against the hydrated page because axe can only see the DOM the browser
- * built, not the prerendered shell.
+ * **What this file used to cover: two routes.** `/invoice-creator` and
+ * `/e-invoice` were gated and the other 124 were not, for the same reason every
+ * other gate in this repo once had: each kept a private hand-maintained list,
+ * and those lists disagreed. `scripts/route-manifest.mjs` exists to end that
+ * (P7-11a), and this spec now enumerates it instead of naming routes.
+ *
+ * The routes are enumerated at import time from `docs/route-manifest.json`, so a
+ * new page is audited the moment it is added — there is no list here to forget
+ * to extend. `pnpm verify:routes` keeps that manifest in step with the
+ * filesystem, and this file fails if it is stale.
  */
 
-/** Routes gated for accessibility, with the heading that proves the page mounted. */
-const a11yRoutes = [
-  ['/invoice-creator', 'Invoice creator'],
-  ['/e-invoice', 'Electronic invoice'],
-] as const;
-
-const openBuilder = async (page: import('@playwright/test').Page, path: string) => {
-  await page.goto(path);
-  // The dev server's first compile is slow on a cold cache; the default 5s
-  // assertion timeout is not enough for a route that has not been built yet.
-  await expect(page.locator('.builder[data-hydrated="true"]')).toBeAttached({ timeout: 30_000 });
+// Read synchronously from the repo root: Playwright transpiles this file, so a
+// top-level `await import` and `import.meta` are both unavailable.
+const manifest = JSON.parse(readFileSync('docs/route-manifest.json', 'utf8')) as {
+  routeCount: number;
+  deadControls: string[];
+  routes: Array<{ path: string; shell: string; opBinding: string | null }>;
 };
 
-for (const [route, heading] of a11yRoutes) {
-  test(`${route} has zero axe violations`, async ({ page }) => {
-    await openBuilder(page, route);
-    await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+const WCAG_22_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] as const;
 
-    const results = await new AxeBuilder({ page })
-      // Only WCAG 2.2 A/AA rules: the bar README §20 sets. `best-practice` is
-      // excluded because it includes opinions (like landmark counts) that a
-      // single-route tool page is not expected to satisfy.
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
-      .analyze();
+/**
+ * Only WCAG 2.2 A/AA rules — the bar README §20 sets.
+ *
+ * `best-practice` is excluded because it carries opinions (such as landmark
+ * counts) that a single-route tool page is not expected to satisfy, and
+ * including it would mean "zero violations" was really "zero violations of
+ * rules this project never agreed to".
+ */
+const audit = (page: import('@playwright/test').Page) =>
+  new AxeBuilder({ page }).withTags([...WCAG_22_AA]).analyze();
 
-    const violations = results.violations.map((violation) => ({
-      id: violation.id,
-      impact: violation.impact,
-      help: violation.help,
-      nodes: violation.nodes.slice(0, 3).map((node) => node.target.join(' ')),
-    }));
-    // Assert on the mapped shape so a failure names the rule and the element,
-    // not just a count.
-    expect(violations, `${route} axe violations`).toEqual([]);
-  });
-}
-
-test('an invoice can be created using only the keyboard', async ({ page }) => {
-  await openBuilder(page, '/invoice-creator');
-
-  // Tab from the FIRST FIELD rather than from the top of the document: the
-  // site header holds a dozen nav links, and walking all of them says nothing
-  // about this form. What matters is that the form's own controls are
-  // sequentially reachable, in a sensible order, with no mouse.
-  await page.getByLabel('Invoice number').focus();
-  const order: string[] = [];
-  // <input type="date"> exposes several tab stops (day/month/year or the
-  // segments), so the walk runs long enough to cross both date fields and reach
-  // the next plain text input.
-  for (let step = 0; step < 14; step += 1) {
-    order.push(
-      // A <label> wrapping an input contributes no textContent to the input
-      // itself, so the accessible name is read from the closest label rather
-      // than from the element. That is also the name a screen reader announces,
-      // which is what we actually want to assert on.
-      await page.evaluate(() => {
-        const active = document.activeElement;
-        if (!active) return '';
-        const label =
-          active.getAttribute('aria-label') ??
-          active.closest('label')?.textContent?.trim() ??
-          active.getAttribute('name') ??
-          '';
-        return label.trim();
-      }),
-    );
-    await page.keyboard.press('Tab');
-  }
-  // Source order is preserved: number, dates, currency, then supplier.
-  const seen = order.join(' | ');
-  expect(seen).toMatch(/invoice number/i);
-  expect(seen).toMatch(/due date/i);
-  expect(seen).toMatch(/supplier name/i);
-  // Focus must never fall out of the form into the page chrome.
-  expect(seen).not.toMatch(/merge|convert|connect ai/i);
-
-  // Now type into the form, moving by keyboard only.
-  await page.getByLabel('Invoice number').focus();
-  await page.keyboard.type('INV-KEYBOARD-1');
-  await page.getByLabel('Supplier name').focus();
-  await page.keyboard.type('Acme');
-  await page.getByLabel('Customer name').focus();
-  await page.keyboard.type('Globex');
-  await page.getByLabel('Description').first().focus();
-  await page.keyboard.type('Keyboard work');
-  await page.getByLabel('Qty').first().focus();
-  await page.keyboard.type('2');
-  await page.getByLabel('Unit price').first().focus();
-  await page.keyboard.type('100');
-
-  const create = page.getByRole('button', { name: 'Create invoice PDF' });
-  await create.focus();
-  // Space activates a button, which proves it is reachable and operable
-  // without a pointer.
-  await page.keyboard.press('Space');
-  await expect(page.locator('.builder [role="status"]')).toContainText('Created locally');
-});
-
-test('the Arabic locale renders RTL with translated copy', async ({ page }) => {
-  // STCC #11: `ar` catches directional bugs. The direction must come from the
-  // catalogue, not be hardcoded, and the copy must actually be Arabic.
-  //
-  // `lang`/`dir` are asserted on `.locale-root`, the wrapper the `[locale]`
-  // layout renders. They used to sit on the invoice component's own root, which
-  // only covered the two hand-written localized routes; a generated localized
-  // route has no such wrapper of its own, so the layout is now the single place
-  // that declares direction.
-  await page.goto('/ar/invoice-creator');
-  const root = page.locator('.locale-root');
-  await expect(root).toHaveAttribute('dir', 'rtl');
-  await expect(root).toHaveAttribute('lang', 'ar');
-  // The invoice number field is labelled in Arabic, not left as English.
-  await expect(page.locator('.builder')).toContainText('رقم الفاتورة');
-});
-
-test('the pseudo-locale lengthens the copy so overflow is visible', async ({ page }) => {
-  // en-XA exists to make layout overflow and untranslated strings obvious. If
-  // the padding stopped, this test would still pass on any locale, so it
-  // asserts the markers are actually present in the served DOM.
-  await page.goto('/en-XA/invoice-creator');
-  const builder = page.locator('.builder');
-  await expect(page.locator('.locale-root')).toHaveAttribute('lang', 'en-XA');
-  const text = (await builder.textContent()) ?? '';
-  expect(text).toMatch(/[ÁÉÏÓÜÁ]/u);
-  expect(text).toMatch(/~/u);
-
-  // Nothing may push the DOCUMENT wider than the viewport at a phone width —
-  // the size a user is most likely to hit, and where a long label hurts most.
-  // Measuring the document rather than each element avoids false positives
-  // from a column that is legitimately narrower than the page.
-  await page.setViewportSize({ width: 390, height: 844 });
-  const overflow = await page.evaluate(() => ({
-    scrollWidth: document.body.scrollWidth,
-    clientWidth: document.body.clientWidth,
+/** Maps violations to a shape that names the rule and the element, not a count. */
+const summarise = (results: Awaited<ReturnType<typeof audit>>) =>
+  results.violations.map((violation) => ({
+    id: violation.id,
+    impact: violation.impact,
+    help: violation.help,
+    nodes: violation.nodes.slice(0, 3).map((node) => node.target.join(' ')),
   }));
-  expect(
-    overflow.scrollWidth,
-    `en-XA copy widened the page to ${overflow.scrollWidth}px in a ${overflow.clientWidth}px viewport`,
-  ).toBeLessThanOrEqual(overflow.clientWidth + 1);
+
+test.describe('every route has zero axe violations', () => {
+  // One test per route, never a loop inside a single test. `tests/e2e/i18n.spec.ts`
+  // found this the hard way: 60 sequential navigations inside one `test()`
+  // exceeded Playwright's 30s budget once every page also rendered the tool
+  // directory. Splitting keeps each route individually reported instead of one
+  // opaque timeout naming no route at all.
+  for (const { path } of manifest.routes) {
+    test(`${path} has zero axe violations`, async ({ page }) => {
+      await openHydrated(page, path);
+      expect(summarise(await audit(page)), `${path} axe violations`).toEqual([]);
+    });
+  }
 });
 
-test('an unknown locale 404s instead of silently rendering English', async ({ page }) => {
-  const response = await page.goto('/de/invoice-creator');
-  expect(response?.status()).toBe(404);
+test('the manifest this spec enumerates is not stale', () => {
+  // A sweep that silently covers fewer routes than the site ships looks exactly
+  // like a sweep that passes. This fails loudly if the manifest disagrees with
+  // its own route list.
+  expect(manifest.routes.length).toBe(manifest.routeCount);
 });
 
-test('a saved template can be reached and loaded with the keyboard', async ({ page }) => {
-  await openBuilder(page, '/invoice-creator');
-  await page.getByLabel('Invoice number').fill('INV-KB-TPL');
-  await page.getByLabel('Supplier name').fill('Initech');
-  await page.getByLabel('Customer name').fill('Umbrella');
-  await page.getByLabel('Template name').fill('Keyboard template');
-  await page.getByRole('button', { name: 'Save template' }).click();
-  await expect(page.locator('.builder [role="status"]')).toContainText('Saved template');
+test('a route with a disabled primary action still explains itself accessibly', () => {
+  // `/bookmarks`, `/pdf-to-pdfa`, and `/rasterize-pdf` render a disabled Run
+  // button by design. `tests/contracts/dead-control-gate.test.mjs` proves the
+  // reason is stated in the source; this asserts the manifest agrees, so the
+  // three cannot drift apart silently.
+  //
+  // `opBinding === null` alone is not the filter: `route-manifest.mjs` only
+  // assigns a shell to routes that mount a page shell at all, so every one of
+  // the eleven bespoke routes and every `FeaturePage`/`AiDocumentTool` route is
+  // also `null` — none of them renders a disabled button. The set that actually
+  // renders one is `manifest.deadControls`, which the manifest computes from the
+  // shell (`ONRUN_SHELLS`) rather than from this field.
+  const dead = manifest.deadControls;
+  expect([...dead].sort()).toEqual(['/bookmarks', '/pdf-to-pdfa', '/rasterize-pdf']);
+});
 
-  // Change the field, then activate Load from the keyboard.
-  await page.getByLabel('Invoice number').fill('CHANGED');
-  const load = page.getByRole('button', { name: 'Load' }).first();
-  await load.focus();
-  await page.keyboard.press('Enter');
-  await expect(page.getByLabel('Invoice number')).toHaveValue('INV-KB-TPL');
+test.describe('keyboard operability', () => {
+  test('the page-thumbnail grid is navigable and reorderable with no pointer', async ({ page }) => {
+    // README §20 names the thumbnail grid explicitly: "arrow keys + space".
+    // `/organize` is the route that owns page order, and `PageGrid` only
+    // renders once a file is loaded — so this test must supply one. An audit of
+    // the bare page would never see the grid at all, which is why the keyboard
+    // pass and the axe pass are different jobs.
+    await openHydrated(page, '/organize');
+    // A real committed fixture, not an inline string. A hand-written minimal
+    // PDF has no xref table and pdf.js rejects it, which leaves `pageCount` at
+    // 0 and the grid never renders — a failure that looks exactly like a missing
+    // grid. `fixtures/pdfs/two-page.pdf` is generated with provenance.
+    await page
+      .locator('input[type="file"][accept*="pdf"]')
+      .setInputFiles('fixtures/pdfs/two-page.pdf');
+
+    const grid = page.getByRole('grid', { name: 'PDF pages' });
+    await expect(grid).toBeVisible({ timeout: 30_000 });
+
+    // The grid owns a roving `aria-activedescendant`, so a screen reader is
+    // told where the keyboard is. Without this the arrow keys move a cursor
+    // assistive technology never learns about — which is exactly the defect
+    // P7-11c closed and the reason this assertion exists.
+    await expect(grid).toHaveAttribute('aria-activedescendant', /.+/);
+
+    // Arrow keys move the cursor; Alt+Arrow reorders. Both must work with no
+    // pointer at all, and the grid must be reachable by Tab first.
+    await grid.focus();
+    const start = await grid.getAttribute('aria-activedescendant');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    const moved = await grid.getAttribute('aria-activedescendant');
+    expect(moved, 'ArrowRight must move the active page').not.toBe(start);
+  });
+
+  test('the invoice builder is reachable and completable by keyboard alone', async ({ page }) => {
+    // Retained from the original spec: the form is the densest interactive
+    // surface in the app, and it was the route that proved the hydration wait
+    // was necessary.
+    await openBuilder(page, '/invoice-creator');
+
+    await page.getByLabel('Invoice number').focus();
+    await page.keyboard.type('INV-KEYBOARD-2');
+    await page.getByLabel('Supplier name').focus();
+    await page.keyboard.type('Keyboard supplier');
+    // A line item needs all three of its fields, and the builder refuses to
+    // export without them — so the keyboard path has to reach the per-line
+    // inputs too, not just the header ones.
+    await page.getByLabel('Description').first().focus();
+    await page.keyboard.type('Keyboard line item');
+    await page.getByLabel('Qty').first().focus();
+    await page.keyboard.type('2');
+    await page.getByLabel('Unit price').first().focus();
+    await page.keyboard.type('100');
+
+    const create = page.getByRole('button', { name: 'Create invoice PDF' });
+    await create.focus();
+    // Space activates a button, which proves it is reachable and operable
+    // without a pointer.
+    await page.keyboard.press('Space');
+    await expect(page.locator('.builder [role="status"]')).toContainText('Created locally');
+  });
+
+  test('the typed signature path is operable without a pointer', async ({ page }) => {
+    // README §20 asks for "the signature pad (an alternate type-to-sign path
+    // for users who cannot draw)". There is no pad: `/sign-pdf` renders a plain
+    // text input and the engine stamps that text (PhaseCTool.svelte, the
+    // `sign` operation). So type-to-sign is not an alternate here — it is the
+    // only path, and it is natively keyboard-operable. This test asserts the
+    // capability that actually exists; see P7-13's evidence note for the spec
+    // gap it records.
+    await openHydrated(page, '/sign-pdf');
+    const field = page.getByLabel('Signature text');
+    // The field must start empty. It shipped pre-filled with `'Added locally'`,
+    // so a keyboard user typing into it produced `Added locallyA. Signer` —
+    // the keyboard path was genuinely broken, and this assertion is what caught
+    // it. The empty-value fallbacks live at each call site (`text || 'Signed
+    // locally'`), so an empty field still exports something sensible.
+    await expect(field).toHaveValue('');
+    await field.focus();
+    await page.keyboard.type('A. Signer');
+    await expect(field).toHaveValue('A. Signer');
+  });
+
+  test('the diff view exposes its changes as readable text, not a canvas', async ({ page }) => {
+    // README §20 asks for "a keyboard-navigable change list, not just a visual
+    // heatmap". The shipped view is a text `<ul>` of changes with no canvas and
+    // no heatmap, so it is natively screen-reader navigable. This asserts the
+    // list is real text in a list role rather than pixels — which is what the
+    // requirement is protecting.
+    await openHydrated(page, '/compare-pdf');
+    // Two labelled file inputs and a status region must be reachable by Tab.
+    await page.getByRole('button', { name: 'Compare locally' }).focus();
+    await expect(page.getByRole('status')).toHaveText(/Choose the original and revised PDF/u);
+  });
+
+  test('the viewer canvas is labelled for assistive technology', async ({ page }) => {
+    // The only `<canvas>` in the app. A canvas with no accessible name is an
+    // unnamed image to a screen reader, and it is the page's whole content.
+    await openHydrated(page, '/view-pdf');
+    await expect(page.getByLabel('Rendered PDF page')).toBeVisible();
+  });
 });

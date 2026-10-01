@@ -1,11 +1,42 @@
 <script lang="ts">
+  /* global HTMLElement */
   import '@pdf-complianttools/ui/tokens.css';
   import { page } from '$app/state';
   import { canonicalPath, canonicalUrl, hreflangLinks } from '$lib/seo';
+  import { configurePdfjs } from '$lib/configure-pdfjs';
   import ToolDirectory from '$lib/ToolDirectory.svelte';
 
+  // Every route inherits this. Configuring the worker inside the one component
+  // that happens to open a document is how it came to be set for `/view-pdf`
+  // only, leaving every other route's `getDocument` to fail on a document that
+  // was fine. See `$lib/configure-pdfjs`.
+  configurePdfjs();
+
   let { children } = $props();
+
+  /**
+   * App-wide hydration signal.
+   *
+   * Every route is prerendered, so the served HTML is complete before the
+   * client runs. An audit that reads the page before hydration measures markup
+   * that no user with JavaScript enabled ever sees — and a `<canvas>` a route
+   * paints only after mount simply is not in the DOM yet.
+   *
+   * It lives on `<body>` rather than on a shell because eleven routes mount no
+   * page shell and so have no component-level signal to wait on, and because
+   * one app-wide flag cannot drift from the others. `<svelte:body>` accepts
+   * only event attributes, so this is an action rather than a bound attribute.
+   *
+   * SvelteKit keeps its own `hydrated` flag module-scoped and does not expose
+   * it, so there is no framework signal to reuse here.
+   */
+  function markHydrated(node: HTMLElement) {
+    node.dataset.hydrated = 'true';
+    return {};
+  }
 </script>
+
+<svelte:body use:markHydrated />
 
 <svelte:head>
   <meta name="theme-color" content="#f0eeea" />

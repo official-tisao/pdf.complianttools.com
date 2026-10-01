@@ -10,9 +10,13 @@
     type PdfTextPage,
   } from '@pdf-complianttools/engine';
   import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
-  import workerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
+  import { configurePdfjs } from '$lib/configure-pdfjs';
 
-  pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+  // Also set by the root layout, which covers every route. Kept here as well
+  // because this component imports pdf.js through the `legacy/` entry point,
+  // which can resolve to a different module instance than the layout's import;
+  // setting it in one place must not depend on which graph a caller reached.
+  configurePdfjs();
 
   type FlatOutline = PdfOutlineItem & { readonly level: number };
   /* global HTMLCanvasElement */
@@ -82,9 +86,25 @@
   }
 
   onDestroy(() => loadingTask?.destroy());
+
+  /** Hydration readiness — see the note in `ToolWorkspace.svelte`. */
+  // NOT `$derived(true)`, which the linter prefers: a constant derived value
+  // is also true during prerendering, so `data-hydrated="true"` would be
+  // baked into the served HTML and the flag would mean nothing. Verified in
+  // the build output — all 458 prerendered pages carry `data-hydrated="false"`.
+  // The flag has to flip on the client, which needs an effect.
+  // eslint-disable-next-line svelte/prefer-writable-derived
+  let hydrated = $state(false);
+  $effect(() => {
+    hydrated = true;
+  });
 </script>
 
-<section class="viewer" aria-labelledby="viewer-heading">
+<section
+  class="viewer"
+  aria-labelledby="viewer-heading"
+  data-hydrated={hydrated ? 'true' : 'false'}
+>
   <div class="intro">
     <p class="eyebrow">LOCAL READER</p>
     <h1 id="viewer-heading">PDF viewer</h1>
@@ -164,7 +184,16 @@
           onchange={() => void renderPage()}
         />
       </div>
-      <div class="page-stage" aria-label="Rendered PDF page">
+      <!--
+        `role="img"` is load-bearing, not decoration. `aria-label` on a bare
+        `<div>` is prohibited (axe `aria-prohibited-attr`, serious): a div has
+        no role that can carry an accessible name, so the label was silently
+        dropped and the canvas — the page's entire content — was unnamed to a
+        screen reader. Naming it as an image is also the honest description:
+        the rendered page is pixels, and the selectable text lives in the
+        outline panel beside it.
+      -->
+      <div class="page-stage" role="img" aria-label="Rendered PDF page">
         <canvas bind:this={canvas}></canvas>
       </div>
       {#if matches.length}

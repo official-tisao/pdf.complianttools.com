@@ -57,7 +57,19 @@
   let downloadName = $state('edited.pdf');
   let find = $state('');
   let replacement = $state('');
-  let text = $state('Added locally');
+  /**
+   * Shared by the `sign`, `watermark`, `fill-form`, and `add-text` tools.
+   *
+   * It must start EMPTY. It previously shipped pre-filled with `'Added locally'`,
+   * which was wrong twice over: a keyboard or screen-reader user who tabbed into
+   * the field and typed got `Added locallyA. Signer` concatenated onto the front,
+   * because a text input appends at the caret; and the pre-filled string was
+   * passed straight through as document content by `add-text`, `watermark`, and
+   * `fill-form`, so a user who never touched the field exported a PDF stamped
+   * with the placeholder. Each call site keeps its own fallback (`text || 'DRAFT'`)
+   * for the empty case, which is the behaviour that was actually intended.
+   */
+  let text = $state('');
   let note = $state('');
   let recipients = $state('recipient@example.test');
   let threshold = $state(32);
@@ -274,6 +286,18 @@
   }
   import { translate, type Locale } from '$lib/i18n';
   import { getLocaleContext } from '../routes/__locale/context';
+
+  /** Hydration readiness — see the note in `ToolWorkspace.svelte`. */
+  // NOT `$derived(true)`, which the linter prefers: a constant derived value
+  // is also true during prerendering, so `data-hydrated="true"` would be
+  // baked into the served HTML and the flag would mean nothing. Verified in
+  // the build output — all 458 prerendered pages carry `data-hydrated="false"`.
+  // The flag has to flip on the client, which needs an effect.
+  // eslint-disable-next-line svelte/prefer-writable-derived
+  let hydrated = $state(false);
+  $effect(() => {
+    hydrated = true;
+  });
 </script>
 
 <svelte:head>
@@ -283,7 +307,7 @@
   {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
 </svelte:head>
 
-<section class="tool-page">
+<section class="tool-page" data-hydrated={hydrated ? 'true' : 'false'}>
   <p class="eyebrow">{t('shell.eyebrow.editSecurity', 'EDIT & SECURITY')}</p>
   <h1>{title}</h1>
   <p class="lede">{description}</p>

@@ -129,6 +129,26 @@
           : t('shell.status.failed', 'The operation could not be completed.');
     }
   }
+
+  /**
+   * Hydration readiness.
+   *
+   * Every route is prerendered (README §7.6), so the served HTML accepts input
+   * and then discards it when the client mounts. `axe` can only audit the DOM
+   * the browser actually built — auditing the prerendered shell measures markup
+   * that no user with JavaScript enabled ever interacts with. The attribute
+   * below is the contract an audit waits on; see `tests/e2e/accessibility.spec.ts`.
+   */
+  // NOT `$derived(true)`, which the linter prefers: a constant derived value
+  // is also true during prerendering, so `data-hydrated="true"` would be
+  // baked into the served HTML and the flag would mean nothing. Verified in
+  // the build output — all 458 prerendered pages carry `data-hydrated="false"`.
+  // The flag has to flip on the client, which needs an effect.
+  // eslint-disable-next-line svelte/prefer-writable-derived
+  let hydrated = $state(false);
+  $effect(() => {
+    hydrated = true;
+  });
 </script>
 
 <!--
@@ -145,7 +165,7 @@
   {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
 </svelte:head>
 
-<section class="tool-page">
+<section class="tool-page" data-hydrated={hydrated ? 'true' : 'false'}>
   <p class="eyebrow">{eyebrowText}</p>
   <h1>{title}</h1>
   <p class="lede">{description}</p>

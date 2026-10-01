@@ -32,9 +32,25 @@
       status = error instanceof Error ? error.message : 'The PDFs could not be compared locally.';
     }
   }
+
+  /** Hydration readiness — see the note in `ToolWorkspace.svelte`. */
+  // NOT `$derived(true)`, which the linter prefers: a constant derived value
+  // is also true during prerendering, so `data-hydrated="true"` would be
+  // baked into the served HTML and the flag would mean nothing. Verified in
+  // the build output — all 458 prerendered pages carry `data-hydrated="false"`.
+  // The flag has to flip on the client, which needs an effect.
+  // eslint-disable-next-line svelte/prefer-writable-derived
+  let hydrated = $state(false);
+  $effect(() => {
+    hydrated = true;
+  });
 </script>
 
-<section class="compare" aria-labelledby="compare-heading">
+<section
+  class="compare"
+  aria-labelledby="compare-heading"
+  data-hydrated={hydrated ? 'true' : 'false'}
+>
   <p class="eyebrow">LOCAL DIFFERENCE REPORT</p>
   <h1 id="compare-heading">Compare PDFs</h1>
   <p class="lede">

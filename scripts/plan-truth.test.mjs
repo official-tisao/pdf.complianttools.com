@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   compareAppendixBToRegistry,
   compareDashboardToAppendices,
+  compareDeadControlsToManifest,
   compareGateGlyphs,
   parseFormatRegistry,
   tallySection,
@@ -96,41 +97,74 @@ test('a gate whose glyph is already honest is not reported', () => {
   assert.deepEqual(compareGateGlyphs(markdown), []);
 });
 
-test('the format registry parse reads ids and statuses from source', () => {
+test('the format registry parse reads ids, statuses, and unavailable reasons', () => {
   const source = `
 const FORMAT_REGISTRY: readonly FormatCapability[] = [
   supported(
     'docx',
     'Word (DOCX)',
+    ['.docx'],
+    ['application/vnd.openxmlformats'],
+    ['to-pdf'],
+    'Structure is read with mammoth.',
   ),
   unavailable(
     'doc',
     'Legacy Word (DOC)',
+    ['.doc'],
+    ['application/msword'],
+    ['to-pdf'],
+    'Legacy OLE2/CFB parsing is not yet complete.',
   ),
 ];
 `;
   assert.deepEqual(parseFormatRegistry(source), [
     { id: 'docx', status: 'supported' },
-    { id: 'doc', status: 'unavailable' },
+    {
+      id: 'doc',
+      status: 'unavailable',
+      // The reason is the FINAL argument, not the label. An earlier parse
+      // stopped the match at the first argument, so this read back as `'doc'`
+      // and the SFCC reason check passed vacuously on every entry.
+      reason: 'Legacy OLE2/CFB parsing is not yet complete.',
+    },
   ]);
 });
 
-test('an appendix row marked done for an unavailable format is reported', () => {
+test('an unavailable format checked in Appendix B is not drift when the reason is stated', () => {
+  // SFCC admits an unavailable format when there is "an honest, specific
+  // 'unsupported' page". DOC/XLS/PPT/TIFF/CBR/PUB/HWP/INDD are checked on that
+  // clause, so reporting them as drift was a false positive on the project.
   const markdown = `## Appendix B — Format tracker
 
 | Format | Status |
 | --- | --- |
 | DOCX/DOC | B |  [x]   |
-| TXT | B |  [x]   |
 
 ## Appendix C — AI adapters
 `;
   const findings = compareAppendixBToRegistry(markdown, [
-    { id: 'doc', status: 'unavailable' },
-    { id: 'txt', status: 'supported' },
+    { id: 'doc', status: 'unavailable', reason: 'Legacy OLE2/CFB parsing is not yet complete.' },
+  ]);
+  assert.deepEqual(findings, []);
+});
+
+test('an unavailable format with no stated reason is drift', () => {
+  // The other half of SFCC's clause: an unavailable format needs a SPECIFIC
+  // reason. An empty one means there is no honest unsupported page to point at.
+  const markdown = `## Appendix B — Format tracker
+
+| Format | Status |
+| --- | --- |
+| DOCX/DOC | B |  [x]   |
+
+## Appendix C — AI adapters
+`;
+  const findings = compareAppendixBToRegistry(markdown, [
+    { id: 'doc', status: 'unavailable', reason: '   ' },
   ]);
   assert.equal(findings.length, 1);
-  assert.match(findings[0], /marks doc as \[x\].*unavailable/u);
+  assert.match(findings[0], /marks doc unavailable with no stated reason/u);
 });
 
 test('an appendix row left unchecked for a supported format is reported', () => {
@@ -145,6 +179,26 @@ test('an appendix row left unchecked for a supported format is reported', () => 
   const findings = compareAppendixBToRegistry(markdown, [{ id: 'csv', status: 'supported' }]);
   assert.equal(findings.length, 1);
   assert.match(findings[0], /leaves csv unchecked.*supports it/u);
+});
+
+test('disabled primary actions that state a reason are not drift', () => {
+  // Three routes disable their Run button on purpose and say why in the served
+  // HTML. An earlier version reported the raw count as an unconditional
+  // finding, which made `pnpm progress` permanently red — a gate that can
+  // never go green is a gate that gets ignored.
+  const findings = compareDeadControlsToManifest({
+    deadControls: ['/bookmarks', '/pdf-to-pdfa', '/rasterize-pdf'],
+  });
+  assert.deepEqual(findings, []);
+});
+
+test('a disabled primary action with no stated reason is drift', () => {
+  const findings = compareDeadControlsToManifest({
+    deadControls: ['/bookmarks', '/crop-pdf'],
+  });
+  assert.equal(findings.length, 1);
+  assert.match(findings[0], /\/crop-pdf/u);
+  assert.doesNotMatch(findings[0], /\/bookmarks/u);
 });
 
 test('a format id that is only a substring of another row is not matched', () => {
