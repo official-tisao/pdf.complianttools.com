@@ -41,6 +41,8 @@ export const shellArabic: Readonly<Record<string, string>> = {
   'shell.files.ready': 'ملف واحد جاهز محليًا.',
   'shell.files.readyPlural': '{value} ملفات جاهزة محليًا.',
   'shell.preview.empty': 'تظهر معاينات الصفحات هنا بعد اختيار ملف PDF.',
+  'shell.preview.selected': 'الصفحة المحددة {value}',
+  'shell.preview.pageAlt': 'معاينة الصفحة {value}',
   'shell.status.working': 'جارٍ العمل محليًا…',
   'shell.status.done': 'تم. لم تتغيّر ملفاتك الأصلية.',
   'shell.status.failed': 'تعذّر إتمام العملية.',

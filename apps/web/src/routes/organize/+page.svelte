@@ -5,6 +5,8 @@
   import { download, firstBytes } from '$lib/pdf-download';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
   import { page } from '$app/state';
+  import { loadPdfJs } from '@pdf-complianttools/engine/pdfjs';
+  import type * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 
   let files = $state<File[]>([]);
   let pageCount = $state(0);
@@ -15,6 +17,10 @@
    * know the sequence, so a keyboard move has to be applied by the owner.
    */
   let order = $state<number[]>([]);
+  let focusedPage = $state(1);
+  let previewDocument = $state<Awaited<ReturnType<typeof pdfjs.getDocument>['promise']>>();
+  let previewKey = $state('');
+  let focusedPreview = $state('');
   let status = $state('');
   let error = $state('');
   let busy = $state(false);
@@ -34,19 +40,47 @@
     error = '';
     selected = [];
     order = [];
+    focusedPage = 1;
+    focusedPreview = '';
+    previewDocument = undefined;
+    previewKey = '';
     pageCount = 0;
     if (files.length === 0) return;
     try {
       // pdf.js is ~500 KB and is only needed to count pages here, so it is
       // loaded on demand rather than on page load.
-      const pdfjs = await import('pdfjs-dist');
-      const document_ = await pdfjs.getDocument({ data: await firstBytes(files) }).promise;
+      const bytes = await firstBytes(files);
+      const document_ = await (await loadPdfJs()).getDocument({ data: bytes.slice() }).promise;
+      previewDocument = document_;
+      previewKey = `${files[0]!.name}:${files[0]!.size}:${files[0]!.lastModified}`;
       pageCount = document_.numPages;
       order = originalOrder;
+      focusedPreview = await renderPreviewPage(1, 0.7);
     } catch (error_) {
       pageCount = 0;
+      previewDocument = undefined;
+      focusedPreview = '';
       error = error_ instanceof Error ? error_.message : 'This PDF could not be read locally.';
     }
+  }
+
+  async function renderPreviewPage(pageNumber: number, scale: number): Promise<string> {
+    if (!previewDocument) return '';
+    const pdfPage = await previewDocument.getPage(pageNumber);
+    const viewport = pdfPage.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    const context = canvas.getContext('2d');
+    if (!context) return '';
+    await pdfPage.render({ canvas, canvasContext: context, viewport }).promise;
+    return canvas.toDataURL('image/png');
+  }
+
+  async function focusPage(pageNumber: number) {
+    focusedPage = pageNumber;
+    focusedPreview = await renderPreviewPage(pageNumber, 0.7);
+    toggle(pageNumber);
   }
 
   function applyChange(change: readonly number[] | { type: 'move'; page: number; to: number }) {
@@ -127,7 +161,21 @@
         {reordered ? 'Save new order' : 'Save order'}
       </Button>
     </div>
-    <PageGrid {pageCount} {selected} reorderable onselect={toggle} onreorder={applyChange} />
+    <PageGrid
+      {pageCount}
+      {selected}
+      reorderable
+      thumbnailKey={previewKey}
+      thumbnailLoader={(pageNumber) => renderPreviewPage(pageNumber, 0.22)}
+      onselect={(pageNumber) => void focusPage(pageNumber)}
+      onreorder={applyChange}
+    />
+    {#if focusedPreview}
+      <section class="focused-page" aria-live="polite" aria-label="Selected page preview">
+        <h2>Page {focusedPage}</h2>
+        <img src={focusedPreview} alt="Preview of selected PDF page" />
+      </section>
+    {/if}
     {#if status}<p class="status" role="status">{status}</p>{/if}
     {#if error}<p class="error" role="alert">{error}</p>{/if}
   {:else if !error}
@@ -172,5 +220,18 @@
   }
   .error {
     color: #8a2b2b;
+  }
+  .focused-page {
+    margin-top: 20px;
+    max-width: 560px;
+  }
+  .focused-page h2 {
+    font-size: 1rem;
+  }
+  .focused-page img {
+    background: #fff;
+    border: 1px solid var(--color-hairline, #1c1a171a);
+    display: block;
+    max-width: 100%;
   }
 </style>

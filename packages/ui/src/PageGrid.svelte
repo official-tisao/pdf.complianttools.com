@@ -7,6 +7,8 @@
     onselect,
     onreorder,
     reorderable = false,
+    thumbnailLoader,
+    thumbnailKey = '',
   }: {
     pageCount?: number;
     selected?: readonly number[];
@@ -21,10 +23,17 @@
     onreorder?: (change: readonly number[] | { type: 'move'; page: number; to: number }) => void;
     /** Whether Alt+Arrow moves the focused page, rather than only selecting it. */
     reorderable?: boolean;
+    /** Lazily renders only the pages in or near the visible viewport. */
+    thumbnailLoader?: (page: number) => Promise<string>;
+    /** Changes when the selected PDF changes, invalidating cached thumbnails. */
+    thumbnailKey?: string;
   } = $props();
   let focused = $state(1);
   let scrollTop = $state(0);
   let draggedPage = $state<number | undefined>();
+  let thumbnails = $state<Record<number, string>>({});
+  let pendingThumbnails = $state<number[]>([]);
+  let previousThumbnailKey = '';
   const rowHeight = 154;
   /**
    * Measured from the rendered grid rather than hardcoded. The stylesheet
@@ -51,6 +60,36 @@
     ),
   );
   const isSelected = (page: number) => selected.includes(page);
+
+  // The grid is virtualized, so thumbnail work is demand-driven. The parent
+  // owns pdf.js/pdfium and supplies a renderer; this package only coordinates
+  // which visible pages need a small image.
+  $effect(() => {
+    const key = thumbnailKey;
+    const loader = thumbnailLoader;
+    const visible = visiblePages;
+    if (key !== previousThumbnailKey) {
+      previousThumbnailKey = key;
+      thumbnails = {};
+      pendingThumbnails = [];
+    }
+    if (!loader) return;
+    for (const page of visible) {
+      if (thumbnails[page] || pendingThumbnails.includes(page)) continue;
+      pendingThumbnails = [...pendingThumbnails, page];
+      void loader(page)
+        .then((src) => {
+          if (thumbnailKey === key) thumbnails = { ...thumbnails, [page]: src };
+        })
+        .catch(() => {
+          // A failed preview must not make the PDF tool unusable; the numbered
+          // fallback remains available and the page can still be opened.
+        })
+        .finally(() => {
+          pendingThumbnails = pendingThumbnails.filter((pending) => pending !== page);
+        });
+    }
+  });
 
   /**
    * Moves a page by `offset` places in the current order.
@@ -148,6 +187,7 @@
           <PageThumb
             pageNumber={page}
             selected={isSelected(page)}
+            src={thumbnails[page]}
             onclick={(event) => {
               focused = page;
               onselect?.(page, event);

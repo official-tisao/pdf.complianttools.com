@@ -105,6 +105,10 @@ test.describe('keyboard operability', () => {
 
     const grid = page.getByRole('grid', { name: 'PDF pages' });
     await expect(grid).toBeVisible({ timeout: 30_000 });
+    await expect(grid.locator('img')).toHaveCount(2, { timeout: 30_000 });
+    await grid.getByRole('button', { name: 'Page 2' }).click();
+    await expect(page.getByRole('img', { name: 'Preview of selected PDF page' })).toBeVisible();
+    await grid.getByRole('button', { name: 'Page 1' }).click();
 
     // The grid owns a roving `aria-activedescendant`, so a screen reader is
     // told where the keyboard is. Without this the arrow keys move a cursor
