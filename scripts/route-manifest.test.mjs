@@ -163,3 +163,59 @@ test('a route that states it is unavailable is not a silent dead control', async
     );
   }
 });
+
+test('a CRLF checkout of the committed manifest is not reported as stale', async () => {
+  // This repository has `core.autocrlf=true` and no `.gitattributes`, so git
+  // hands back a CRLF copy of the manifest on a Windows checkout while the
+  // generator emits LF. Comparing the two byte-for-byte reported a correctly
+  // committed manifest as stale, which failed `verify:routes` in CI. The
+  // comparison is on content, so both spellings must be accepted.
+  const committed = await readFile(new URL('../docs/route-manifest.json', import.meta.url), 'utf8');
+  // This checkout is already CRLF (core.autocrlf=true), so normalize to LF
+  // first — the generator's own output — and then build the CRLF spelling that
+  // a Linux runner or a differently-configured checkout would see.
+  const lf = committed.replace(/\r\n/gu, '\n');
+  const crlf = lf.replace(/\n/gu, '\r\n');
+  assert.notEqual(crlf, lf, 'fixture must actually differ to be meaningful');
+
+  const { generateManifest, manifestIsCurrent } = await import('./generate-route-manifest.mjs');
+  const regenerated = `${JSON.stringify(await generateManifest(), null, 2)}\n`;
+
+  assert.equal(manifestIsCurrent(lf, regenerated), true, 'LF checkout is current');
+  assert.equal(
+    manifestIsCurrent(committed, regenerated),
+    true,
+    'the committed file as checked out on this machine is current',
+  );
+  assert.equal(
+    manifestIsCurrent(crlf, regenerated),
+    true,
+    'a CRLF checkout of the same manifest must not be reported as stale',
+  );
+});
+
+test('a genuinely changed manifest is still reported as stale', async () => {
+  // The CRLF tolerance must not turn the check off: a real content change
+  // still has to fail, or the gate stops detecting a route set that moved.
+  const { manifestIsCurrent } = await import('./generate-route-manifest.mjs');
+  const current = '{\n  "routeCount": 76\n}\n';
+  assert.equal(manifestIsCurrent(current, current), true);
+  assert.equal(manifestIsCurrent('{\n  "routeCount": 75\n}\n', current), false);
+  assert.equal(manifestIsCurrent('{\r\n  "routeCount": 76\r\n}\r\n', current), true);
+  assert.equal(manifestIsCurrent(undefined, current), false, 'a missing file is not current');
+});
+
+test('generated locale routes tolerate a CRLF checkout but not a real change', async () => {
+  // `verify:locales` compares generated templates against the committed
+  // `+page.svelte` / `+page.ts` files the same way, and had the same byte-level
+  // comparison. It would have failed on the next CI run after `verify:routes`
+  // was fixed, so it is covered here rather than discovered there.
+  const { isCurrent } = await import('./generate-locale-routes.mjs');
+  const generated = 'export const entries = () => [{ locale: "en" }];\n';
+  const crlf = generated.replace(/\n/gu, '\r\n');
+
+  assert.equal(isCurrent(generated, generated), true);
+  assert.equal(isCurrent(crlf, generated), true, 'a CRLF checkout is not stale');
+  assert.equal(isCurrent('export const entries = () => [];\n', generated), false);
+  assert.equal(isCurrent(undefined, generated), false, 'a missing file is not current');
+});

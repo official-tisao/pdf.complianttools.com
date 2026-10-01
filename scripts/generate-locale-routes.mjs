@@ -43,6 +43,21 @@ function buildPage(slug) {
 `;
 }
 
+/**
+ * Whether a generated file on disk still matches what would be written.
+ *
+ * Compared on content rather than on raw bytes: git checks text files out with
+ * CRLF on Windows (`core.autocrlf=true`, and this repository has no
+ * `.gitattributes`), while the templates below are LF. A byte comparison
+ * therefore reported correctly committed generated routes as stale on any CRLF
+ * checkout. Same guard as `generate-route-manifest.mjs` and
+ * `verify-licenses.mjs`.
+ */
+export function isCurrent(existing, generated) {
+  if (existing === undefined) return false;
+  return existing.replace(/\r\n/gu, '\n') === generated;
+}
+
 async function main() {
   const root = process.cwd();
   const routesRoot = resolve(root, 'apps/web/src/routes');
@@ -60,7 +75,7 @@ async function main() {
       readFile(pagePath, 'utf8').catch(() => undefined),
       readFile(join(dir, '+page.ts'), 'utf8').catch(() => undefined),
     ]);
-    if (existingPage === body && existingEntries === ENTRIES_PAGE) continue;
+    if (isCurrent(existingPage, body) && isCurrent(existingEntries, ENTRIES_PAGE)) continue;
     if (check) {
       stale.push(route);
       continue;

@@ -5,6 +5,24 @@ import { fileURLToPath } from 'node:url';
 import { buildManifest, deadControlRoutes } from './route-manifest.mjs';
 
 /**
+ * Whether a committed manifest is up to date with what was just generated.
+ *
+ * Compared on content rather than on raw bytes: git checks text files out with
+ * CRLF on Windows (`core.autocrlf=true`, and this repository has no
+ * `.gitattributes`), while the generator emits LF. A byte comparison therefore
+ * reported a correctly committed manifest as stale on any CRLF checkout, which
+ * is what failed `verify:routes` in CI while passing on a Linux runner with an
+ * LF checkout. `verify-licenses.mjs` carries the same guard for its manifests.
+ *
+ * @param {string|undefined} existing committed file contents, if readable
+ * @param {string} serialized freshly generated contents
+ */
+export function manifestIsCurrent(existing, serialized) {
+  if (existing === undefined) return false;
+  return existing.replace(/\r\n/gu, '\n') === serialized;
+}
+
+/**
  * Regenerates docs/route-manifest.json from the routes on disk.
  *
  * Run with `--write` to update the committed file, `--check` to fail in CI
@@ -47,7 +65,7 @@ async function main() {
 
   if (process.argv.includes('--check')) {
     const existing = await readFile(target, 'utf8').catch(() => undefined);
-    if (existing !== serialized) {
+    if (!manifestIsCurrent(existing, serialized)) {
       console.error(
         'docs/route-manifest.json is stale; run `pnpm generate:routes -- --write` to update it.',
       );
