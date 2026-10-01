@@ -106,6 +106,18 @@ test.describe('keyboard operability', () => {
     const grid = page.getByRole('grid', { name: 'PDF pages' });
     await expect(grid).toBeVisible({ timeout: 30_000 });
     await expect(grid.locator('img')).toHaveCount(2, { timeout: 30_000 });
+    await expect
+      .poll(() =>
+        grid.locator('img').evaluateAll((images) => images.map((image) => image.naturalWidth)),
+      )
+      .toEqual([expect.any(Number), expect.any(Number)]);
+    await expect
+      .poll(() =>
+        grid
+          .locator('img')
+          .evaluateAll((images) => images.every((image) => image.naturalWidth > 0)),
+      )
+      .toBe(true);
     await grid.getByRole('button', { name: 'Page 2' }).click();
     await expect(page.getByRole('img', { name: 'Preview of selected PDF page' })).toBeVisible();
     await grid.getByRole('button', { name: 'Page 1' }).click();
@@ -124,6 +136,25 @@ test.describe('keyboard operability', () => {
     await page.keyboard.press('ArrowRight');
     const moved = await grid.getAttribute('aria-activedescendant');
     expect(moved, 'ArrowRight must move the active page').not.toBe(start);
+  });
+
+  test('the shared tool workspace shows thumbnails after a PDF is attached', async ({ page }) => {
+    await openHydrated(page, '/compress-pdf');
+    await page
+      .locator('input[type="file"][accept*="pdf"]')
+      .setInputFiles('fixtures/pdfs/two-page.pdf');
+
+    const grid = page.getByRole('grid', { name: 'PDF pages' });
+    await expect(grid).toBeVisible({ timeout: 30_000 });
+    await expect(grid.getByRole('button', { name: 'Page 1' })).toBeVisible();
+    await expect(grid.locator('img')).toHaveCount(2, { timeout: 30_000 });
+    await expect
+      .poll(() =>
+        grid
+          .locator('img')
+          .evaluateAll((images) => images.every((image) => image.naturalWidth > 0)),
+      )
+      .toBe(true);
   });
 
   test('the invoice builder is reachable and completable by keyboard alone', async ({ page }) => {

@@ -116,15 +116,16 @@
       return;
     }
     try {
-      // pdf.js is ~500 KB. It is only needed to show a page-count preview, so it
-      // is loaded here rather than statically, and the tool still works without it.
+      // pdf.js is ~500 KB, so it remains lazy until a user selects a PDF. The
+      // document load already gives us the page count; doing a separate engine
+      // inspection first made the empty state linger before the page grid could
+      // appear.
       const bytes = new Uint8Array(await first.arrayBuffer());
-      const { inspectWithPdfJs } = await import('@pdf-complianttools/engine');
-      pageCount = (await inspectWithPdfJs(bytes)).pageCount;
       previewDocument = await (await loadPdfJs()).getDocument({ data: bytes.slice() }).promise;
+      pageCount = previewDocument.numPages;
       previewKey = `${first.name}:${first.size}:${first.lastModified}`;
       selectedPage = 1;
-      selectedPreview = await renderPreviewPage(1, 0.7);
+      selectedPreview = pageCount > 0 ? await renderPreviewPage(1, 0.7) : '';
     } catch (error) {
       pageCount = 0;
       previewDocument = undefined;

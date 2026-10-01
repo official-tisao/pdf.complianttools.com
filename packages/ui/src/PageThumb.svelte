@@ -46,10 +46,15 @@
 
   .preview {
     align-items: center;
+    background: #fafafa;
+    border: 1px solid var(--color-hairline, #1c1a171a);
+    border-radius: 4px;
     display: flex;
     flex: 1 1 auto;
     justify-content: center;
     min-height: 0;
+    overflow: hidden;
+    padding: 3px;
     width: 100%;
   }
 
@@ -57,8 +62,8 @@
     display: block;
     height: auto;
     max-height: 100%;
+    max-width: 100%;
     object-fit: contain;
-    width: 100%;
   }
 
   button.selected {
