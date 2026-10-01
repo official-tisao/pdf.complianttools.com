@@ -106,14 +106,48 @@ function normalizeRoutePath(routePath) {
 }
 
 /**
+ * True when a route path lives under a dynamic segment such as `[locale]`.
+ *
+ * Such a route is a generated *copy* of a canonical page — it renders
+ * `../../merge/+page.svelte`, not the tool itself — so it must never be the
+ * copy that wins the collapse in `buildManifest`.
+ */
+function isLocalizedRoutePath(routePath) {
+  return /^\[[a-zA-Z-]+\]/u.test(routePath);
+}
+
+/**
  * Builds the manifest from a list of `{ routePath, source }` records.
  * Sorted so the committed file is stable and reviewable in a diff.
+ *
+ * The input is sorted by canonical-ness *before* classification, which is what
+ * makes the result independent of the order the caller discovered the files in.
+ * That independence is not cosmetic: the localized copy of a route classifies as
+ * `bespoke` (it mounts no shell and calls no `fieldsFor`, because it just renders
+ * the canonical page), while the canonical copy classifies as its real shell and
+ * op. A collapse keyed on "first one wins" therefore picks whichever copy the
+ * filesystem listed first. `readdir` gives no ordering guarantee, and the two
+ * platforms this repo runs on disagree: NTFS hands back bare-name directories
+ * first, while ext4 — the GitHub runner — sorts `[locale]` ahead of every
+ * letter, because `[` is 0x5B and every route name starts above that. So the
+ * committed manifest was generated with canonical routes winning, and CI
+ * regenerated it with all 110 localized stubs winning: 110 routes flattened to
+ * `bespoke` and every dead control vanished from `deadControls`.
  *
  * @param {ReadonlyArray<{ routePath: string, source: string }>} files
  */
 export function buildManifest(files) {
   const byPath = new Map();
-  for (const file of files) {
+  // Canonical routes first, so the collapse below keeps the real shell/op and a
+  // localized stub can never shadow it. `routePath` breaks ties so the ordering
+  // is total, not merely stable-by-luck.
+  const ordered = [...files].sort(
+    (left, right) =>
+      Number(isLocalizedRoutePath(left.routePath)) -
+        Number(isLocalizedRoutePath(right.routePath)) ||
+      (left.routePath < right.routePath ? -1 : left.routePath > right.routePath ? 1 : 0),
+  );
+  for (const file of ordered) {
     const entry = classifyRoute(file);
     const existing = byPath.get(entry.path);
     if (!existing) {
