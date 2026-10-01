@@ -187,6 +187,58 @@ export function parseImporterDirectories(lockfile) {
 }
 
 /**
+ * The exact versions installed for the shipped graph, read from the lockfile's
+ * `snapshots:` block.
+ *
+ * This exists because the store is keyed by `name@version` and keeps a
+ * directory per version *ever installed* — pnpm does not prune entries that a
+ * later install orphaned. Matching the store by name prefix alone therefore
+ * picks whichever version `readdir` happens to return first, not the one the
+ * lockfile resolves to. That reported `unzipper@0.10.14`'s dependency list
+ * after the lockfile had moved to `0.12.5`, so a package that no longer
+ * existed in the graph was still licence-checked — and a real one could be
+ * missed.
+ *
+ * `snapshots:` is the block that records each resolved package's own
+ * dependency versions, so it is where the installed name@version pairs are
+ * stated rather than inferred. Keys may carry a peer-dependency suffix
+ * (`pkg@1.0.0(peer@2.0.0)`); the suffix is stripped so both forms match the
+ * store directory name.
+ *
+ * @param {string} lockfile pnpm-lock.yaml contents
+ * @returns {Map<string, ReadonlySet<string>>} package name -> installed versions
+ */
+export function parseInstalledVersions(lockfile) {
+  const versions = new Map();
+  // Anchored to a line of its own rather than to a preceding newline: a
+  // section header is not guaranteed to be the line after another key, and a
+  // `\n`-anchored search silently found nothing when a blank line separated
+  // them, which read as "no versions known" and disabled the check below.
+  const start = lockfile.search(/^snapshots:[ \t]*$/mu);
+  if (start === -1) return versions;
+  for (const raw of lockfile.slice(start).split(/\r?\n/u)) {
+    const line = raw.replace(/\r$/u, '');
+    // A snapshot key is a 2-space name@version, and pnpm writes it either
+    // bare (`unzipper@0.12.5:`) for a package with no dependencies or with an
+    // inline `{}` (`unzipper@0.12.5: {}`). Requiring the line to end at the
+    // colon matched only the first form and so dropped most of the block.
+    const key = /^ {2}['"]?([^'"]+?)['"]?:(?:\s*\{\})?\s*$/u.exec(line);
+    if (!key) continue;
+    const spec = key[1];
+    // Drop the peer suffix: `a@1.0.0(b@2.0.0)` -> `a@1.0.0`.
+    const plain = spec.replace(/\(.*\)$/u, '');
+    const at = plain.lastIndexOf('@');
+    if (at <= 0) continue;
+    const name = plain.slice(0, at);
+    const version = plain.slice(at + 1);
+    if (!name || !version) continue;
+    if (!versions.has(name)) versions.set(name, new Set());
+    versions.get(name).add(version);
+  }
+  return versions;
+}
+
+/**
  * Locates an installed package's real directory.
  *
  * pnpm's isolated layout links only a package's *direct* dependencies into an
@@ -195,8 +247,19 @@ export function parseImporterDirectories(lockfile) {
  * `cookie` and `pako` — both shipped — actually live. So the importers are
  * searched first, then the store, which is keyed by name@version and can hold
  * several versions of the same package.
+ *
+ * @param {Map<string, ReadonlySet<string>>} [versions] installed versions from
+ *   `parseInstalledVersions`, used to disambiguate the store. Omitting it
+ *   falls back to a name-prefix match, which is only correct when a single
+ *   version of the package is installed.
  */
-export async function locatePackage(packageName, importerDirs, root, aliases = new Map()) {
+export async function locatePackage(
+  packageName,
+  importerDirs,
+  root,
+  aliases = new Map(),
+  versions = new Map(),
+) {
   // pnpm/npm aliases (`string-width-cjs: string-width@4.2.3`) are stored under
   // the real package name, so an alias must be followed to its target before
   // the filesystem is searched — otherwise the alias reads as Unknown even
@@ -212,14 +275,36 @@ export async function locatePackage(packageName, importerDirs, root, aliases = n
   }
   const store = resolve(root, 'node_modules/.pnpm');
   if (!existsSync(store)) return undefined;
+  // When the lockfile could be read, it is the authority on what is installed.
+  // A name it does not resolve is not in the graph, and a store directory left
+  // behind by an earlier install must not resurrect it — that is how `buffers`
+  // kept being reported after the override had removed it from the lockfile.
+  // An empty map means the lockfile was unreadable, so fall back to a
+  // name-prefix match rather than concluding nothing is installed.
+  if (versions.size > 0 && !versions.has(realName)) return undefined;
   const prefix = `${realName.replace('/', '+')}@`;
+  const wanted = versions.get(realName);
+  const candidates = [];
   for (const entry of await readdir(store, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     if (!entry.name.startsWith(prefix)) continue;
+    // A store directory is `<name>@<version>` for a plain package, but pnpm
+    // appends the resolved peer dependencies for a package that has them:
+    // `esrap@2.3.8_@typescript-eslint+types@8.70.1`. The lockfile states the
+    // same resolution as `esrap@2.3.8(@typescript-eslint/types@8.70.1)`, so
+    // the two suffixes have to be compared on the version alone. Matching the
+    // whole remainder instead rejected every peer-suffixed package, which read
+    // as Unknown.
+    const remainder = entry.name.slice(prefix.length);
+    const version = remainder.split('_')[0];
+    if (wanted && !wanted.has(version)) continue;
     const candidate = join(store, entry.name, 'node_modules', realName);
-    if (existsSync(join(candidate, 'package.json'))) return candidate;
+    if (existsSync(join(candidate, 'package.json'))) candidates.push(candidate);
   }
-  return undefined;
+  // Sorted so the result is deterministic when several matching versions are
+  // installed and the lockfile does not narrow it to one.
+  candidates.sort();
+  return candidates[0];
 }
 
 /**
@@ -242,8 +327,14 @@ export function collectAliases(manifest) {
  * Reads the `license`/`licenses` field from an installed package, resolved
  * through pnpm's store for transitive dependencies.
  */
-export async function readPackageLicense(packageName, importerDirs, root, aliases = new Map()) {
-  const directory = await locatePackage(packageName, importerDirs, root, aliases);
+export async function readPackageLicense(
+  packageName,
+  importerDirs,
+  root,
+  aliases = new Map(),
+  versions = new Map(),
+) {
+  const directory = await locatePackage(packageName, importerDirs, root, aliases, versions);
   if (!directory) return undefined;
   const manifest = JSON.parse(await readFile(resolve(directory, 'package.json'), 'utf8'));
   if (typeof manifest.license === 'string') return manifest.license;
@@ -285,6 +376,10 @@ export async function collectShippedLicenses(root = process.cwd()) {
   const importerDirs = parseImporterDirectories(lockfile);
   importerDirs.push('.');
 
+  // Which version of each name the lockfile actually resolves to, so the store
+  // lookup cannot settle on a stale directory from an earlier install.
+  const versions = parseInstalledVersions(lockfile);
+
   const entries = {};
   const queue = [...declared].map((name) => ({ name, aliases: new Map() }));
   const seen = new Set();
@@ -301,11 +396,12 @@ export async function collectShippedLicenses(root = process.cwd()) {
       continue;
     }
     entries[name] = {
-      licenses: (await readPackageLicense(name, importerDirs, root, aliases)) ?? 'Unknown',
+      licenses:
+        (await readPackageLicense(name, importerDirs, root, aliases, versions)) ?? 'Unknown',
     };
 
     // Walk this package's own production dependencies — they ship too.
-    const directory = await locatePackage(name, importerDirs, root, aliases);
+    const directory = await locatePackage(name, importerDirs, root, aliases, versions);
     if (!directory) continue;
     let manifest;
     try {

@@ -56,6 +56,15 @@ because pnpm links only _direct_ dependencies into an importer's `node_modules`;
 only in the store. It also follows `npm:` aliases — `string-width-cjs: npm:string-width@^4.2.0` —
 which exist on disk only under their target name.
 
+The store is keyed by `name@version` and **retains a directory for every version ever installed** —
+pnpm does not prune one that a later install orphaned. A name-prefix match therefore returns
+whichever version the filesystem yields first, not the one the lockfile resolves to, which both
+reports packages the lockfile has removed and reads the wrong licence for packages shadowed the same
+way. The `snapshots:` block is consequently authoritative for which version is installed, and a
+package it does not resolve is treated as not installed. One wrinkle: pnpm spells a peer-suffixed
+store directory `esrap@2.3.8_@peer+types@1.0.0` where the lockfile writes
+`esrap@2.3.8(@peer/types@1.0.0)`, so the two are compared on the version alone.
+
 ### Reviewed licence expressions
 
 `splitLicenses` was replaced with an SPDX-expression parser, because the shipped graph contains
@@ -72,24 +81,53 @@ expressions the old parser mishandled:
 
 An `OR` is satisfied by any single allowlisted branch; an `AND` requires every branch.
 
-## Open item — `buffers@0.1.1` (blocks the licence gate)
+## Resolved — `buffers@0.1.1` (closed 2026-10-01 by override)
 
-The corrected gate **fails**, and the failure is real rather than a bug in the check.
+`buffers@0.1.1` declared no `license` field and shipped no `LICENSE` file (npm registry reports
+`license: undefined`). It reached the shipped graph through
+`exceljs@4.4.0 → unzipper@0.10.14 → binary@0.3.0 → buffers@0.1.1`, with `exceljs` a production
+dependency of `packages/engine`. P0-04's rule is "deny on … unknown/missing", so the gate was right
+to fail.
 
-`buffers@0.1.1` declares no `license` field and ships no `LICENSE` file. It reaches the shipped graph
-through `exceljs@4.4.0 → unzipper@0.10.14 → big-integer@1.6.52 → buffers@0.1.1`, and `exceljs` is a
-production dependency of `packages/engine`.
+It is **removed rather than excepted**. A pnpm `overrides` entry in the root `package.json` pins
+`unzipper` to `0.11.3`: that version is MIT, still exports the `Parse` and `Open` API exceljs calls,
+and still honours the `forceStream` option its streaming reader passes, but it no longer depends on
+`binary` — so the unlabelled package leaves the dependency graph entirely. Its closure
+(`big-integer` Unlicense, `fstream` ISC, `duplexer2` BSD-3-Clause) is entirely allowlisted.
 
-P0-04's rule is "deny on … unknown/missing", so an unlabelled package in the shipped graph is a
-licence question the project has not answered. Two ways to close it, both requiring an owner's
-decision rather than an implementation:
+**The pin is `0.11.3` and not the newer `0.12.x` deliberately.** Every 0.12 release contains a lazy
+`require('@aws-sdk/client-s3')` in its `s3_v3` directory handler. Nothing in this project reads from
+S3, so the require is never executed — but it is not declared in `unzipper`'s `dependencies`
+either, so it cannot be installed to satisfy the import, and a static bundler cannot prove the
+branch unreachable. `pnpm build` failed with `Rolldown failed to resolve import
+"@aws-sdk/client-s3"` against every 0.12.x tried. `0.11.3` predates the S3 handler and keeps the
+same public API. **Revisit only if a future `unzipper` release drops that require or declares it
+properly.**
 
-1. **Override** — add a pnpm `overrides` entry or a patch that removes `unzipper` from exceljs's
-   tree, so the unlicensed package is never bundled.
-2. **Record** — add an Appendix D row stating that `buffers@0.1.1` ships unlabelled, why the risk is
-   accepted, and what fallback applies.
+**No exception was added to the allowlist.** The gate is as strict as it was before; the offending
+package simply is not there any more. Recorded as Appendix D **D21**.
 
-What is _not_ an acceptable resolution is weakening the gate to let the failure through silently.
+Two supporting facts, both verified rather than assumed:
+
+- **It was never browser-reachable.** `exceljs` declares `"browser": "./dist/exceljs.min.js"`, a
+  self-contained prebuilt bundle with no external `require()` calls, and `buffers` appears in no
+  chunk of the production build. The exposure was to the Node/CLI shipped graph only.
+- **The only code path reaching `unzipper` is unused here.** It is exceljs's Node _streaming_
+  reader; all three engine call sites use the jszip `workbook.xlsx.load` / `writeBuffer` path.
+
+> The chain was originally recorded in this ADR and in `PLAN.md` as running through
+> `big-integer@1.6.52`. That was incorrect — `big-integer` is a leaf in the lockfile — and the chain
+> is `unzipper → binary → buffers`. Corrected 2026-10-01.
+
+### A defect this exposed in the gate
+
+`locatePackage` resolved a package in pnpm's store by **name prefix with no version awareness**.
+pnpm does not prune a store directory when a later install orphans it, so the gate read whichever
+version the filesystem yielded first. After the override moved `unzipper` off `0.10.14`, the gate
+still read the orphaned `unzipper@0.10.14` — whose dependency list still names `binary` — and kept
+reporting `buffers` as a shipped violation, while reading the wrong licence for any package
+shadowed the same way. The lockfile's `snapshots:` block is now authoritative for which version is
+installed. Covered by tests in `scripts/verify-licenses.test.mjs`.
 
 ### A limitation no script can close
 

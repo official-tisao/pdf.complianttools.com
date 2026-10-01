@@ -1,9 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   collectAliases,
   isAllowlisted,
+  locatePackage,
   parseImporterDirectories,
+  parseInstalledVersions,
   parseProductionDependencies,
   renderLicenseManifest,
   resolveExpression,
@@ -156,4 +161,135 @@ test('license manifest rendering is deterministic', () => {
       '- a-package@1.0.0 — Apache-2.0 — https://example.test/a\n' +
       '- z-package@1.0.0 — MIT — https://example.test/z\n',
   );
+});
+
+test('installed versions are read from the snapshots block, without peer suffixes', () => {
+  // The `snapshots:` block is where the lockfile states each resolved package's
+  // own dependency versions. Keys there carry a peer suffix in parentheses,
+  // which the store directory spells with underscores, so both forms have to
+  // reduce to the bare version for the two to be comparable.
+  const lockfile = [
+    "lockfileVersion: '9.0'",
+    '',
+    'packages:',
+    '',
+    '  unzipper@0.12.5:',
+    '    resolution: {integrity: sha512-abc}',
+    '',
+    'snapshots:',
+    '',
+    "  '@axe-core/playwright@4.13.0(playwright-core@1.63.0)':",
+    '    dependencies:',
+    '      playwright-core: 1.63.0',
+    '',
+    '  unzipper@0.12.5: {}',
+    '',
+    '  esrap@2.3.8(@typescript-eslint/types@8.70.1): {}',
+    '',
+  ].join('\n');
+  const versions = parseInstalledVersions(lockfile);
+  assert.deepEqual([...versions.get('unzipper')], ['0.12.5']);
+  assert.deepEqual([...versions.get('esrap')], ['2.3.8']);
+  assert.deepEqual([...versions.get('@axe-core/playwright')], ['4.13.0']);
+});
+
+/** Builds a throwaway pnpm-shaped store so `locatePackage` can be exercised. */
+async function makeStore(entries) {
+  const root = await mkdtemp(join(tmpdir(), 'verify-licenses-'));
+  const store = join(root, 'node_modules/.pnpm');
+  for (const [dir, name, version] of entries) {
+    const packageDir = join(store, dir, 'node_modules', name);
+    await mkdir(packageDir, { recursive: true });
+    await writeFile(
+      join(packageDir, 'package.json'),
+      JSON.stringify({ name, version, license: 'MIT' }),
+    );
+  }
+  return { root, store };
+}
+
+test('the store lookup takes the version the lockfile names, not a stale one', () => {
+  // This is the bug that kept `buffers` in the shipped set after the lockfile
+  // had moved to `unzipper@0.12.5`. pnpm does not prune a store directory when
+  // a later install orphans it, so a name-prefix match returns whichever
+  // version `readdir` yields first — here the stale `0.10.14`, whose
+  // dependency list still names `binary` and therefore `buffers`.
+  return (async () => {
+    const { root } = await makeStore([
+      ['unzipper@0.10.14', 'unzipper', '0.10.14'],
+      ['unzipper@0.12.5', 'unzipper', '0.12.5'],
+    ]);
+    const versions = new Map([['unzipper', new Set(['0.12.5'])]]);
+
+    const stale = await locatePackage('unzipper', [], root, new Map());
+    assert.ok(stale, 'a version-blind lookup still finds something');
+
+    const resolved = await locatePackage('unzipper', [], root, new Map(), versions);
+    const manifest = JSON.parse(await readFile(join(resolved, 'package.json'), 'utf8'));
+    assert.equal(manifest.version, '0.12.5');
+  })();
+});
+
+test('a store directory carrying a peer suffix still matches its lockfile version', () => {
+  // pnpm spells a peer-suffixed store directory `esrap@2.3.8_@peer+types@1.0.0`
+  // while the lockfile writes `esrap@2.3.8(@peer/types@1.0.0)`. Comparing the
+  // whole remainder made every such package read as Unknown, which is how
+  // `esrap` and `@sveltejs/acorn-typescript` were reported.
+  return (async () => {
+    const { root } = await makeStore([
+      ['esrap@2.3.8_@typescript-eslint+types@8.70.1', 'esrap', '2.3.8'],
+    ]);
+    const versions = new Map([['esrap', new Set(['2.3.8'])]]);
+    const resolved = await locatePackage('esrap', [], root, new Map(), versions);
+    assert.ok(resolved, 'a peer-suffixed store directory must still resolve');
+    assert.ok(
+      resolved.endsWith(
+        join('esrap@2.3.8_@typescript-eslint+types@8.70.1', 'node_modules', 'esrap'),
+      ),
+    );
+  })();
+});
+
+test('a package absent from the lockfile is not resolved out of a stale store entry', () => {
+  // After the override, `buffers` is in no snapshot. The gate must not pick it
+  // up from a leftover store directory, because that is what re-reported a
+  // package the lockfile had already removed. The map here is non-empty —
+  // it stands for a lockfile that *was* read and simply does not resolve
+  // `buffers`; an empty map means the lockfile was unreadable and falls back
+  // to a name-prefix match.
+  return (async () => {
+    const { root } = await makeStore([
+      ['buffers@0.1.1', 'buffers', '0.1.1'],
+      ['unzipper@0.12.5', 'unzipper', '0.12.5'],
+    ]);
+    const versions = new Map([['unzipper', new Set(['0.12.5'])]]);
+    const resolved = await locatePackage('buffers', [], root, new Map(), versions);
+    assert.equal(resolved, undefined);
+  })();
+});
+
+test('an unreadable lockfile falls back to a name-prefix match', () => {
+  // An empty version map means the `snapshots:` block could not be parsed, not
+  // that nothing is installed. Reporting nothing here would silently empty the
+  // shipped set, so the lookup must still find the package on disk.
+  return (async () => {
+    const { root } = await makeStore([['sax@1.6.1', 'sax', '1.6.1']]);
+    const resolved = await locatePackage('sax', [], root, new Map(), new Map());
+    assert.ok(resolved, 'a package must still resolve when the lockfile is unreadable');
+  })();
+});
+
+test('an importer-local package is preferred over the store', () => {
+  return (async () => {
+    const { root } = await makeStore([['svelte@5.0.0', 'svelte', '5.0.0']]);
+    const linked = join(root, 'apps/web/node_modules/svelte');
+    await mkdir(linked, { recursive: true });
+    await writeFile(
+      join(linked, 'package.json'),
+      JSON.stringify({ name: 'svelte', version: '5.57.1' }),
+    );
+    const versions = new Map([['svelte', new Set(['5.57.1'])]]);
+    const resolved = await locatePackage('svelte', ['apps/web'], root, new Map(), versions);
+    assert.ok(resolved.includes(join('apps', 'web')));
+  })();
 });
