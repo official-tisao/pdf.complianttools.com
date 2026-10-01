@@ -27,14 +27,14 @@
   const attributes = $derived(localeAttributes(locale));
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
   import { downloadBytes } from '$lib/download';
-  // Deep import for the light invoice helpers (pdf-lib only). `convertToPdf`
-  // is deliberately NOT imported here: it lives in the conversion module, which
-  // pulls pdfjs/mammoth/exceljs. It is loaded on demand inside the handler, so
-  // a user who only builds an invoice never downloads it.
-  import {
-    extractInvoiceXmlFromPdf,
-    validateEInvoiceXml,
-  } from '@pdf-complianttools/engine/invoice';
+  // `validateEInvoiceXml` comes from `invoice-core`, which has no pdf-lib in
+  // it, so it stays on the initial load path. `extractInvoiceXmlFromPdf` has to
+  // parse a PDF, so it lives in the pdf-lib half and is pulled in on demand
+  // inside the handler — importing it from here would put pdf-lib back on the
+  // initial load. `convertToPdf` is deliberately NOT imported either: it lives in
+  // the conversion module, which pulls pdfjs/mammoth/exceljs, and is likewise
+  // loaded on demand so a user who only builds an invoice never downloads it.
+  import { validateEInvoiceXml } from '@pdf-complianttools/engine/invoice-core';
 
   let status = $state('');
 
@@ -97,6 +97,7 @@
     recovered = undefined;
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
+      const { extractInvoiceXmlFromPdf } = await import('@pdf-complianttools/engine/invoice');
       const xml = await extractInvoiceXmlFromPdf(bytes);
       const base = file.name.replace(/\.pdf$/iu, '') || 'invoice';
       download(new TextEncoder().encode(xml), `${base}.xml`, 'application/xml');

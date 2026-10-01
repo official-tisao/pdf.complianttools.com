@@ -6,11 +6,12 @@
    */
   // Deep subpath import, not the engine barrel: `index.ts` re-exports every
   // module, so importing from it pulls pdfjs, mammoth, exceljs and pptxgenjs
-  // into every route that renders this form. `invoiceTotals` runs on every
-  // keystroke for the live preview, so it stays eager — it is pure arithmetic
-  // with no dependencies. `createInvoicePdf` pulls pdf-lib (~170 KB gzip) and is
-  // only needed when the user presses the button, so it loads on demand.
-  import { invoiceTotals, validateEInvoiceXml } from '@pdf-complianttools/engine/invoice';
+  // into every route that renders this form. `invoice-core` is the pdf-lib-free
+  // half, so `invoiceTotals` can stay eager for the live preview — it is pure
+  // arithmetic. `createInvoicePdf` pulls pdf-lib (~170 KB gzip) and is only
+  // needed when the user presses the button, so it loads on demand from the
+  // `./invoice` subpath, which is where the PDF code now lives.
+  import { invoiceTotals, validateEInvoiceXml } from '@pdf-complianttools/engine/invoice-core';
   import type { InvoiceData, InvoiceLine } from '@pdf-complianttools/engine';
   import { downloadBytes } from '$lib/download';
   import { localeAttributes, translate, type Locale } from '$lib/i18n';

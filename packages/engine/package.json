@@ -15,6 +15,10 @@
       "types": "./dist/invoice.d.ts",
       "import": "./dist/invoice.js"
     },
+    "./invoice-core": {
+      "types": "./dist/invoice-core.d.ts",
+      "import": "./dist/invoice-core.js"
+    },
     "./create": {
       "types": "./dist/create.d.ts",
       "import": "./dist/create.js"

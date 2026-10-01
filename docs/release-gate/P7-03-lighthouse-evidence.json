@@ -1,6 +1,6 @@
 {
   "task": "P7-03",
-  "date": "2026-09-29",
+  "date": "2026-10-01",
   "evidenceType": "Lighthouse mobile audit of the production build",
   "environment": {
     "lighthouse": "13.5.0",
@@ -15,18 +15,39 @@
           "score": 100
         },
         "accessibility": {
-          "score": 100
+          "score": 96
         },
         "best-practices": {
-          "score": 100
+          "score": 96
         },
         "seo": {
           "score": 100
         }
       },
-      "worstCategory": 100,
+      "worstCategory": 96,
       "status": "PASS",
       "failing": [
+        {
+          "id": "errors-in-console",
+          "title": "Browser errors were logged to the console",
+          "score": 0
+        },
+        {
+          "id": "target-size",
+          "title": "Touch targets do not have sufficient size or spacing.",
+          "score": 0,
+          "items": [
+            {
+              "node": "<a class=\"brand svelte-12qhfyh\" href=\"/\">"
+            },
+            {
+              "node": "<a href=\"/merge\" class=\"svelte-12qhfyh\">"
+            },
+            {
+              "node": "<a href=\"/convert\" class=\"svelte-12qhfyh\">"
+            }
+          ]
+        },
         {
           "id": "network-dependency-tree-insight",
           "title": "Network dependency tree",
@@ -35,24 +56,25 @@
         {
           "id": "render-blocking-insight",
           "title": "Render-blocking requests",
-          "score": 0.5,
+          "score": 0,
+          "displayValue": "Est savings of 100 ms",
           "items": [
             {
-              "wastedMs": 305
+              "wastedMs": 301
             },
             {
-              "wastedMs": 305
+              "wastedMs": 301
             },
             {
-              "wastedMs": 155
+              "wastedMs": 151
             }
           ]
         },
         {
           "id": "first-contentful-paint",
           "title": "First Contentful Paint",
-          "score": 0.96,
-          "displayValue": "1.5 s"
+          "score": 0.99,
+          "displayValue": "1.2 s"
         }
       ]
     },
@@ -60,32 +82,39 @@
       "route": "/invoice-creator",
       "categories": {
         "performance": {
-          "score": 98
+          "score": 100
         },
         "accessibility": {
-          "score": 100
+          "score": 96
         },
         "best-practices": {
-          "score": 100
+          "score": 96
         },
         "seo": {
           "score": 100
         }
       },
-      "worstCategory": 98,
+      "worstCategory": 96,
       "status": "PASS",
       "failing": [
         {
-          "id": "unused-javascript",
-          "title": "Reduce unused JavaScript",
+          "id": "errors-in-console",
+          "title": "Browser errors were logged to the console",
+          "score": 0
+        },
+        {
+          "id": "target-size",
+          "title": "Touch targets do not have sufficient size or spacing.",
           "score": 0,
-          "displayValue": "Est savings of 112 KiB",
           "items": [
             {
-              "wastedMs": 175158
+              "node": "<a class=\"brand svelte-12qhfyh\" href=\"/\">"
             },
             {
-              "wastedMs": 28612
+              "node": "<a href=\"/merge\" class=\"svelte-12qhfyh\">"
+            },
+            {
+              "node": "<a href=\"/convert\" class=\"svelte-12qhfyh\">"
             }
           ]
         },
@@ -97,30 +126,25 @@
         {
           "id": "render-blocking-insight",
           "title": "Render-blocking requests",
-          "score": 0.5,
+          "score": 0,
+          "displayValue": "Est savings of 100 ms",
           "items": [
             {
-              "wastedMs": 305
+              "wastedMs": 302
             },
             {
-              "wastedMs": 305
+              "wastedMs": 302
             },
             {
-              "wastedMs": 155
+              "wastedMs": 302
             }
           ]
         },
         {
           "id": "first-contentful-paint",
           "title": "First Contentful Paint",
-          "score": 0.88,
-          "displayValue": "1.9 s"
-        },
-        {
-          "id": "largest-contentful-paint",
-          "title": "Largest Contentful Paint",
-          "score": 0.98,
-          "displayValue": "1.9 s"
+          "score": 0.97,
+          "displayValue": "1.4 s"
         }
       ]
     },
@@ -128,21 +152,42 @@
       "route": "/merge",
       "categories": {
         "performance": {
-          "score": 99
+          "score": 100
         },
         "accessibility": {
-          "score": 100
+          "score": 96
         },
         "best-practices": {
-          "score": 100
+          "score": 96
         },
         "seo": {
           "score": 100
         }
       },
-      "worstCategory": 99,
+      "worstCategory": 96,
       "status": "PASS",
       "failing": [
+        {
+          "id": "errors-in-console",
+          "title": "Browser errors were logged to the console",
+          "score": 0
+        },
+        {
+          "id": "target-size",
+          "title": "Touch targets do not have sufficient size or spacing.",
+          "score": 0,
+          "items": [
+            {
+              "node": "<a class=\"brand svelte-12qhfyh\" href=\"/\">"
+            },
+            {
+              "node": "<a href=\"/merge\" class=\"svelte-12qhfyh\">"
+            },
+            {
+              "node": "<a href=\"/convert\" class=\"svelte-12qhfyh\">"
+            }
+          ]
+        },
         {
           "id": "network-dependency-tree-insight",
           "title": "Network dependency tree",
@@ -151,30 +196,25 @@
         {
           "id": "render-blocking-insight",
           "title": "Render-blocking requests",
-          "score": 0.5,
+          "score": 0,
+          "displayValue": "Est savings of 100 ms",
           "items": [
             {
-              "wastedMs": 305
+              "wastedMs": 302
             },
             {
-              "wastedMs": 305
+              "wastedMs": 302
             },
             {
-              "wastedMs": 305
+              "wastedMs": 302
             }
           ]
         },
         {
           "id": "first-contentful-paint",
           "title": "First Contentful Paint",
-          "score": 0.95,
-          "displayValue": "1.6 s"
-        },
-        {
-          "id": "largest-contentful-paint",
-          "title": "Largest Contentful Paint",
-          "score": 0.99,
-          "displayValue": "1.6 s"
+          "score": 0.97,
+          "displayValue": "1.4 s"
         }
       ]
     }

@@ -25,10 +25,16 @@ const BASE = `http://127.0.0.1:${PORT}`;
  * bundle-size project: a budget that fails on its first run is a budget that
  * gets raised, not one that gets fixed.
  *
- * Known floor: /invoice-creator and /merge carry pdf-lib (~171 KB gzip) because
- * writing a PDF requires it. That is not reducible without moving the work to a
- * worker or a build-time asset, which is a larger project than this budget.
- * /view-pdf additionally carries pdf.js, which is inherent to rendering.
+ * Known floor: the routes that WRITE a PDF (invoice, merge) used to carry
+ * pdf-lib (~171 KB gzip) on load, which is what pinned their budgets near 275
+ * KB. That is no longer the case — the invoice routes take their totals and
+ * validator from `engine/invoice-core`, which has no pdf-lib in it, and pull the
+ * writer on demand, so they load at roughly the same size as any other page.
+ * `scripts/bundle-boundaries.test.mjs` asserts that split at the source level,
+ * because it is easy to reintroduce with a single import line and nothing fails
+ * until two budgets regress at once.
+ *
+ * /view-pdf still carries pdf.js, which is inherent to rendering.
  */
 const BUDGET_KB = {
   landing: 60,
