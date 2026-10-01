@@ -32,3 +32,12 @@ this directory.
   shipped XML round-trips through the structural validator and that its stated net, tax and gross
   reconcile to the cent. Regenerate with the same `InvoiceData` in
   `packages/engine/test/phasef.test.mjs`.
+- `p7-04/skew-*.png` and `p7-04/skew-manifest.json` — pages of synthetic text rules drawn at known
+  rotations (−8°, −4.5°, −2°, 0°, +1.5°, +3°, +6°, +11°) by
+  `scripts/generate-skew-fixtures.mjs`. These are the "deliberately skewed fixture set" of P7-04's
+  Done-when: the manifest records the angle each page was drawn at, so a measurement compares the
+  shipped estimator's output against a ground truth held outside the code under test. `skew-upright.png`
+  is the control — an already-straight page that must be left untouched. Regenerate with
+  `node scripts/generate-skew-fixtures.mjs`; re-measure with `node scripts/measure-skew.mjs`.
+  These are rendered text rules, not photographs of paper: they exercise the estimator and the
+  correction, not lens distortion, uneven lighting, or page curl.

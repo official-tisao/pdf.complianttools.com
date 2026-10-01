@@ -1,0 +1,119 @@
+{
+  "task": "P7-04",
+  "title": "Scan to PDF — deskew measurement over a deliberately skewed fixture set",
+  "date": "2026-09-30",
+  "evidenceType": "synthetic-fixture-set",
+  "doneWhen": "STCC; deskew measurably improves a deliberately-skewed fixture set.",
+  "method": "Each fixture is a page of horizontal text rules drawn at a known rotation by scripts/generate-skew-fixtures.mjs. The shipped estimator and correction are run over the decoded pixels; \"detected\" is what the estimator reports for the page as drawn, and \"residual after\" is how far the corrected page still sits from upright.",
+  "toleranceDegrees": 0.5,
+  "fixturesMeasured": 8,
+  "skewedFixtures": 7,
+  "worstResidualAfterDegrees": 0.05,
+  "meanDetectionErrorDegrees": 0.018,
+  "maxDeskewMs": 69.5,
+  "status": "PASS",
+  "gateUpdateAuthorized": false,
+  "knownGaps": [
+    "Rotation only. Perspective (four-point) correction is NOT implemented and is recorded as a P7-04 follow-up; README §4.5 wording is not yet fully satisfied.",
+    "Fixtures are synthetic rendered text rules, not photographs of real paper. They exercise the estimator and the correction, not photograph-specific artefacts (lens distortion, uneven lighting, page curl).",
+    "No physical-device evidence: unlike P7-02, this Done-when is met by measurement over the fixture set rather than by scanning on hardware."
+  ],
+  "measurements": [
+    {
+      "file": "skew-upright.png",
+      "appliedDegrees": 0,
+      "detectedDegrees": -0.05,
+      "residualBeforeDegrees": 0.05,
+      "residualAfterDegrees": 0.05,
+      "applied": false,
+      "confidence": 0.474,
+      "correctedTo": "900x640",
+      "deskewMs": 41.7,
+      "pass": true
+    },
+    {
+      "file": "skew-neg8.png",
+      "appliedDegrees": -8,
+      "detectedDegrees": -8.003,
+      "residualBeforeDegrees": 0.003,
+      "residualAfterDegrees": 0.05,
+      "applied": true,
+      "confidence": 0.444,
+      "correctedTo": "723x391",
+      "deskewMs": 64.7,
+      "pass": true
+    },
+    {
+      "file": "skew-neg4_5.png",
+      "appliedDegrees": -4.5,
+      "detectedDegrees": -4.505,
+      "residualBeforeDegrees": 0.005,
+      "residualAfterDegrees": 0.05,
+      "applied": true,
+      "confidence": 0.427,
+      "correctedTo": "799x498",
+      "deskewMs": 60.9,
+      "pass": true
+    },
+    {
+      "file": "skew-neg2.png",
+      "appliedDegrees": -2,
+      "detectedDegrees": -2.003,
+      "residualBeforeDegrees": 0.003,
+      "residualAfterDegrees": 0.05,
+      "applied": true,
+      "confidence": 0.417,
+      "correctedTo": "855x576",
+      "deskewMs": 54.4,
+      "pass": true
+    },
+    {
+      "file": "skew-pos1_5.png",
+      "appliedDegrees": 1.5,
+      "detectedDegrees": 1.499,
+      "residualBeforeDegrees": 0.001,
+      "residualAfterDegrees": 0.05,
+      "applied": true,
+      "confidence": 0.427,
+      "correctedTo": "865x592",
+      "deskewMs": 55.5,
+      "pass": true
+    },
+    {
+      "file": "skew-pos3.png",
+      "appliedDegrees": 3,
+      "detectedDegrees": 2.992,
+      "residualBeforeDegrees": 0.008,
+      "residualAfterDegrees": 0.05,
+      "applied": true,
+      "confidence": 0.443,
+      "correctedTo": "832x546",
+      "deskewMs": 62.2,
+      "pass": true
+    },
+    {
+      "file": "skew-pos6.png",
+      "appliedDegrees": 6,
+      "detectedDegrees": 5.926,
+      "residualBeforeDegrees": 0.074,
+      "residualAfterDegrees": 0.05,
+      "applied": true,
+      "confidence": 0.465,
+      "correctedTo": "767x453",
+      "deskewMs": 69.5,
+      "pass": true
+    },
+    {
+      "file": "skew-pos11.png",
+      "appliedDegrees": 11,
+      "detectedDegrees": 11.001,
+      "residualBeforeDegrees": 0.001,
+      "residualAfterDegrees": 0.05,
+      "applied": true,
+      "confidence": 0.695,
+      "correctedTo": "659x302",
+      "deskewMs": 42.7,
+      "pass": true
+    }
+  ]
+}

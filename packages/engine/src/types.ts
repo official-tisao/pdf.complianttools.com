@@ -275,6 +275,9 @@ export type BatchOptions = {
   maxMemoryBytes?: number;
   signal?: AbortSignal;
   onItem?: (item: BatchItemResult) => void;
+  /** Called once with the concurrency the memory governor settled on, so a caller can explain a
+   *  slower-than-requested run instead of silently getting a different number. */
+  onGovern?: (concurrency: number, projectedBytes: number, maxBytes: number) => void;
 };
 
 export type MemoryPlan = {

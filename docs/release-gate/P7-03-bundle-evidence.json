@@ -1,6 +1,6 @@
 {
   "task": "P7-03",
-  "date": "2026-09-29",
+  "date": "2026-09-30",
   "evidenceType": "gzip bytes actually fetched from the production build",
   "environment": {
     "node": "v22.23.2",
@@ -9,36 +9,36 @@
   "results": [
     {
       "route": "/",
-      "files": 13,
-      "gzippedKb": 39,
+      "files": 7,
+      "gzippedKb": 22,
       "budgetKb": 60,
       "status": "PASS"
     },
     {
       "route": "/invoice-creator",
-      "files": 20,
-      "gzippedKb": 252,
+      "files": 8,
+      "gzippedKb": 49,
       "budgetKb": 275,
       "status": "PASS"
     },
     {
       "route": "/e-invoice",
-      "files": 20,
-      "gzippedKb": 254,
+      "files": 10,
+      "gzippedKb": 224,
       "budgetKb": 275,
       "status": "PASS"
     },
     {
       "route": "/merge",
-      "files": 17,
-      "gzippedKb": 42,
+      "files": 9,
+      "gzippedKb": 23,
       "budgetKb": 470,
       "status": "PASS"
     },
     {
       "route": "/view-pdf",
-      "files": 25,
-      "gzippedKb": 568,
+      "files": 21,
+      "gzippedKb": 377,
       "budgetKb": 625,
       "status": "PASS"
     }

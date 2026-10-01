@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
@@ -95,7 +97,7 @@ test('an unreachable Relay still produces an actionable message', async ({ page 
   );
 });
 
-test('a tool route never renders another tool\'s controls', async ({ page }) => {
+test("a tool route never renders another tool's controls", async ({ page }) => {
   // Regression guard. FeaturePage once fell through to a catch-all `{:else}`,
   // so /invoice-creator and /e-invoice served the folder watcher — controls
   // those tools were never built for. Each route is checked only against
@@ -106,10 +108,10 @@ test('a tool route never renders another tool\'s controls', async ({ page }) => 
     '/e-invoice': /Invoice number/i,
     '/merge': /Merge PDF/i,
     '/qr-code': /Text or URL/i,
-    '/watch': /Choose folder and start watcher/i,
+    '/watch': /Choose folders and start watching/i,
   };
   const FOREIGN: ReadonlyArray<readonly [string, RegExp]> = [
-    ['folder watcher', /Choose folder and start watcher/i],
+    ['folder watcher', /Choose folders and start watching/i],
     // T35's own label, distinct from the invoice builder's "Templates" fieldset.
     ['create-pdf template picker', /Template Grid/i],
     ['Relay endpoint', /Your Relay endpoint/i],
@@ -157,7 +159,10 @@ test('the invoice tools are reachable from the site chrome', async ({ page }) =>
     '/e-invoice',
   );
 
-  await page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('link', { name: 'Invoices' }).click();
+  await page
+    .getByRole('navigation', { name: 'Primary navigation' })
+    .getByRole('link', { name: 'Invoices' })
+    .click();
   await expect(page.getByRole('heading', { name: 'Invoice creator' })).toBeVisible();
 
   await page.goto('/');
@@ -175,14 +180,13 @@ test('a page ships exactly one meta description', async ({ page }) => {
   for (const route of ['/invoice-creator', '/e-invoice', '/merge', '/']) {
     await page.goto(route);
     const descriptions = page.locator('meta[name="description"]');
-    await expect(
-      descriptions,
-      `${route} must ship exactly one meta description`,
-    ).toHaveCount(1);
+    await expect(descriptions, `${route} must ship exactly one meta description`).toHaveCount(1);
   }
 });
 
-test('every prerendered page carries canonical, hreflang, and structured data', async ({ page }) => {
+test('every prerendered page carries canonical, hreflang, and structured data', async ({
+  page,
+}) => {
   // Appendix E / §7.6. Canonical and hreflang come from the layout so a new
   // route cannot ship without them; JSON-LD is per route. Checked on a spread
   // of component families: FeaturePage, ToolWorkspace, and a bespoke route.
@@ -216,9 +220,7 @@ test('the JSON-LD is valid, factual structured data', async ({ page }) => {
 test('the invoice FAQ is in the served HTML, not produced by hydration', async ({ page }) => {
   // §7.6 requires the answer to exist without JavaScript.
   await page.goto('/e-invoice');
-  await expect(
-    page.getByRole('heading', { name: 'Frequently asked questions' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Frequently asked questions' })).toBeVisible();
   await expect(page.getByText(/published OASIS UBL schema/u)).toBeAttached();
 
   // And the zero-JS reference is present, so the page is honest about needing JS.
@@ -231,6 +233,146 @@ test('recipe route describes a document-free deterministic share', async ({ page
   await page.goto('/recipe');
   await expect(page.getByText(/document-free recipe/i)).toBeVisible();
   await expect(page.getByRole('button', { name: /Copy document-free recipe link/i })).toBeVisible();
+});
+
+test('a shared recipe link restores the steps it was copied from', async ({ page, context }) => {
+  // The share button wrote a URL fragment but nothing ever read one back, so opening a
+  // shared link silently landed on the default recipe. This is the P7-08 done-when: the
+  // link reproduces the recipe, with no server round-trip.
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/recipe');
+
+  // Wait for the page to be live before interacting. The step list is prerendered, so it
+  // exists before hydration and an early click lands on inert markup. The editor reports
+  // itself hydrated, the same signal the invoice builder uses. Retrying a mutating click
+  // is not an option — a retry landing after hydration would remove a second step.
+  await expect(page.locator('.recipe-editor[data-hydrated="true"]')).toBeVisible({
+    timeout: 30_000,
+  });
+  const steps = page.locator('.recipe-steps li');
+  await expect(steps).toHaveCount(1);
+
+  // Each option is chosen once: the select keeps its value, so re-picking the same one
+  // fires no new change event.
+  await page.getByRole('combobox', { name: /Step/i }).selectOption({ label: 'Bates numbering' });
+  await expect(steps).toHaveCount(2);
+  await page.getByRole('combobox', { name: /Step/i }).selectOption({ label: 'Metadata' });
+  await expect(steps).toHaveCount(3);
+  await page.getByRole('combobox', { name: /Step/i }).selectOption({ label: 'Compress' });
+  await expect(steps).toHaveCount(4);
+
+  await page.getByRole('button', { name: /Copy document-free recipe link/i }).click();
+  // The status line must say something either way. A denied clipboard previously rejected
+  // out of the handler, so the user saw no feedback at all.
+  await expect(
+    page.locator('[role="status"]').filter({ hasText: /Share link|no document bytes/i }),
+  ).toBeVisible();
+  const link = (await page.evaluate(() => navigator.clipboard.readText())) as string;
+  expect(link, 'the copied link must carry a recipe fragment').toMatch(/\/recipe#r1\./u);
+
+  // Open it in a fresh page: a same-page reload would prove nothing about a share.
+  const opened = await context.newPage();
+  await opened.goto(link);
+  await expect(opened.locator('.recipe-steps li')).toHaveCount(4, { timeout: 30_000 });
+  await expect(
+    opened.locator('[role="status"]').filter({ hasText: /Loaded a shared recipe/i }),
+  ).toBeVisible();
+  await opened.close();
+});
+
+test('a corrupt recipe fragment is reported, not thrown away silently', async ({ page }) => {
+  // A link can be truncated by a chat client or an editor. It must say so rather than
+  // leaving the user looking at a default recipe that is not what they were sent.
+  await page.goto('/recipe#r1.not-a-real-fragment');
+  await expect(
+    page.locator('[role="status"]').filter({ hasText: /could not be read/i }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('button', { name: /Copy document-free recipe link/i })).toBeVisible();
+});
+
+test('a saved recipe is restored on reload, not discarded', async ({ page }) => {
+  // The IndexedDB save had no reader anywhere in the app, so the recipe was written on Share
+  // and never read back — a reload silently returned the default. README §4.10 T70 asks for a
+  // save that persists.
+  await page.goto('/recipe');
+  await expect(page.locator('.recipe-editor[data-hydrated="true"]')).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await page.getByRole('button', { name: /Save to this browser/i }).click();
+  await expect(page.locator('[role="status"]').filter({ hasText: /Saved to this browser/i })).toBeVisible();
+
+  // The default recipe has one step. Removing it, then reloading, is the only way to tell a
+  // restored recipe from a fresh default.
+  await page.getByRole('button', { name: /Remove step 1/i }).click();
+  await expect(page.locator('.recipe-steps li')).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('.recipe-editor[data-hydrated="true"]')).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(
+    page.locator('[role="status"]').filter({ hasText: /Restored your last recipe/i }),
+  ).toBeVisible({ timeout: 30_000 });
+});
+
+test('the recipe route offers the export T70 requires', async ({ page }) => {
+  await page.goto('/recipe');
+  await expect(page.getByRole('button', { name: /Export JSON/i })).toBeVisible();
+});
+
+test.describe('P7-07 batch runner', () => {
+  const selectPdfs = async (page: import('@playwright/test').Page, count: number) => {
+    await page.goto('/batch');
+    // The route is prerendered, so its markup accepts a file and then throws it away. This is
+    // silent: the input keeps its file and Playwright reports no error, but the component's own
+    // `files` is empty, so the Run button stays disabled and the failure surfaces 30 seconds
+    // later as an inexplicable timeout. Nothing on this route publishes a hydration signal, so
+    // the gate is the observable consequence of hydration — the live component reacting to input.
+    // Refilling is safe to retry here: `setInputFiles` replaces the selection wholesale, so a
+    // second attempt cannot leave an extra file behind.
+    const payload = Array.from({ length: count }, (_, index) => ({
+      name: `doc-${index + 1}.pdf`,
+      mimeType: 'application/pdf',
+      buffer: readFileSync(join(process.cwd(), 'fixtures', 'pdfs', 'one-page.pdf')),
+    }));
+    const runButton = page.getByRole('button', { name: /Run local batch/i });
+    // Real PDFs, not stubs: the engine inspects each one before running the recipe, and a stub
+    // would fail classification rather than exercising the per-file status path.
+    await expect(async () => {
+      await page.locator('input[type="file"]').setInputFiles(payload);
+      await expect(runButton).toBeEnabled({ timeout: 1000 });
+    }).toPass({ timeout: 30_000 });
+  };
+
+  test('each file gets its own status row naming it', async ({ page }) => {
+    // README §11.5 asks for per-file status rows. The page previously showed one aggregate
+    // count, so a user could not tell which file had failed or why.
+    await selectPdfs(page, 3);
+    await page.getByRole('button', { name: /Run local batch/i }).click();
+
+    const rows = page.locator('[data-testid="batch-rows"] li');
+    await expect(rows).toHaveCount(3, { timeout: 30_000 });
+    await expect(rows.first()).toHaveAttribute('data-status', 'succeeded');
+    await expect(page.getByText('doc-1.pdf')).toBeVisible();
+    await expect(page.getByText('doc-3.pdf')).toBeVisible();
+  });
+
+  test('completed results are downloadable', async ({ page }) => {
+    await selectPdfs(page, 2);
+    await page.getByRole('button', { name: /Run local batch/i }).click();
+    await expect(page.locator('[data-testid="batch-rows"] li')).toHaveCount(2, { timeout: 30_000 });
+    await expect(page.getByRole('button', { name: /Download results as ZIP/i })).toBeVisible();
+  });
+
+  test('a retry control appears only when something failed', async ({ page }) => {
+    await selectPdfs(page, 1);
+    // Before a run there is nothing to retry, so the control must not be offered.
+    await expect(page.getByRole('button', { name: /Retry failed only/i })).toHaveCount(0);
+    await page.getByRole('button', { name: /Run local batch/i }).click();
+    await expect(page.locator('[data-testid="batch-rows"] li')).toHaveCount(1, { timeout: 30_000 });
+    // All succeeded, so there is still nothing to retry.
+    await expect(page.getByRole('button', { name: /Retry failed only/i })).toHaveCount(0);
+  });
 });
 
 test.describe('P7-03 invoice builder', () => {
@@ -257,7 +399,9 @@ test.describe('P7-03 invoice builder', () => {
     await expect(totals.nth(2)).toHaveText('220.00 CAD');
   });
 
-  test('an invalid invoice reports the engine remedy instead of failing silently', async ({ page }) => {
+  test('an invalid invoice reports the engine remedy instead of failing silently', async ({
+    page,
+  }) => {
     // A tax rate above 100 is rejected by the engine. The input's own max
     // attribute is only a hint, so this proves the engine is the real guard and
     // that its remedy reaches the user instead of a broken download.
@@ -291,7 +435,9 @@ test.describe('P7-03 invoice builder', () => {
 
   test('e-invoice offers the XML-to-PDF direction and refuses invalid XML', async ({ page }) => {
     await openBuilder(page, '/e-invoice');
-    await expect(page.getByRole('heading', { name: 'Existing e-invoice XML to PDF' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Existing e-invoice XML to PDF' }),
+    ).toBeVisible();
 
     // The page has two conversion sections, each with its own file input and
     // status line, so both are scoped rather than matched globally.
@@ -304,7 +450,9 @@ test.describe('P7-03 invoice builder', () => {
     await expect(toPdf.locator('[role="status"]')).toHaveText(/not a usable e-invoice/);
   });
 
-  test('a PDF with no embedded XML is refused honestly rather than guessed at', async ({ page }) => {
+  test('a PDF with no embedded XML is refused honestly rather than guessed at', async ({
+    page,
+  }) => {
     // Recovery reads the structured attachment only. A PDF without one must say
     // so, never invent invoice fields from the rendered page.
     await openBuilder(page, '/e-invoice');
@@ -319,3 +467,134 @@ test.describe('P7-03 invoice builder', () => {
   });
 });
 
+test.describe('P7-04 scan capture', () => {
+  const status = (page: import('@playwright/test').Page) => page.getByRole('status').first();
+
+  /**
+   * Clicks a control and waits for the status line to change, retrying the click
+   * until it takes.
+   *
+   * SvelteKit serves this route with its static HTML before hydration finishes,
+   * so a click dispatched in that window hits inert markup and is silently
+   * dropped — the assertion then times out against an empty status line for a
+   * reason that has nothing to do with the code under test. There is no
+   * hydration marker in the DOM to wait on, so the observable effect is the
+   * signal: keep clicking until the page reacts. This is deterministic with
+   * respect to hydration, unlike a fixed sleep.
+   */
+  const clickAndExpectStatus = async (
+    page: import('@playwright/test').Page,
+    name: string | RegExp,
+    expected: RegExp,
+  ) => {
+    const line = status(page);
+    await expect(async () => {
+      await page.getByRole('button', { name }).click();
+      await expect(line).toHaveText(expected);
+    }).toPass({ timeout: 10_000 });
+  };
+
+  test('the camera is never requested without an explicit gesture', async ({ page }) => {
+    // The core of P7-04's permission seam: loading the route must not call
+    // getUserMedia. A page that asked on load would prompt before the user ever
+    // asked to scan anything, which is what this project forbids.
+    await page.addInitScript(() => {
+      (window as unknown as { __cameraRequested: number }).__cameraRequested = 0;
+      const media = navigator.mediaDevices;
+      if (!media) return;
+      const original = media.getUserMedia.bind(media);
+      media.getUserMedia = (constraints: MediaStreamConstraints) => {
+        (window as unknown as { __cameraRequested: number }).__cameraRequested += 1;
+        return original(constraints);
+      };
+    });
+
+    await page.goto('/scan-to-pdf');
+    await expect(page.getByRole('heading', { name: 'Scan to PDF' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Start camera' })).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { __cameraRequested: number }).__cameraRequested,
+      ),
+    ).toBe(0);
+  });
+
+  test('a denied camera permission surfaces the engine remedy', async ({ page }) => {
+    // requestScanCamera maps a rejected getUserMedia to permission-denied. The
+    // remedy, not a generic failure, must reach the status line.
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'mediaDevices', {
+        configurable: true,
+        // A real DOMException carries the code in `name`; that is what the
+        // engine branches on, so the stub has to match or it tests the
+        // unrecognised path instead of the permission one.
+        value: {
+          getUserMedia: () => {
+            const error = new Error('Permission denied');
+            error.name = 'NotAllowedError';
+            return Promise.reject(error);
+          },
+        },
+      });
+    });
+    await page.goto('/scan-to-pdf');
+    await clickAndExpectStatus(page, 'Start camera', /Allow camera access in the browser/);
+  });
+
+  test('a device with no camera is not told to grant permission', async ({ page }) => {
+    // Asking someone to allow a camera that does not exist sends them somewhere
+    // they cannot succeed, so this must read differently from a denial.
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'mediaDevices', {
+        configurable: true,
+        value: {
+          getUserMedia: () => {
+            const error = new Error('Requested device not found');
+            error.name = 'NotFoundError';
+            return Promise.reject(error);
+          },
+        },
+      });
+    });
+    await page.goto('/scan-to-pdf');
+    await clickAndExpectStatus(page, 'Start camera', /No camera was found on this device/);
+  });
+
+  test('a runtime with no camera support says so instead of failing silently', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined });
+    });
+    await page.goto('/scan-to-pdf');
+    await clickAndExpectStatus(page, 'Start camera', /getUserMedia support/);
+  });
+
+  test('the file-input path still assembles a PDF without a camera', async ({ page }) => {
+    // §7.6 requires a real file input in served HTML, and the imported-image
+    // path must keep working with no camera and no JavaScript-only affordance.
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    );
+    await page.goto('/scan-to-pdf');
+    const input = page.locator('input[type=file]');
+    // The `change` handler is a hydration-time binding, so the files are set
+    // again on each attempt until the button actually enables.
+    await expect(async () => {
+      await input.setInputFiles([
+        { name: 'page-1.png', mimeType: 'image/png', buffer: png },
+        { name: 'page-2.png', mimeType: 'image/png', buffer: png },
+      ]);
+      await expect(page.getByRole('button', { name: 'Assemble scan to PDF' })).toBeEnabled();
+    }).toPass({ timeout: 10_000 });
+
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Assemble scan to PDF' }).click();
+    await download;
+    await expect(status(page)).toHaveText(/Assembled 2 pages locally/);
+  });
+
+  test('assembling is disabled until there is a page to assemble', async ({ page }) => {
+    await page.goto('/scan-to-pdf');
+    await expect(page.getByRole('button', { name: 'Assemble scan to PDF' })).toBeDisabled();
+  });
+});

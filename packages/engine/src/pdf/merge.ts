@@ -31,7 +31,7 @@ export async function mergePdfBuffers(
     });
   }
 
-  const output = await PDFDocument.create();
+  const output = await PDFDocument.create({ updateMetadata: false });
   const order = options.fileOrder?.length ? options.fileOrder : sources.map((_, index) => index);
   for (const [position, sourceIndex] of order.entries()) {
     const source = sources[sourceIndex];
@@ -43,7 +43,7 @@ export async function mergePdfBuffers(
       });
     let input: PDFDocument;
     try {
-      input = await PDFDocument.load(source, { ignoreEncryption: false });
+      input = await PDFDocument.load(source, { ignoreEncryption: false, updateMetadata: false });
     } catch {
       throw new PdfEngineError({
         kind: 'corrupt-structure',

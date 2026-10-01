@@ -1,0 +1,7 @@
+{
+  "version": "r1",
+  "steps": [
+    { "op": "bates", "options": { "prefix": "PARITY-" } },
+    { "op": "metadata", "options": { "title": "P7-10 parity fixture" } }
+  ]
+}

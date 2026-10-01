@@ -12,9 +12,10 @@ function typedFailure(operation: string, error: unknown): never {
   });
 }
 
+/** `updateMetadata: false` keeps saved bytes deterministic — see the same option in graph.ts. */
 async function load(bytes: Uint8Array, operation: string): Promise<PDFDocument> {
   try {
-    return await PDFDocument.load(bytes, { ignoreEncryption: false });
+    return await PDFDocument.load(bytes, { ignoreEncryption: false, updateMetadata: false });
   } catch (error) {
     return typedFailure(operation, error);
   }
@@ -69,7 +70,7 @@ function requirePages(pages: readonly number[], operation: string): void {
 }
 
 async function copySelected(source: PDFDocument, pages: readonly number[]): Promise<Uint8Array> {
-  const output = await PDFDocument.create();
+  const output = await PDFDocument.create({ updateMetadata: false });
   const copied = await output.copyPages(
     source,
     pages.map((page) => page - 1),
@@ -200,7 +201,7 @@ export async function nUp(
   const cols = Math.ceil(columns / rows);
   const width = 612;
   const height = 792;
-  const output = await PDFDocument.create();
+  const output = await PDFDocument.create({ updateMetadata: false });
   const order = booklet ? bookletOrder(sourcePages.length) : sourcePages.map((_, index) => index);
   for (let offset = 0; offset < order.length; offset += columns) {
     const page = output.addPage([width, height]);
@@ -242,7 +243,7 @@ export async function halvePages(
   threshold = 1.25,
 ): Promise<Uint8Array> {
   const source = await load(bytes, 'halve pages');
-  const output = await PDFDocument.create();
+  const output = await PDFDocument.create({ updateMetadata: false });
   for (const sourcePage of source.getPages()) {
     const horizontal = direction === 'horizontal';
     const oversized = horizontal
@@ -359,6 +360,7 @@ export async function repairPdf(bytes: Uint8Array): Promise<Uint8Array> {
     const document = await PDFDocument.load(bytes, {
       ignoreEncryption: true,
       throwOnInvalidObject: false,
+      updateMetadata: false,
     });
     return document.save();
   } catch (error) {
@@ -503,7 +505,7 @@ export async function createPdfProxy(bytes: Uint8Array, pageNumber = 1): Promise
       operation: 'preview',
       remedy: 'Choose a page number within the document.',
     });
-  const output = await PDFDocument.create();
+  const output = await PDFDocument.create({ updateMetadata: false });
   const [page] = await output.copyPages(source, [pageNumber - 1]);
   if (page) output.addPage(page);
   return { bytes: await output.save(), pageNumber, pageCount: 1 };
@@ -585,7 +587,7 @@ export async function rasterizePdf(
   dpi = 150,
 ): Promise<Uint8Array> {
   const source = await load(bytes, 'rasterize the PDF');
-  const output = await PDFDocument.create();
+  const output = await PDFDocument.create({ updateMetadata: false });
   const scale = dpi / 72;
   for (let pageNumber = 1; pageNumber <= source.getPageCount(); pageNumber += 1) {
     const frame = await renderer(bytes, pageNumber, scale);

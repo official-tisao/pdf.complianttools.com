@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { PDFDocument } from 'pdf-lib';
+import { unzipSync } from 'fflate';
 import {
   assembleScans,
   buildDocumentPack,
@@ -14,13 +15,18 @@ import {
   extractInvoiceXmlFromPdf,
   extractPdfAttachments,
   parseRecipe,
+  parseSerializedRecipe,
+  serializeRecipe,
   runBatch,
   compile,
   inspectWithPdfJs,
+  operationSchemas,
   run,
   FolderWatcher,
   captureWebpageToPdf,
   PdfEngineError,
+  watchProcessor,
+  outputNameFor,
 } from '../dist/index.js';
 
 const fixture = async (name) =>
@@ -398,12 +404,12 @@ test('a creation op must be the first step in a recipe', async () => {
 });
 
 test('an invalid invoice in a recipe surfaces the engine remedy', async () => {
-  // The recipe schema types the invoice as an untyped record, so Zod cannot
-  // reject it. It must still fail as a typed PdfEngineError naming the cause,
-  // not as a TypeError from deep inside the cast.
+  // The recipe schema now types the invoice, so these are caught at parse time rather
+  // than deep inside the builder. Either way the failure must reach a user as a typed
+  // PdfEngineError naming the cause — never a raw ZodError with a JSON issue list.
   for (const [invoice, pattern] of [
     [{ ...baseInvoice, currency: 'DOLLARS' }, /ISO 4217/u],
-    [{ ...baseInvoice, lines: [] }, /at least one line item/u],
+    [{ ...baseInvoice, lines: [] }, /invoice\.lines.*>=1/u],
     [{ ...baseInvoice, issueDate: 'nope' }, /ISO date/u],
   ]) {
     await assert.rejects(
@@ -427,6 +433,98 @@ test('a recipe cannot smuggle document bytes into the invoice', async () => {
       }),
     PdfEngineError,
   );
+});
+
+test('a shared recipe link carries no local file path or base64 payload', async () => {
+  // The leak the byte check above could not see: `assertDocumentFree` only rejects
+  // Uint8Array and four exact key names, so a local path rode through a hand-written
+  // recipe and landed in the clipboard link. The invoice op used to be an unvalidated
+  // passthrough, which let it. What actually closes this is the schema naming the real
+  // fields — Zod strips what it does not declare, before anything is encoded.
+  const hostile = {
+    ...baseInvoice,
+    filePath: 'C:/Users/someone/Private/2026-salary.pdf',
+    fileName: 'salary-2026.pdf',
+    attachment: 'JVBERi0xLjQK',
+  };
+  const restored = await parseSerializedRecipe(
+    await serializeRecipe(
+      parseRecipe({ version: 'r1', steps: [{ op: 'invoice', options: { invoice: hostile } }] }),
+    ),
+  );
+  const invoice = restored.steps[0].options.invoice;
+
+  assert.equal(
+    invoice.filePath,
+    undefined,
+    'a local file path must not survive into a shared link',
+  );
+  assert.equal(invoice.fileName, undefined, 'a file name must not survive into a shared link');
+  assert.equal(invoice.attachment, undefined, 'an undeclared payload must not survive');
+  // The point of the schema is hardening, not rejection: a legitimate invoice still shares.
+  assert.equal(invoice.invoiceNumber, baseInvoice.invoiceNumber);
+  assert.equal(invoice.lines.length, 1);
+  assert.equal(invoice.currency, baseInvoice.currency);
+});
+
+test('the invoice recipe schema rejects the same values the invoice builder rejects', async () => {
+  // One contract, enforced at both entry points. `createInvoicePdf` already refuses these
+  // with a typed remedy, and a shared recipe must not be a way around that.
+  const bad = [
+    [{ ...baseInvoice, currency: 'dollars' }, /ISO 4217/u],
+    [{ ...baseInvoice, currency: 'ca' }, /ISO 4217/u],
+    [{ ...baseInvoice, issueDate: '30/09/2026' }, /ISO date/u],
+    [{ ...baseInvoice, dueDate: 'soon' }, /ISO date/u],
+    [{ ...baseInvoice, lines: [] }, /invoice\.lines.*>=1/u],
+    [{ ...baseInvoice, invoiceNumber: '' }, /invoice\.invoiceNumber.*>=1/u],
+  ];
+  for (const [invoice, pattern] of bad) {
+    assert.throws(
+      () => parseRecipe({ version: 'r1', steps: [{ op: 'invoice', options: { invoice } }] }),
+      (error) => pattern.test(error.message ?? String(error)),
+      `expected rejection for ${JSON.stringify(invoice).slice(0, 80)}`,
+    );
+  }
+});
+
+test('a batch ZIP carries the real output bytes, not placeholders', async () => {
+  // The batch page computed every output and then discarded it, so a user had no way to
+  // retrieve a result. The packer previously wrote a JSON placeholder with a TODO saying
+  // the bytes were unavailable — they had been available all along.
+  const pdfA = new Uint8Array([0x25, 0x50, 0x44, 0x46, 1, 2, 3]);
+  const pdfB = new Uint8Array([0x25, 0x50, 0x44, 0x46, 9, 9]);
+  const { zipBatchResults } = await import('../src/batch/zip.ts');
+  const { zipBytes, manifest } = zipBatchResults([
+    { index: 0, status: 'succeeded', attempts: 1, output: pdfA },
+    { index: 1, status: 'succeeded', attempts: 1, output: pdfB },
+  ]);
+
+  // Browser-safety is part of the contract: this runs in the browser, where Buffer is not
+  // defined, so the packer must return a plain Uint8Array.
+  assert.ok(zipBytes instanceof Uint8Array, 'the archive must be a Uint8Array, not a Buffer');
+
+  const entries = unzipSync(zipBytes);
+  assert.deepEqual(
+    [...entries['batch_0_succeeded.pdf']],
+    [...pdfA],
+    'the archived bytes must be the actual PDF output',
+  );
+  assert.deepEqual([...entries['batch_1_succeeded.pdf']], [...pdfB]);
+  assert.ok(entries['manifest.json'], 'a download must be self-describing');
+  assert.equal(manifest.completed, 2);
+  assert.equal(manifest.zipEntries, 3, 'two documents plus the manifest');
+});
+
+test('a batch ZIP never claims an entry it did not write', async () => {
+  // A succeeded item with no bytes cannot be packed. The manifest must not count it,
+  // or a user is told the download is complete while a file is missing from it.
+  const { zipBatchResults } = await import('../src/batch/zip.ts');
+  const { zipBytes, manifest } = zipBatchResults([
+    { index: 0, status: 'succeeded', attempts: 1, output: new Uint8Array([1]) },
+    { index: 1, status: 'succeeded', attempts: 1 },
+  ]);
+  assert.equal(manifest.zipEntries, 2, 'one document plus the manifest');
+  assert.equal(Object.keys(unzipSync(zipBytes)).length, 2);
 });
 
 test('scan assembly and document pack preserve page order', async () => {
@@ -507,18 +605,40 @@ test('folder watcher requires explicit permission and exposes pause/stop', async
   assert.deepEqual(seen, ['a.pdf']);
 });
 
-test('P7-07 ZIP adapter packs completed batch entries without breaking outputs', async () => {
+test('P7-07 ZIP adapter records a failed item in the manifest rather than a file', async () => {
+  // A failed item has no PDF to write, so it is only represented in the manifest. The point
+  // of the manifest is that a user can see what failed without re-running the batch.
   const { zipBatchResults } = await import('../src/batch/zip.ts');
   const results = [
-    { index: 0, status: 'succeeded', attempts: 1 },
-    { index: 1, status: 'failed', attempts: 2 },
+    {
+      index: 0,
+      status: 'succeeded',
+      attempts: 1,
+      output: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
+    },
+    {
+      index: 1,
+      status: 'failed',
+      attempts: 2,
+      error: { kind: 'conversion-failed', remedy: 'Retry it.' },
+    },
   ];
-  const { zipBuffer, manifest } = await zipBatchResults(results, { includeFailed: true });
-  assert.ok(zipBuffer.length > 0, 'ZIP buffer non-empty');
+  const { zipBytes, manifest } = await zipBatchResults(results, { includeFailed: true });
+  assert.ok(zipBytes.length > 0, 'ZIP non-empty');
   assert.equal(manifest.total, 2);
   assert.equal(manifest.completed, 1);
   assert.equal(manifest.failed, 1);
-  assert.equal(manifest.zipEntries, 2);
+  assert.equal(manifest.zipEntries, 3, 'one document, one failure record, and the manifest');
+  // includeFailed writes a small JSON record so the archive explains what failed and why.
+  assert.ok(
+    unzipSync(zipBytes)['batch_1_failed.pdf'],
+    'the failed item is recorded when asked for',
+  );
+
+  // Without the option a failure contributes nothing but a manifest line.
+  const plain = zipBatchResults(results);
+  assert.equal(plain.manifest.zipEntries, 2, 'the one real document plus the manifest');
+  assert.equal(Object.keys(unzipSync(plain.zipBytes)).includes('batch_1_failed.pdf'), false);
 });
 
 test('Relay remains explicit opt-in with typed failure when unconfigured', async () => {
@@ -572,4 +692,262 @@ test('Relay returns the PDF bytes on a successful capture', async () => {
   const result = await captureWebpageToPdf('https://example.com', 'http://127.0.0.1:8787', stub);
   assert.equal(result.mimeType, 'application/pdf');
   assert.deepEqual([...result.bytes], [0x25, 0x50, 0x44, 0x46, 0x2d]);
+});
+
+test('a recipe op produces byte-identical output when run again later', async () => {
+  // The P7-10 done-when is that the same recipe yields the same bytes. This used to fail
+  // intermittently: pdf-lib's `updateMetadata` defaults to true and stamps a wall-clock
+  // `/ModDate` into the Info dict, so two saves straddling a second boundary differed.
+  //
+  // The wait is the point. Without crossing a second boundary this test passes even when
+  // the engine is fully nondeterministic, which is exactly why the bug shipped. Each op is
+  // checked because the stamp came from shared save plumbing, not from any one op.
+  const input = await fixture('one-page.pdf');
+  const cases = [
+    ['bates', { prefix: 'X-' }],
+    ['compress', {}],
+    ['metadata', { title: 'T' }],
+    ['rotate', { degrees: 90 }],
+    ['add-text', { text: 'hi' }],
+    ['watermark', { text: 'hi' }],
+    ['flatten', { forms: false }],
+    ['page-numbers', {}],
+  ];
+
+  const produce = async (op, options) => {
+    const plan = compile(
+      parseRecipe({ version: 'r1', steps: [{ op, options }] }),
+      await inspectWithPdfJs(input),
+    );
+    for await (const event of run(plan, [input])) if (event.kind === 'result') return event.bytes;
+    throw new Error(`${op} produced no result`);
+  };
+
+  for (const [op, options] of cases) {
+    const first = await produce(op, options);
+    await new Promise((resolve) => setTimeout(resolve, 1_100));
+    const second = await produce(op, options);
+    assert.deepEqual(
+      [...second],
+      [...first],
+      `${op} is not byte-stable across a one-second gap, so a shared recipe would not reproduce`,
+    );
+  }
+});
+
+test('every recipe op is either dispatched or rejected, never silently skipped', async () => {
+  // `scan-to-pdf` was declared in the schema with no `case` in the dispatch switch and no
+  // `default`, so it fell through to `return undefined` — which the pipeline reads as "this
+  // step produced no new output" and then re-serialises the untouched input while reporting
+  // success. A recipe asking to scan silently returned a document that was never scanned.
+  //
+  // The dispatch surface is source, not a runtime export, so this reads the two files that
+  // decide an op's fate and asserts every declared op appears in one of them. That is the
+  // structural guard: it fails the moment a new op is added to the schema without a branch.
+  const engineRoot = new URL('../src/', import.meta.url);
+  const graph = await readFile(new URL('pdf/graph.ts', engineRoot), 'utf8');
+  const pipeline = await readFile(new URL('runtime/pipeline.ts', engineRoot), 'utf8');
+  const dispatchSource = `${graph}\n${pipeline}`;
+
+  const missing = Object.keys(operationSchemas).filter((op) => !dispatchSource.includes(`'${op}'`));
+  assert.deepEqual(
+    missing,
+    [],
+    `these ops are declared in the recipe schema but never dispatched, so they silently pass their input through: ${missing.join(', ')}`,
+  );
+});
+
+test('a scan-to-pdf recipe step is rejected with a remedy instead of passing input through', async () => {
+  const input = await fixture('one-page.pdf');
+  const plan = compile(
+    parseRecipe({ version: 'r1', steps: [{ op: 'scan-to-pdf', options: { dpi: 150 } }] }),
+    await inspectWithPdfJs(input),
+  );
+
+  await assert.rejects(
+    async () => {
+      for await (const _event of run(plan, [input])) void _event;
+    },
+    (error) => {
+      assert.ok(error instanceof PdfEngineError, `expected a PdfEngineError, got ${error}`);
+      assert.equal(error.details.kind, 'unsupported-feature');
+      assert.match(error.message, /Scan to PDF page/u);
+      return true;
+    },
+  );
+});
+
+test('the memory governor reduces concurrency instead of refusing the batch', async () => {
+  // README §11.5 requires a governor that "reduces concurrency rather than crashing on very
+  // large document sets". The previous implementation compared a projected total against the
+  // cap and threw, so a large batch never started at all — the opposite of the requirement.
+  const big = new Uint8Array(1024 * 1024);
+  const inputs = Array.from({ length: 20 }, () => big);
+  let peak = 0;
+  let active = 0;
+
+  const results = await runBatch(
+    inputs,
+    parseRecipe({ version: 'r1', steps: [] }),
+    {
+      concurrency: 8,
+      // Each item projects to 2 MB, so only three fit inside a 6 MB budget.
+      maxMemoryBytes: 6 * 1024 * 1024,
+      onGovern: (concurrency) => {
+        peak = concurrency;
+      },
+    },
+    async () => {
+      active += 1;
+      assert.ok(active <= 3, `governor let ${active} items run at once against a 3-item budget`);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      active -= 1;
+      return big;
+    },
+  );
+
+  assert.equal(peak, 3, 'the governor must report the concurrency it chose');
+  assert.equal(results.filter((item) => item.status === 'succeeded').length, 20);
+});
+
+test('an item larger than the whole memory budget is refused with its own numbers', async () => {
+  // Thinning the pool cannot make a single oversized item fit, so this is the one case that
+  // still throws — and the remedy must state both figures rather than "reduce the batch size".
+  const oversized = new Uint8Array(8 * 1024 * 1024);
+  await assert.rejects(
+    async () =>
+      runBatch([oversized], parseRecipe({ version: 'r1', steps: [] }), {
+        concurrency: 4,
+        maxMemoryBytes: 1024 * 1024,
+      }),
+    (error) => {
+      assert.ok(error instanceof PdfEngineError, `expected a PdfEngineError, got ${error}`);
+      assert.equal(error.details.kind, 'memory-limit-exceeded');
+      assert.equal(error.details.projectedBytes, 16 * 1024 * 1024);
+      assert.equal(error.details.maxBytes, 1024 * 1024);
+      assert.match(error.message, /16 MB/u);
+      return true;
+    },
+  );
+});
+
+test('the folder watcher writes a processed document into the output folder', async () => {
+  // P7-09's Done-when. The route previously reported a detected filename and discarded the file,
+  // so "auto-process new files dropped into a picked folder" was never actually happening.
+  const written = new Map();
+  const output = {
+    queryPermission: async () => 'granted',
+    requestPermission: async () => 'granted',
+    getFileHandle: async (name) => ({
+      createWritable: async () => ({
+        write: async (bytes) => {
+          written.set(name, new Uint8Array(bytes));
+        },
+        close: async () => {},
+      }),
+    }),
+  };
+  const results = [];
+  const onFile = await watchProcessor({
+    recipe: parseRecipe({ version: 'r1', steps: [{ op: 'bates', options: { prefix: 'W-' } }] }),
+    output,
+    onResult: (result) => results.push(result),
+  });
+
+  const source = await fixture('one-page.pdf');
+  await onFile(new globalThis.File([source], 'quarterly.pdf', { type: 'application/pdf' }));
+
+  assert.equal(results.length, 1, 'the callback reports one result per file');
+  assert.equal(
+    results[0].status,
+    'succeeded',
+    `expected success, got ${JSON.stringify(results[0])}`,
+  );
+  // The output name must not collide with the input, or the watcher would overwrite the file it
+  // is watching.
+  assert.equal(written.has('quarterly.pdf'), false, 'the input must never be overwritten');
+  assert.equal(
+    written.has('quarterly.processed.pdf'),
+    true,
+    'the suffix is inserted before the extension',
+  );
+  const bytes = written.get('quarterly.processed.pdf');
+  assert.equal(bytes.byteLength, source.byteLength > 0 ? bytes.byteLength : 0);
+  assert.equal((await PDFDocument.load(bytes)).getPageCount(), 1);
+});
+
+test('one unreadable file does not stop the watcher, and its failure names the file', async () => {
+  // A corrupt PDF in a watched folder must not take down every other file, and the user has to
+  // be told which file failed and why rather than seeing the watcher simply stop.
+  const written = new Map();
+  const output = {
+    queryPermission: async () => 'granted',
+    requestPermission: async () => 'granted',
+    getFileHandle: async (name) => ({
+      createWritable: async () => ({
+        write: async (bytes) => {
+          written.set(name, new Uint8Array(bytes));
+        },
+        close: async () => {},
+      }),
+    }),
+  };
+  const results = [];
+  const onFile = await watchProcessor({
+    recipe: parseRecipe({ version: 'r1', steps: [] }),
+    output,
+    maxRetries: 1,
+    onResult: (result) => results.push(result),
+  });
+
+  await onFile(new globalThis.File([new Uint8Array([1, 2, 3])], 'broken.pdf'));
+  const good = await fixture('one-page.pdf');
+  await onFile(new globalThis.File([good], 'intact.pdf'));
+
+  assert.equal(results.length, 2, 'the second file is still processed');
+  assert.equal(results[0].status, 'failed');
+  assert.equal(results[0].attempts, 2, 'the configured retry is honoured');
+  assert.match(results[0].error.remedy, /\S/u, 'a failure must carry a remedy');
+  assert.match(results[0].error.cause, /broken\.pdf/u, 'the failure must name the file');
+  assert.equal(results[1].status, 'succeeded', `got ${JSON.stringify(results[1])}`);
+  assert.equal(written.size, 1, 'only the intact file produced output');
+});
+
+test('the watcher asks for write permission before it writes anything', async () => {
+  // Reading the input folder must not imply write access to the output, and a denied write has
+  // to surface at start rather than once per file.
+  let asked = 0;
+  const denied = {
+    queryPermission: async () => 'denied',
+    requestPermission: async () => {
+      asked += 1;
+      return 'denied';
+    },
+    getFileHandle: async () => {
+      throw new Error('nothing may be written without permission');
+    },
+  };
+  await assert.rejects(
+    async () =>
+      watchProcessor({
+        recipe: parseRecipe({ version: 'r1', steps: [] }),
+        output: denied,
+      }),
+    (error) => {
+      assert.ok(error instanceof PdfEngineError, `expected a PdfEngineError, got ${error}`);
+      assert.equal(error.details.kind, 'permission-denied');
+      assert.equal(error.details.resource, 'output folder');
+      return true;
+    },
+  );
+  assert.equal(asked, 1, 'permission is asked once, up front');
+});
+
+test('outputNameFor never produces the input name, including for dotfiles', () => {
+  assert.equal(outputNameFor('report.pdf'), 'report.processed.pdf');
+  assert.equal(outputNameFor('a.b.c.pdf'), 'a.b.c.processed.pdf');
+  assert.equal(outputNameFor('noextension'), 'noextension.processed');
+  // A leading dot is not an extension boundary, so the suffix goes on the end.
+  assert.equal(outputNameFor('.env'), '.env.processed');
+  assert.equal(outputNameFor('report.pdf', '.done'), 'report.done.pdf');
 });

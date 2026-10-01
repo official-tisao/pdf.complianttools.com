@@ -8,7 +8,7 @@
     "clean": "node -e \"fs.rmSync('.svelte-kit',{recursive:true,force:true});fs.rmSync('build',{recursive:true,force:true})\"",
     "dev": "vite dev",
     "lint": "eslint src --max-warnings=0",
-    "test": "node --test test/*.test.mjs",
+    "test": "node --test --test-timeout=120000 --test-force-exit test/*.test.mjs",
     "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {

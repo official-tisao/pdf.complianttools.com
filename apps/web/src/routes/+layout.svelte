@@ -2,6 +2,7 @@
   import '@pdf-complianttools/ui/tokens.css';
   import { page } from '$app/state';
   import { HREFLANG, canonicalUrl } from '$lib/seo';
+  import '$lib/configure-pdfjs';
 
   let { children } = $props();
 </script>
