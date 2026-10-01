@@ -32,6 +32,9 @@ jobs:
       - run: pnpm verify:assets
       - run: pnpm verify:trademarks
       - run: pnpm verify:routes
+      - run: pnpm verify:conversions
+      - run: pnpm verify:locales
+      - run: pnpm verify:directory
       - run: pnpm verify:plan-sync -- --base="${{ github.event.pull_request.base.sha || github.event.before }}"
       - run: pnpm build
 
@@ -121,11 +124,18 @@ jobs:
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm verify:lighthouse
+      - name: Check every prerendered page against Appendix E (SPCC)
+        run: node scripts/spcc.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: p7-03-lighthouse-evidence
           path: docs/release-gate/P7-03-lighthouse-evidence.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p7-12-spcc-report
+          path: docs/release-gate/P7-12-spcc-report.json
 
   accessibility:
     # STCC #10 (`axe` zero violations, keyboard operability) and STCC #11 (the

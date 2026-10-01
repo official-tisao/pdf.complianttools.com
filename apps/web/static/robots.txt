@@ -1,2 +1,9 @@
 User-agent: *
 Allow: /
+
+# The pseudo-locale (`/en-XA/`) is a test locale whose copy is accented and
+# padded on purpose to expose layout overflow. It must never be indexed, or
+# padded pseudo-copy ends up in search results.
+Disallow: /en-XA/
+
+Sitemap: https://pdf.complianttools.com/sitemap.xml

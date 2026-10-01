@@ -84,6 +84,27 @@ test('the pseudo-locale causes no horizontal overflow at a phone width', async (
   ).toBeLessThanOrEqual(box.clientWidth + 1);
 });
 
+test.describe('every localized page advertises correct hreflang alternates', () => {
+  // One test per route rather than a loop inside a single test: 60 sequential
+  // navigations in one test exceeded Playwright's 30s timeout once every page
+  // also rendered the tool directory. Splitting keeps each assertion
+  // individually reported instead of failing as one opaque timeout.
+  for (const { path } of localized) {
+    test(`${path} points each alternate at its own locale`, async ({ page }) => {
+      await page.goto(`/ar${path}`);
+      const hrefs = await page.locator('link[rel="alternate"][hreflang]').evaluateAll((links) =>
+        links.map((link) => ({
+          lang: link.getAttribute('hreflang'),
+          href: new URL(link.getAttribute('href') ?? '').pathname,
+        })),
+      );
+      const byLang = Object.fromEntries(hrefs.map((entry) => [entry.lang, entry.href]));
+      expect(byLang.en, `${path}: hreflang=en must point at the English URL`).toBe(path);
+      expect(byLang.ar, `${path}: hreflang=ar must point at the Arabic URL`).toBe(`/ar${path}`);
+    });
+  }
+});
+
 test('an unknown locale 404s rather than silently rendering English', async ({ page }) => {
   const response = await page.goto('/de/crop-pdf');
   expect(response?.status()).toBe(404);

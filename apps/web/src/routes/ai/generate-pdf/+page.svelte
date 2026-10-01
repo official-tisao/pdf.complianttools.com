@@ -7,6 +7,7 @@
     type AiOperationRequest,
   } from '@pdf-complianttools/engine';
   import AiCallConfirm from '$lib/AiCallConfirm.svelte';
+  import SeoTags from '$lib/SeoTags.svelte';
   import { getConfiguredConnection, sendConfirmed } from '$lib/ai-client';
 
   let prompt = $state('');
@@ -85,6 +86,12 @@
     content="Generate text with an explicit BYOK request, then assemble a PDF locally for review."
   /></svelte:head
 >
+<!-- Appendix E requires structured data on every prerendered page; the SPCC
+  check is what surfaced that this route shipped without JSON-LD. -->
+<SeoTags
+  name="Generate PDF from a prompt"
+  description="Generate text with an explicit BYOK request, then assemble a PDF locally for review."
+/>
 
 <section class="page">
   <p class="eyebrow">BYOK AI · LOCAL PDF WRITE</p>

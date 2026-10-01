@@ -3,6 +3,8 @@
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import { download, firstBytes } from '$lib/pdf-download';
+  import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
+  import { page } from '$app/state';
 
   let files = $state<File[]>([]);
   let pageCount = $state(0);
@@ -16,6 +18,11 @@
   let status = $state('');
   let error = $state('');
   let busy = $state(false);
+  const description =
+    'Reorder PDF pages in an accessible, keyboard-navigable thumbnail grid. Drag, or use Alt with the arrow keys, and export the new order locally.';
+  const structuredData = $derived(
+    softwareApplicationLd({ name: 'Organize PDF pages', description, path: page.url.pathname }),
+  );
 
   const originalOrder = $derived(Array.from({ length: pageCount }, (_, index) => index + 1));
   const reordered = $derived(pageCount > 0 && order.some((page, index) => page !== index + 1));
@@ -89,13 +96,24 @@
   }
 </script>
 
-<svelte:head><title>Organize PDF pages locally</title></svelte:head>
+<svelte:head>
+  <title>Organize PDF pages locally</title>
+  <!--
+    This route was hand-written during the wiring phase and shipped with a title
+    alone. Every other shell owns its description and JSON-LD, and Appendix E
+    requires both — the SPCC check is what surfaced the omission.
+  -->
+  <meta name="description" content={description} />
+  <!-- safe-html-reviewed: JSON-LD needs a script element Svelte cannot emit; the payload is JSON.stringify from $lib/seo with "<" escaped, tested in scripts/seo.test.mjs -->
+  {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
+</svelte:head>
 <div class="organize">
   <header>
     <h1>Organize Pages</h1>
-    <p>
-      Reorder pages in an accessible, keyboard-navigable thumbnail grid. Use the arrow keys to move
-      the focus and <kbd>Alt</kbd> + arrows to move the page itself; no pointer required.
+    <p>{description}</p>
+    <p class="hint">
+      Use the arrow keys to move focus and <kbd>Alt</kbd> + arrows to move the page itself; no pointer
+      required.
     </p>
   </header>
 

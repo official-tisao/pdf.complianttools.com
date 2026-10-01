@@ -29,12 +29,61 @@ export function jsonLdPayload(value: unknown): string {
   return JSON.stringify(value).replaceAll('<', '\\u003c');
 }
 
-/** The languages the UI is actually translated into; see README §21. */
-export const HREFLANG: ReadonlyArray<{ lang: string; hreflang: string }> = [
-  { lang: 'en', hreflang: 'en' },
-  { lang: 'x-a', hreflang: 'en-xa' },
-  { lang: 'ar', hreflang: 'ar' },
-];
+/**
+ * The URL path prefix a locale is served under, and the `hreflang` that
+ * identifies it.
+ *
+ * `en-XA` is a pseudo-locale: it exists to catch overflow and untranslated copy
+ * in CI, and is deliberately kept out of the emitted `hreflang` set below, so
+ * it is listed here for routing but not advertised to a crawler.
+ */
+const LOCALE_PREFIXES = [
+  { prefix: 'en-XA', hreflang: null },
+  { prefix: 'en', hreflang: 'en' },
+  { prefix: 'ar', hreflang: 'ar' },
+] as const;
+
+/** The locale a path is served under, or `en` for an unprefixed path. */
+export function localeOfPath(path: string): string {
+  const [, first] = path.split('/').filter(Boolean);
+  const match = LOCALE_PREFIXES.find((entry) => entry.prefix === first);
+  return match?.prefix ?? 'en';
+}
+
+/**
+ * Strips the locale prefix from a path, yielding the canonical route path.
+ *
+ * `/ar/crop-pdf` -> `/crop-pdf`. An unprefixed path is returned unchanged, so
+ * the English route is its own canonical.
+ */
+export function canonicalPath(path: string): string {
+  const [head, ...rest] = path.split('/').filter(Boolean);
+  const prefixed = LOCALE_PREFIXES.some((entry) => entry.prefix === head);
+  return prefixed ? `/${rest.join('/')}` : path;
+}
+
+/**
+ * The `hreflang` set for one page: one alternate per real locale, each pointing
+ * at *that locale's* URL.
+ *
+ * The previous implementation reused `page.url.pathname` for every alternate,
+ * so on `/ar/crop-pdf` the `hreflang="en"` link pointed at the Arabic URL —
+ * declaring the Arabic page to be the English one. That was live on all 180
+ * localized pages and is the single worst signal this site emits to a crawler:
+ * it tells search engines the translations are all the same document.
+ *
+ * Each alternate is built from the canonical path plus that locale's prefix, so
+ * `/ar/crop-pdf` advertises `/crop-pdf`, `/en-XA/crop-pdf` and `/ar/crop-pdf`.
+ * `en-XA` is excluded — it is a test locale, and advertising it would invite
+ * indexing of padded pseudo-copy.
+ */
+export function hreflangLinks(path: string): ReadonlyArray<{ hreflang: string; href: string }> {
+  const base = canonicalPath(path);
+  return LOCALE_PREFIXES.filter((entry) => entry.hreflang !== null).map((entry) => ({
+    hreflang: entry.hreflang,
+    href: canonicalUrl(entry.prefix === 'en' ? base : `/${entry.prefix}${base}`),
+  }));
+}
 
 /** Absolute, normalised URL for a route path such as "/invoice-creator". */
 export function canonicalUrl(path: string): string {

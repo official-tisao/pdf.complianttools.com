@@ -70,6 +70,9 @@ export default [
       'scripts/**/*.mjs',
       'packages/**/*.test.mjs',
       'apps/relay/test/**/*.mjs',
+      // Contract suites under tests/ run in Node under `node --test`, and read
+      // the build output through `new URL(...)`, so they need the same globals.
+      'tests/**/*.mjs',
       'playwright.config.ts',
     ],
     languageOptions: {
@@ -86,6 +89,7 @@ export default [
         process: 'readonly',
         Response: 'readonly',
         setTimeout: 'readonly',
+        clearTimeout: 'readonly',
         performance: 'readonly',
         // A measurement harness times work inside `page.evaluate`, whose
         // callback body executes in the BROWSER, not in Node. These are that

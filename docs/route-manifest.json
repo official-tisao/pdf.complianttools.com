@@ -1,6 +1,6 @@
 {
   "generated": "by scripts/generate-route-manifest.mjs — do not hand-edit",
-  "routeCount": 76,
+  "routeCount": 126,
   "deadControls": [
     "/bookmarks",
     "/pdf-to-pdfa",
@@ -27,6 +27,13 @@
       "localized": false,
       "opBinding": null,
       "op": "add-text"
+    },
+    {
+      "path": "/ai-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
     },
     {
       "path": "/ai/chat-with-pdf",
@@ -92,8 +99,22 @@
       "op": "bates"
     },
     {
+      "path": "/bmp-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/bookmarks",
       "shell": "ToolWorkspace",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/cbz-to-pdf",
+      "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,
       "op": null
@@ -155,6 +176,13 @@
       "op": null
     },
     {
+      "path": "/csv-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/design-file-to-pdf",
       "shell": "ConversionTool",
       "localized": false,
@@ -164,6 +192,13 @@
     {
       "path": "/document-pack-builder",
       "shell": "FeaturePage",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/docx-to-pdf",
+      "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,
       "op": null
@@ -184,6 +219,13 @@
     },
     {
       "path": "/epub-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/epub-to-pdf",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,
@@ -225,6 +267,13 @@
       "op": "flatten"
     },
     {
+      "path": "/gif-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/halve-pages",
       "shell": "ToolWorkspace",
       "localized": false,
@@ -239,7 +288,21 @@
       "op": "headers-footers"
     },
     {
+      "path": "/heic-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/html-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/html-to-pdf",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,
@@ -267,6 +330,20 @@
       "op": null
     },
     {
+      "path": "/jpg-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/markdown-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/merge",
       "shell": "ToolWorkspace",
       "localized": false,
@@ -282,6 +359,34 @@
     },
     {
       "path": "/odf-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/odg-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/odp-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/ods-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/odt-to-pdf",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,
@@ -358,7 +463,49 @@
       "op": "overlay"
     },
     {
+      "path": "/pdf-to-cbz",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-csv",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-docx",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-epub",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-html",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/pdf-to-image",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-jpg",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,
@@ -372,8 +519,148 @@
       "op": null
     },
     {
+      "path": "/pdf-to-odg",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-odp",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-ods",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-odt",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-pdf-epub",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-pdf-html",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-pdf-image",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-pdf-markdown",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-pdf-odp",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-pdf-ods",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-pdf-odt",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-pdf-rtf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-pdf-txt",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/pdf-to-pdfa",
       "shell": "ToolWorkspace",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-png",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-pptx",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-rtf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-txt",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-xlsx",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-zip",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/png-to-pdf",
+      "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,
       "op": null
@@ -386,11 +673,25 @@
       "op": null
     },
     {
+      "path": "/pptx-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/protect-pdf",
       "shell": "PhaseCTool",
       "localized": false,
       "opBinding": null,
       "op": "protect"
+    },
+    {
+      "path": "/psd-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
     },
     {
       "path": "/qr-code",
@@ -463,6 +764,13 @@
       "op": "rotate"
     },
     {
+      "path": "/rtf-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/scan-to-pdf",
       "shell": "FeaturePage",
       "localized": false,
@@ -484,7 +792,21 @@
       "op": "split"
     },
     {
+      "path": "/svg-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/text-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/txt-to-pdf",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,
@@ -526,6 +848,13 @@
       "op": "watermark"
     },
     {
+      "path": "/webp-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/webpage-to-pdf",
       "shell": "FeaturePage",
       "localized": false,
@@ -534,6 +863,27 @@
     },
     {
       "path": "/word-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/xlsx-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/xml-einvoice-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/zip-to-pdf",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,

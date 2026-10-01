@@ -1,0 +1,330 @@
+{
+  "task": "P7-12",
+  "evidenceType": "structural SPCC check over every prerendered page in the build",
+  "rules": [
+    {
+      "id": "h1",
+      "title": "static H1",
+      "judgedBy": "built HTML"
+    },
+    {
+      "id": "description",
+      "title": "static meta description",
+      "judgedBy": "built HTML"
+    },
+    {
+      "id": "faq",
+      "title": "static FAQ",
+      "judgedBy": "built HTML"
+    },
+    {
+      "id": "fileInput",
+      "title": "real file input in served HTML",
+      "judgedBy": "built HTML"
+    },
+    {
+      "id": "dropZone",
+      "title": "drag/paste layered on at hydration",
+      "judgedBy": "built HTML"
+    },
+    {
+      "id": "reference",
+      "title": "zero-JS reference archetype",
+      "judgedBy": "built HTML"
+    },
+    {
+      "id": "engineChunk",
+      "title": "shared long-cached engine chunk",
+      "judgedBy": "built HTML"
+    },
+    {
+      "id": "sizeBudget",
+      "title": "per-route size budget",
+      "judgedBy": "scripts/measure-bundle.mjs"
+    },
+    {
+      "id": "canonical",
+      "title": "correct canonical/hreflang",
+      "judgedBy": "built HTML"
+    },
+    {
+      "id": "structuredData",
+      "title": "structured data, factual",
+      "judgedBy": "built HTML"
+    },
+    {
+      "id": "internalLinks",
+      "title": "internal links to recipe/batch",
+      "judgedBy": "built HTML"
+    },
+    {
+      "id": "lighthouse",
+      "title": "Lighthouse mobile >= 95",
+      "judgedBy": "scripts/measure-lighthouse.mjs"
+    }
+  ],
+  "pagesChecked": 456,
+  "pagesPassing": 456,
+  "pagesFailing": 0,
+  "outOfScope": [
+    {
+      "path": "/offline",
+      "reason": "static PWA shell, not a content page"
+    }
+  ],
+  "exemptions": [
+    {
+      "path": "/ai/escalations",
+      "reason": "lists escalation routes; it is an index, not a tool"
+    },
+    {
+      "path": "/ai/generate-pdf",
+      "reason": "generates a PDF from a prompt; there is no document to pick"
+    },
+    {
+      "path": "/ar/batch",
+      "reason": "accepts several PDFs through its own picker, not a single input"
+    },
+    {
+      "path": "/ar/bookmarks",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/ar/create-pdf",
+      "reason": "builds a PDF from a template; there is no document to pick"
+    },
+    {
+      "path": "/ar/design-file-to-pdf",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/ar/e-invoice",
+      "reason": "builds a PDF from form fields; there is no document to pick"
+    },
+    {
+      "path": "/ar/extract-images",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/ar/invoice-creator",
+      "reason": "builds a PDF from form fields; there is no document to pick"
+    },
+    {
+      "path": "/ar/other-formats-to-pdf",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/ar/pdf-to-image",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/ar/pdf-to-pdfa",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/ar/qr-code",
+      "reason": "encodes text typed into the page; there is no document to pick"
+    },
+    {
+      "path": "/ar/rasterize-pdf",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/ar/recipe",
+      "reason": "describes steps rather than accepting a document"
+    },
+    {
+      "path": "/ar/watch",
+      "reason": "grants access to a whole folder through the File System Access API; there is no single file to pick, and no folder may be read before permission is granted"
+    },
+    {
+      "path": "/ar/webpage-to-pdf",
+      "reason": "takes a URL and a Relay endpoint, not a document"
+    },
+    {
+      "path": "/batch",
+      "reason": "accepts several PDFs through its own picker, not a single input"
+    },
+    {
+      "path": "/bookmarks",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/connect-ai",
+      "reason": "configures a provider connection; it takes no document"
+    },
+    {
+      "path": "/create-pdf",
+      "reason": "builds a PDF from a template; there is no document to pick"
+    },
+    {
+      "path": "/design-file-to-pdf",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/e-invoice",
+      "reason": "builds a PDF from form fields; there is no document to pick"
+    },
+    {
+      "path": "/en/batch",
+      "reason": "accepts several PDFs through its own picker, not a single input"
+    },
+    {
+      "path": "/en/bookmarks",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en/create-pdf",
+      "reason": "builds a PDF from a template; there is no document to pick"
+    },
+    {
+      "path": "/en/design-file-to-pdf",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en/e-invoice",
+      "reason": "builds a PDF from form fields; there is no document to pick"
+    },
+    {
+      "path": "/en/extract-images",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en/invoice-creator",
+      "reason": "builds a PDF from form fields; there is no document to pick"
+    },
+    {
+      "path": "/en/other-formats-to-pdf",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en/pdf-to-image",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en/pdf-to-pdfa",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en/qr-code",
+      "reason": "encodes text typed into the page; there is no document to pick"
+    },
+    {
+      "path": "/en/rasterize-pdf",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en/recipe",
+      "reason": "describes steps rather than accepting a document"
+    },
+    {
+      "path": "/en/watch",
+      "reason": "grants access to a whole folder through the File System Access API; there is no single file to pick, and no folder may be read before permission is granted"
+    },
+    {
+      "path": "/en/webpage-to-pdf",
+      "reason": "takes a URL and a Relay endpoint, not a document"
+    },
+    {
+      "path": "/en-XA/batch",
+      "reason": "accepts several PDFs through its own picker, not a single input"
+    },
+    {
+      "path": "/en-XA/bookmarks",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en-XA/create-pdf",
+      "reason": "builds a PDF from a template; there is no document to pick"
+    },
+    {
+      "path": "/en-XA/design-file-to-pdf",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en-XA/e-invoice",
+      "reason": "builds a PDF from form fields; there is no document to pick"
+    },
+    {
+      "path": "/en-XA/extract-images",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en-XA/invoice-creator",
+      "reason": "builds a PDF from form fields; there is no document to pick"
+    },
+    {
+      "path": "/en-XA/other-formats-to-pdf",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en-XA/pdf-to-image",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en-XA/pdf-to-pdfa",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en-XA/qr-code",
+      "reason": "encodes text typed into the page; there is no document to pick"
+    },
+    {
+      "path": "/en-XA/rasterize-pdf",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en-XA/recipe",
+      "reason": "describes steps rather than accepting a document"
+    },
+    {
+      "path": "/en-XA/watch",
+      "reason": "grants access to a whole folder through the File System Access API; there is no single file to pick, and no folder may be read before permission is granted"
+    },
+    {
+      "path": "/en-XA/webpage-to-pdf",
+      "reason": "takes a URL and a Relay endpoint, not a document"
+    },
+    {
+      "path": "/extract-images",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/invoice-creator",
+      "reason": "builds a PDF from form fields; there is no document to pick"
+    },
+    {
+      "path": "/other-formats-to-pdf",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/pdf-to-image",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/pdf-to-pdfa",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/qr-code",
+      "reason": "encodes text typed into the page; there is no document to pick"
+    },
+    {
+      "path": "/rasterize-pdf",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/recipe",
+      "reason": "describes steps rather than accepting a document"
+    },
+    {
+      "path": "/watch",
+      "reason": "grants access to a whole folder through the File System Access API; there is no single file to pick, and no folder may be read before permission is granted"
+    },
+    {
+      "path": "/webpage-to-pdf",
+      "reason": "takes a URL and a Relay endpoint, not a document"
+    }
+  ],
+  "failures": []
+}

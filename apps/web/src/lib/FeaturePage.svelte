@@ -1,5 +1,5 @@
 <script lang="ts">
-  /* global HTMLInputElement, HTMLSelectElement, location, navigator */
+  /* global HTMLSelectElement, location, navigator */
   // Types are erased at build time, so the type-only import costs nothing. The
   // runtime imports use deep subpaths: the engine barrel re-exports every
   // module, so importing it eagerly would pull pdfjs, mammoth, exceljs and
@@ -13,6 +13,7 @@
   import { downloadBytes } from '$lib/download';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
   import { translate, type Locale } from '$lib/i18n';
+  import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import { getLocaleContext } from '../routes/__locale/context';
   import { page } from '$app/state';
 
@@ -77,8 +78,8 @@
   function download(bytes: Uint8Array, name: string, mime = 'application/pdf') {
     downloadBytes(bytes, name, mime);
   }
-  function selectFiles(event: Event) {
-    files = Array.from((event.currentTarget as HTMLInputElement).files ?? []);
+  function selectFiles(list: FileList | null) {
+    files = list ? Array.from(list) : [];
   }
   async function create() {
     // jspdf is ~950 KB. Only /create-pdf needs it, so it is loaded here
@@ -207,17 +208,25 @@
       onclick={qr}>{t('feature.qr.action', 'Export QR PDF')}</button
     >
   {:else if kind === 'scan'}
-    <label
-      >{t('feature.scan.label', 'Scan images')}
-      <input type="file" accept="image/png,image/jpeg" multiple onchange={selectFiles} /></label
-    ><button disabled={!files.length} onclick={scan}
+    <p class="field-label">{t('feature.scan.label', 'Scan images')}</p>
+    <FileDrop
+      accept="image/png,image/jpeg"
+      multiple
+      onchange={selectFiles}
+      label={t('feature.scan.drop', 'Drop images here or choose files')}
+    />
+    <button disabled={!files.length} onclick={scan}
       >{t('feature.scan.action', 'Assemble scan to PDF')}</button
     >
   {:else if kind === 'pack'}
-    <label
-      >{t('feature.pack.label', 'Documents to pack')}
-      <input type="file" accept="application/pdf,.pdf" multiple onchange={selectFiles} /></label
-    ><button disabled={!files.length} onclick={pack}
+    <p class="field-label">{t('feature.pack.label', 'Documents to pack')}</p>
+    <FileDrop
+      accept="application/pdf,.pdf"
+      multiple
+      onchange={selectFiles}
+      label={t('feature.pack.drop', 'Drop PDFs here or choose files')}
+    />
+    <button disabled={!files.length} onclick={pack}
       >{t('feature.pack.action', 'Build document pack')}</button
     >
   {:else if kind === 'webpage'}
@@ -236,10 +245,14 @@
       >{t('feature.webpage.action', 'Capture with Relay')}</button
     >
   {:else if kind === 'batch'}
-    <label
-      >{t('feature.batch.label', 'PDFs to process')}
-      <input type="file" accept="application/pdf,.pdf" multiple onchange={selectFiles} /></label
-    ><button disabled={!files.length} onclick={batch}
+    <p class="field-label">{t('feature.batch.label', 'PDFs to process')}</p>
+    <FileDrop
+      accept="application/pdf,.pdf"
+      multiple
+      onchange={selectFiles}
+      label={t('feature.batch.drop', 'Drop PDFs here or choose files')}
+    />
+    <button disabled={!files.length} onclick={batch}
       >{t('feature.batch.action', 'Run local batch')}</button
     >
     <p class="note">
@@ -296,6 +309,10 @@
     margin: auto;
     max-width: 960px;
     padding: 96px 40px 0;
+  }
+  .field-label {
+    font-weight: 600;
+    margin: 16px 0 6px;
   }
   .eyebrow {
     color: var(--color-muted);

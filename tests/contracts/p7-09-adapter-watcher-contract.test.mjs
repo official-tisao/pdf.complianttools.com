@@ -58,4 +58,3 @@ assert.strictEqual(
   true,
   'P7-09 CONTRACT TESTS PASSED — adapter + watcher; fixtures untouched',
 );
-/* global setTimeout, clearTimeout */

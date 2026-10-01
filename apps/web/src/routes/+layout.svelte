@@ -1,7 +1,8 @@
 <script lang="ts">
   import '@pdf-complianttools/ui/tokens.css';
   import { page } from '$app/state';
-  import { HREFLANG, canonicalUrl } from '$lib/seo';
+  import { canonicalPath, canonicalUrl, hreflangLinks } from '$lib/seo';
+  import ToolDirectory from '$lib/ToolDirectory.svelte';
 
   let { children } = $props();
 </script>
@@ -15,14 +16,17 @@
     output) — a conflict for crawlers. The description is therefore owned
     solely by the page: each tool component sets a specific one.
 
-    Canonical and hreflang DO live here, unlike the description. They are
-    derived purely from the route path, so every page computes the identical
-    value for itself, and deriving them once here means a new route cannot ship
-    without them.
+    Canonical and hreflang DO live here, unlike the description. Deriving them
+    once from the route path means a new route cannot ship without them.
+
+    The canonical is the *unprefixed* URL on every locale, so all three variants
+    of a page point at one document and the alternates below disambiguate it.
+    Pointing each locale at itself would tell a crawler there are three
+    competing documents rather than three translations of one.
   -->
-  <link rel="canonical" href={canonicalUrl(page.url.pathname)} />
-  {#each HREFLANG as entry (entry.hreflang)}
-    <link rel="alternate" hreflang={entry.hreflang} href={canonicalUrl(page.url.pathname)} />
+  <link rel="canonical" href={canonicalUrl(canonicalPath(page.url.pathname))} />
+  {#each hreflangLinks(page.url.pathname) as entry (entry.hreflang)}
+    <link rel="alternate" hreflang={entry.hreflang} href={entry.href} />
   {/each}
 </svelte:head>
 
@@ -52,6 +56,13 @@
   <span>Nothing uploaded for local tools.</span>
   <span aria-live="polite">{page.url.pathname}</span>
 </footer>
+
+<!--
+  Appendix E rule 9. Every page therefore links into the whole tool graph, not
+  just the 11 routes the header lists — which is what lets a crawler (and a
+  reader) reach a page it would not otherwise know exists.
+-->
+<ToolDirectory />
 
 <style>
   :global(body) {

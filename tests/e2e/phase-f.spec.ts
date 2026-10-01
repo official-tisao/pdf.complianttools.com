@@ -188,6 +188,11 @@ test('every prerendered page carries canonical, hreflang, and structured data', 
   // Appendix E / §7.6. Canonical and hreflang come from the layout so a new
   // route cannot ship without them; JSON-LD is per route. Checked on a spread
   // of component families: FeaturePage, ToolWorkspace, and a bespoke route.
+  //
+  // Two real locales are advertised (`en` and `ar`); `en-XA` is a CI-only
+  // pseudo-locale and is deliberately not emitted. This assertion was
+  // previously `toHaveCount(3)` — a count that passed while every href pointed
+  // at the current page, which is how the wrong-target bug survived CI.
   for (const route of ['/', '/invoice-creator', '/merge', '/compare-pdf', '/ocr-pdf']) {
     await page.goto(route);
     const canonical = page.locator('link[rel="canonical"]');
@@ -195,10 +200,36 @@ test('every prerendered page carries canonical, hreflang, and structured data', 
     expect(new URL((await canonical.getAttribute('href')) ?? '').pathname).toBe(
       new URL(page.url()).pathname,
     );
-    await expect(page.locator('link[rel="alternate"][hreflang]')).toHaveCount(3);
+
+    const alternates = page.locator('link[rel="alternate"][hreflang]');
+    await expect(alternates).toHaveCount(2);
+    const hrefs = await alternates.evaluateAll((links) =>
+      links.map((link) => ({
+        lang: link.getAttribute('hreflang'),
+        href: new URL(link.getAttribute('href') ?? '').pathname,
+      })),
+    );
+    // Each alternate must point at its own locale's URL, not this page's.
+    assertDistinctLocales(route, hrefs);
     await expect(page.locator('script[type="application/ld+json"]')).not.toHaveCount(0);
   }
 });
+
+/** Every locale must resolve to a distinct path — the bug this pins. */
+function assertDistinctLocales(route: string, hrefs: Array<{ lang: string | null; href: string }>) {
+  const paths = hrefs.map((entry) => entry.href);
+  assert.equal(
+    new Set(paths).size,
+    paths.length,
+    `${route}: every hreflang points at the same URL (${paths.join(', ')})`,
+  );
+  for (const { lang, href } of hrefs) {
+    assert.ok(
+      href === `/${lang}${route}` || href === route,
+      `${route}: hreflang="${lang}" points at ${href}`,
+    );
+  }
+}
 
 test('the JSON-LD is valid, factual structured data', async ({ page }) => {
   // The claim is deliberately free of ratings and review counts: a rich result

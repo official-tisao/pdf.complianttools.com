@@ -1,6 +1,8 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
+  import { page } from '$app/state';
   import {
     createAiCallPlan,
     createDocumentContext,
@@ -22,6 +24,10 @@
 
   let { kind, title, description }: { kind: ToolKind; title: string; description: string } =
     $props();
+
+  const structuredData = $derived(
+    softwareApplicationLd({ name: title, description, path: page.url.pathname }),
+  );
 
   let file = $state<File | undefined>();
   let prompt = $state('');
@@ -167,7 +173,17 @@
   }
 </script>
 
-<svelte:head><title>{title}</title><meta name="description" content={description} /></svelte:head>
+<svelte:head>
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <!--
+    Appendix E requires structured data on every prerendered page. This shell
+    emitted only a title and description, which the SPCC check surfaced: four AI
+    routes were shipping with no JSON-LD at all.
+  -->
+  <!-- safe-html-reviewed: JSON-LD needs a script element Svelte cannot emit; the payload is JSON.stringify from $lib/seo with "<" escaped, tested in scripts/seo.test.mjs -->
+  {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
+</svelte:head>
 
 <section class="page">
   <p class="eyebrow">BYOK AI · LOCAL FIRST</p>
