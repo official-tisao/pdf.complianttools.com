@@ -43,6 +43,10 @@ jobs:
       - run: pnpm verify:licenses
       - run: pnpm verify:assets
       - run: pnpm verify:trademarks
+      - run: pnpm verify:routes
+      - run: pnpm verify:conversions
+      - run: pnpm verify:locales
+      - run: pnpm verify:directory
       - run: pnpm verify:plan-sync -- --base="${{ github.event.pull_request.base.sha || github.event.before }}"
       - run: pnpm build
 
@@ -159,17 +163,58 @@ jobs:
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm verify:lighthouse
+      - name: Check every prerendered page against Appendix E (SPCC)
+        run: node scripts/spcc.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: p7-03-lighthouse-evidence
           path: docs/release-gate/P7-03-lighthouse-evidence.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p7-12-spcc-report
+          path: docs/release-gate/P7-12-spcc-report.json
 
   accessibility:
-    # STCC #10 (`axe` zero violations, keyboard operability) and STCC #11 (the
-    # prerendered `ar` and `en-XA` locale variants). The audit runs against the
-    # hydrated page, because axe can only see the DOM the browser built, not the
-    # prerendered shell.
+    # STCC #10 (`axe` zero violations on EVERY route, keyboard operability) and
+    # STCC #11 (the prerendered `ar` and `en-XA` locale variants).
+    #
+    # The audit runs against the hydrated page: every route is prerendered, so
+    # the served HTML is complete before any client code runs and `axe` would
+    # otherwise audit markup the browser discards on mount. The spec waits on the
+    # `data-hydrated` signal the layout sets.
+    #
+    # `pnpm verify:routes` runs first because the spec enumerates
+    # `docs/route-manifest.json`: if that file is stale, the sweep would quietly
+    # cover fewer routes than the site ships and still report green. This job
+    # grew from 8 tests to 133 when P7-13 replaced a hand-written two-route list
+    # with the manifest, so it is sharded four ways to stay inside the runner
+    # budget.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify:routes
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test tests/e2e/accessibility.spec.ts --shard=1/4
+      - run: pnpm exec playwright test tests/e2e/accessibility.spec.ts --shard=2/4
+      - run: pnpm exec playwright test tests/e2e/accessibility.spec.ts --shard=3/4
+      - run: pnpm exec playwright test tests/e2e/accessibility.spec.ts --shard=4/4
+
+  i18n:
+    # STCC #11. This job used to run the identical command as `accessibility`,
+    # so nothing about i18n was actually gated. It now runs its own spec, which
+    # asserts translated copy on `/ar` and padding/overflow behaviour on
+    # `/en-XA` across every localizable route.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -183,7 +228,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm exec playwright test tests/e2e/accessibility.spec.ts
+      - run: pnpm verify:locales
+      - run: pnpm exec playwright test tests/e2e/i18n.spec.ts
 
   workflows:
     # Every remaining e2e spec. `phase-f.spec.ts` is the largest file in the

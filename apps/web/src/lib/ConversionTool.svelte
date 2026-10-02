@@ -2,6 +2,8 @@
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
+  import { translate, type Locale } from '$lib/i18n';
+  import { getLocaleContext } from '../routes/__locale/context';
   import { page as route } from '$app/state';
 
   let {
@@ -14,6 +16,7 @@
     available = true,
     unavailableReason = '',
     note = '',
+    locale: localeProp,
   }: {
     title: string;
     eyebrow?: string;
@@ -24,7 +27,17 @@
     available?: boolean;
     unavailableReason?: string;
     note?: string;
+    /**
+     * The active UI locale, supplied by the `[locale]` layout via context.
+     * Optional because English routes sit outside that tree and resolve to the
+     * `en` source locale without changing.
+     */
+    locale?: Locale;
   } = $props();
+
+  const locale = $derived(localeProp ?? getLocaleContext());
+  const t = (key: string, fallback: string, ...values: Array<string | number | undefined>) =>
+    translate(locale, key, fallback, ...values);
 
   let files = $state<File[]>([]);
   let busy = $state(false);
@@ -62,48 +75,82 @@
       message =
         result.warnings.length > 0
           ? result.warnings.join(' ')
-          : 'Conversion complete. Your file stayed local.';
+          : t('shell.convert.done', 'Conversion complete. Your file stayed local.');
     } catch (caught) {
       error =
-        caught instanceof Error ? caught.message : 'The conversion could not be completed locally.';
+        caught instanceof Error
+          ? caught.message
+          : t('shell.convert.failed', 'The conversion could not be completed locally.');
     } finally {
       busy = false;
     }
   }
+
+  /**
+   * Hydration readiness — see the note in `ToolWorkspace.svelte`. Routes are
+   * prerendered, so an audit that runs against the served shell measures
+   * markup the browser discards on mount.
+   */
+  // NOT `$derived(true)`, which the linter prefers: a constant derived value
+  // is also true during prerendering, so `data-hydrated="true"` would be
+  // baked into the served HTML and the flag would mean nothing. Verified in
+  // the build output — all 458 prerendered pages carry `data-hydrated="false"`.
+  // The flag has to flip on the client, which needs an effect.
+  // eslint-disable-next-line svelte/prefer-writable-derived
+  let hydrated = $state(false);
+  $effect(() => {
+    hydrated = true;
+  });
 </script>
 
 <svelte:head>
-  <title>{title} locally</title>
+  <title>{t('shell.title.locally', '{value} locally', title)}</title>
   <meta name="description" content={description} />
   <!-- safe-html-reviewed: JSON-LD needs a script element Svelte cannot emit; the payload is JSON.stringify from $lib/seo with "<" escaped, tested in scripts/seo.test.mjs -->
   {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
 </svelte:head>
 
-<section class="tool-page">
+<section class="tool-page" data-hydrated={hydrated ? 'true' : 'false'}>
   <p class="eyebrow">{eyebrow}</p>
   <h1>{title}</h1>
   <p class="lede">{description}</p>
-  <div class="trust-note"><strong>Local-first.</strong> Nothing is uploaded for this path.</div>
+  <div class="trust-note">
+    <strong>{t('shell.trust.strong', 'Local-first.')}</strong>
+    {t('shell.trust.body', 'Nothing is uploaded for this path.')}
+  </div>
   {#if available}
     <FileDrop
       {accept}
       onchange={selectFiles}
-      label={`Drop a file here or choose ${format.toUpperCase()} input`}
+      label={t('shell.convert.drop', `Drop a file here or choose ${format.toUpperCase()} input`)}
     />
     <div class="toolbar">
-      <span>{files.length} file{files.length === 1 ? '' : 's'} ready</span>
+      <span
+        >{t(
+          files.length === 1 ? 'shell.files.ready' : 'shell.files.readyPlural',
+          files.length === 1 ? '1 file ready locally.' : `${files.length} files ready locally.`,
+          files.length,
+        )}</span
+      >
       <Button disabled={files.length === 0 || busy} onclick={convert}
-        >{busy ? 'Converting...' : 'Convert locally'}</Button
+        >{busy
+          ? t('shell.convert.busy', 'Converting...')
+          : t('shell.action.convert', 'Convert locally')}</Button
       >
     </div>
     {#if message}<p class="message" role="status">{message}</p>{/if}
     {#if error}<p class="error" role="alert">{error}</p>{/if}
   {:else}
     <div class="unavailable" role="status">
-      <h2>Not available in the clean local build</h2>
+      <h2>{t('shell.convert.unavailableHeading', 'Not available in the clean local build')}</h2>
       <p>{unavailableReason}</p>
       <p>{note}</p>
-      <p>The original file is kept on your device. Choose the suggested export path and retry.</p>
+      <p>
+        {t(
+          'shell.convert.unavailableHelp',
+          'The original file is kept on your device. Choose the suggested export path and retry.',
+        )}
+      </p>
     </div>
   {/if}
 </section>

@@ -1,8 +1,25 @@
 <script lang="ts">
   import AiEscalationList from '$lib/AiEscalationList.svelte';
+  import SeoTags from '$lib/SeoTags.svelte';
 </script>
 
-<svelte:head><title>Document AI escalations</title></svelte:head>
+<svelte:head>
+  <title>Document AI escalations</title>
+  <!--
+    `SeoTags` emits only JSON-LD by design — canonical and hreflang come from
+    the layout — so the description this route needs has to be its own.
+  -->
+  <meta
+    name="description"
+    content="The registered AI escalation routes for the document tools, kept visible while their deterministic local paths run first."
+  />
+</svelte:head>
+<!-- Appendix E requires structured data on every prerendered page; the SPCC
+  check is what surfaced that this route shipped with a title alone. -->
+<SeoTags
+  name="Document AI escalations"
+  description="The registered AI escalation routes for the document tools, kept visible while their deterministic local paths run first."
+/>
 <section class="page">
   <p class="eyebrow">LOCAL FIRST · TIER 3 OPTIONAL</p>
   <h1>Document AI escalations</h1>

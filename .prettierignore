@@ -8,3 +8,9 @@ playwright-report
 test-results
 saas-template
 pnpm-lock.yaml
+
+# Generated. prettier collapses short arrays onto one line while the generator
+# writes them expanded, so formatting the file and regenerating it disagree and
+# the pre-commit hook can never pass. The generator is the only writer.
+docs/route-manifest.json
+docs/THIRD-PARTY-LICENSES-SHIPPED.md

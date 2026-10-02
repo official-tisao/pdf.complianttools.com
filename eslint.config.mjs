@@ -2,7 +2,7 @@ import eslint from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import svelte from 'eslint-plugin-svelte';
 import tseslint from 'typescript-eslint';
-import { noEngineFetch, noUnsafeDom } from './scripts/eslint-rules.mjs';
+import { noEngineFetch, noUntranslatedCopy, noUnsafeDom } from './scripts/eslint-rules.mjs';
 
 export default [
   {
@@ -39,6 +39,10 @@ export default [
         FileList: 'readonly',
         MediaProvider: 'readonly',
         MouseEvent: 'readonly',
+        // PageGrid measures its rendered column count so the keyboard handlers
+        // agree with the stylesheet's responsive breakpoints.
+        HTMLDivElement: 'readonly',
+        getComputedStyle: 'readonly',
       },
     },
     rules: {
@@ -67,6 +71,9 @@ export default [
       'scripts/**/*.mjs',
       'packages/**/*.test.mjs',
       'apps/relay/test/**/*.mjs',
+      // Contract suites under tests/ run in Node under `node --test`, and read
+      // the build output through `new URL(...)`, so they need the same globals.
+      'tests/**/*.mjs',
       'playwright.config.ts',
     ],
     languageOptions: {
@@ -83,6 +90,7 @@ export default [
         process: 'readonly',
         Response: 'readonly',
         setTimeout: 'readonly',
+        clearTimeout: 'readonly',
         performance: 'readonly',
         // A measurement harness times work inside `page.evaluate`, whose
         // callback body executes in the BROWSER, not in Node. These are that
@@ -100,12 +108,17 @@ export default [
         rules: {
           'no-unsafe-dom': noUnsafeDom,
           'no-engine-fetch': noEngineFetch,
+          'no-untranslated-copy': noUntranslatedCopy,
         },
       },
     },
     rules: {
       'project-security/no-unsafe-dom': 'error',
       'project-security/no-engine-fetch': 'error',
+      // STCC #11: `en-XA` cannot detect a literal typed straight into a template,
+      // because pseudo() is applied to the fallback passed to translate(). This
+      // catches that at authorship instead of after it ships.
+      'project-security/no-untranslated-copy': 'error',
     },
   },
   prettier,

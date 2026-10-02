@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import PageGrid from '@pdf-complianttools/ui/PageGrid.svelte';
   import '$lib/configure-pdfjs';
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import {
@@ -41,6 +42,7 @@
   let matches = $state<Awaited<ReturnType<typeof searchPdfText>>>([]);
   let status = $state('Choose a PDF to view locally.');
   let document = $state<Awaited<ReturnType<typeof pdfjs.getDocument>['promise']>>();
+  let thumbnailKey = $state('');
   let loadingTask: ReturnType<typeof pdfjs.getDocument> | undefined;
 
   function flatten(items: readonly PdfOutlineItem[], level = 0): FlatOutline[] {
@@ -62,11 +64,25 @@
     status = `Page ${currentPage} of ${document.numPages}. Local viewer ready.`;
   }
 
+  async function renderThumbnail(pageNumber: number): Promise<string> {
+    if (!document) return '';
+    const page = await document.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 0.22 });
+    const thumbnail = globalThis.document.createElement('canvas');
+    thumbnail.width = Math.ceil(viewport.width);
+    thumbnail.height = Math.ceil(viewport.height);
+    const context = thumbnail.getContext('2d');
+    if (!context) return '';
+    await page.render({ canvas: thumbnail, canvasContext: context, viewport }).promise;
+    return thumbnail.toDataURL('image/png');
+  }
+
   async function selectFile(list: FileList | null) {
     const file = list?.[0];
     if (!file) return;
     try {
       bytes = new Uint8Array(await file.arrayBuffer());
+      thumbnailKey = `${file.name}:${file.size}:${file.lastModified}`;
       loadingTask?.destroy();
       loadingTask = (await loadPdfJs()).getDocument({ data: bytes });
       document = await loadingTask.promise;
@@ -97,9 +113,25 @@
   }
 
   onDestroy(() => loadingTask?.destroy());
+
+  /** Hydration readiness — see the note in `ToolWorkspace.svelte`. */
+  // NOT `$derived(true)`, which the linter prefers: a constant derived value
+  // is also true during prerendering, so `data-hydrated="true"` would be
+  // baked into the served HTML and the flag would mean nothing. Verified in
+  // the build output — all 458 prerendered pages carry `data-hydrated="false"`.
+  // The flag has to flip on the client, which needs an effect.
+  // eslint-disable-next-line svelte/prefer-writable-derived
+  let hydrated = $state(false);
+  $effect(() => {
+    hydrated = true;
+  });
 </script>
 
-<section class="viewer" aria-labelledby="viewer-heading">
+<section
+  class="viewer"
+  aria-labelledby="viewer-heading"
+  data-hydrated={hydrated ? 'true' : 'false'}
+>
   <div class="intro">
     <p class="eyebrow">LOCAL READER</p>
     <h1 id="viewer-heading">PDF viewer</h1>
@@ -152,6 +184,19 @@
   </div>
   <div class="viewer-layout">
     <aside class="outline" aria-labelledby="outline-heading">
+      {#if document}
+        <h2 id="pages-heading">Pages</h2>
+        <PageGrid
+          pageCount={document.numPages}
+          selected={[currentPage]}
+          {thumbnailKey}
+          thumbnailLoader={renderThumbnail}
+          onselect={(pageNumber) => {
+            currentPage = pageNumber;
+            void renderPage();
+          }}
+        />
+      {/if}
       <h2 id="outline-heading">Outline</h2>
       {#if outline.length}
         <ul>
@@ -179,7 +224,16 @@
           onchange={() => void renderPage()}
         />
       </div>
-      <div class="page-stage" aria-label="Rendered PDF page">
+      <!--
+        `role="img"` is load-bearing, not decoration. `aria-label` on a bare
+        `<div>` is prohibited (axe `aria-prohibited-attr`, serious): a div has
+        no role that can carry an accessible name, so the label was silently
+        dropped and the canvas — the page's entire content — was unnamed to a
+        screen reader. Naming it as an image is also the honest description:
+        the rendered page is pixels, and the selectable text lives in the
+        outline panel beside it.
+      -->
+      <div class="page-stage" role="img" aria-label="Rendered PDF page">
         <canvas bind:this={canvas}></canvas>
       </div>
       {#if matches.length}

@@ -1,6 +1,6 @@
 {
   "task": "P7-03",
-  "date": "2026-09-29",
+  "date": "2026-10-01",
   "evidenceType": "Lighthouse mobile audit of the production build",
   "environment": {
     "lighthouse": "13.5.0",
@@ -12,79 +12,21 @@
       "route": "/",
       "categories": {
         "performance": {
-          "score": 100
-        },
-        "accessibility": {
-          "score": 100
-        },
-        "best-practices": {
-          "score": 96
-        },
-        "seo": {
-          "score": 100
-        }
-      },
-      "worstCategory": 96,
-      "status": "PASS",
-      "failing": [
-        {
-          "id": "errors-in-console",
-          "title": "Browser errors were logged to the console",
-          "score": 0
-        },
-        {
-          "id": "network-dependency-tree-insight",
-          "title": "Network dependency tree",
-          "score": 0
-        },
-        {
-          "id": "render-blocking-insight",
-          "title": "Render-blocking requests",
-          "score": 0.5,
-          "items": [
-            {
-              "wastedMs": 302
-            },
-            {
-              "wastedMs": 152
-            },
-            {
-              "wastedMs": 302
-            }
-          ]
-        },
-        {
-          "id": "first-contentful-paint",
-          "title": "First Contentful Paint",
-          "score": 0.97,
-          "displayValue": "1.4 s"
-        }
-      ]
-    },
-    {
-      "route": "/invoice-creator",
-      "categories": {
-        "performance": {
           "score": 99
         },
         "accessibility": {
           "score": 100
         },
         "best-practices": {
-          "score": 96
+          "score": 100
         },
         "seo": {
           "score": 100
         }
       },
-      "worstCategory": 96,
+      "worstCategory": 99,
       "status": "PASS",
       "failing": [
-        {
-          "id": "errors-in-console",
-          "title": "Browser errors were logged to the console",
-          "score": 0
-        },
         {
           "id": "network-dependency-tree-insight",
           "title": "Network dependency tree",
@@ -96,21 +38,27 @@
           "score": 0.5,
           "items": [
             {
-              "wastedMs": 302
+              "wastedMs": 305
             },
             {
-              "wastedMs": 302
+              "wastedMs": 305
             },
             {
-              "wastedMs": 152
+              "wastedMs": 155
             }
           ]
         },
         {
           "id": "first-contentful-paint",
           "title": "First Contentful Paint",
-          "score": 0.95,
+          "score": 0.93,
           "displayValue": "1.6 s"
+        },
+        {
+          "id": "max-potential-fid",
+          "title": "Max Potential First Input Delay",
+          "score": 0.98,
+          "displayValue": "90 ms"
         },
         {
           "id": "largest-contentful-paint",
@@ -121,28 +69,34 @@
       ]
     },
     {
-      "route": "/merge",
+      "route": "/invoice-creator",
       "categories": {
         "performance": {
-          "score": 100
+          "score": 97
         },
         "accessibility": {
           "score": 100
         },
         "best-practices": {
-          "score": 96
+          "score": 100
         },
         "seo": {
           "score": 100
         }
       },
-      "worstCategory": 96,
+      "worstCategory": 97,
       "status": "PASS",
       "failing": [
         {
-          "id": "errors-in-console",
-          "title": "Browser errors were logged to the console",
-          "score": 0
+          "id": "unused-javascript",
+          "title": "Reduce unused JavaScript",
+          "score": 0,
+          "displayValue": "Est savings of 21 KiB",
+          "items": [
+            {
+              "wastedMs": 29420
+            }
+          ]
         },
         {
           "id": "network-dependency-tree-insight",
@@ -153,23 +107,103 @@
           "id": "render-blocking-insight",
           "title": "Render-blocking requests",
           "score": 0.5,
+          "displayValue": "Est savings of 10 ms",
           "items": [
             {
-              "wastedMs": 302
+              "wastedMs": 305
             },
             {
-              "wastedMs": 302
+              "wastedMs": 305
             },
             {
-              "wastedMs": 152
+              "wastedMs": 305
             }
           ]
         },
         {
           "id": "first-contentful-paint",
           "title": "First Contentful Paint",
+          "score": 0.82,
+          "displayValue": "2.1 s"
+        },
+        {
+          "id": "largest-contentful-paint",
+          "title": "Largest Contentful Paint",
           "score": 0.96,
-          "displayValue": "1.5 s"
+          "displayValue": "2.1 s"
+        },
+        {
+          "id": "speed-index",
+          "title": "Speed Index",
+          "score": 0.99,
+          "displayValue": "2.1 s"
+        },
+        {
+          "id": "interactive",
+          "title": "Time to Interactive",
+          "score": 0.99,
+          "displayValue": "2.1 s"
+        }
+      ]
+    },
+    {
+      "route": "/merge",
+      "categories": {
+        "performance": {
+          "score": 99
+        },
+        "accessibility": {
+          "score": 100
+        },
+        "best-practices": {
+          "score": 100
+        },
+        "seo": {
+          "score": 100
+        }
+      },
+      "worstCategory": 99,
+      "status": "PASS",
+      "failing": [
+        {
+          "id": "network-dependency-tree-insight",
+          "title": "Network dependency tree",
+          "score": 0
+        },
+        {
+          "id": "render-blocking-insight",
+          "title": "Render-blocking requests",
+          "score": 0,
+          "displayValue": "Est savings of 100 ms",
+          "items": [
+            {
+              "wastedMs": 306
+            },
+            {
+              "wastedMs": 306
+            },
+            {
+              "wastedMs": 306
+            }
+          ]
+        },
+        {
+          "id": "first-contentful-paint",
+          "title": "First Contentful Paint",
+          "score": 0.92,
+          "displayValue": "1.7 s"
+        },
+        {
+          "id": "largest-contentful-paint",
+          "title": "Largest Contentful Paint",
+          "score": 0.99,
+          "displayValue": "1.7 s"
+        },
+        {
+          "id": "max-potential-fid",
+          "title": "Max Potential First Input Delay",
+          "score": 0.99,
+          "displayValue": "70 ms"
         }
       ]
     }

@@ -26,6 +26,7 @@
   eyebrow="ORGANIZE"
   description="Split a PDF by page count or ranges, entirely in your browser."
   options={fieldsFor('split')}
+  actionKey="shell.action.split"
   actionLabel="Split PDF"
   onrun={split}
 />

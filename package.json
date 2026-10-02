@@ -17,7 +17,7 @@
     "prepare": "simple-git-hooks",
     "test": "turbo run test --concurrency=1 && pnpm test:unit:scripts",
     "test:e2e": "playwright test",
-    "test:unit": "node --test --test-timeout=120000 --test-force-exit scripts/*.test.mjs packages/engine/test/*.test.mjs",
+    "test:unit": "node --test --test-timeout=120000 --test-force-exit scripts/*.test.mjs packages/engine/test/*.test.mjs tests/contracts/dead-control-gate.test.mjs tests/contracts/format-pairs.test.mjs tests/contracts/seo-locale.test.mjs tests/contracts/sitemap.test.mjs tests/contracts/spcc.test.mjs tests/contracts/tool-directory.test.mjs",
     "test:unit:scripts": "node --test --test-timeout=120000 --test-force-exit scripts/*.test.mjs",
     "test:latency": "node scripts/measure-latency.mjs",
     "measure:skew": "node scripts/measure-skew.mjs",
@@ -26,12 +26,23 @@
     "verify:assets": "node scripts/verify-assets.mjs",
     "verify:licenses": "node scripts/verify-licenses.mjs",
     "verify:plan-sync": "node scripts/check-plan-sync.mjs",
+    "verify:routes": "node scripts/generate-route-manifest.mjs --check",
+    "verify:locales": "node scripts/generate-locale-routes.mjs --check",
     "verify:source-safety": "node scripts/source-safety.mjs",
     "verify:trademarks": "node scripts/verify-trademarks.mjs",
     "verify:latency": "node scripts/measure-latency.mjs",
     "verify:bundle": "node scripts/measure-bundle.mjs",
     "verify:lighthouse": "node scripts/measure-lighthouse.mjs",
-    "verify": "pnpm format:check && pnpm lint && pnpm verify:source-safety && pnpm typecheck && pnpm test && pnpm verify:licenses && pnpm verify:assets && pnpm verify:trademarks && pnpm verify:plan-sync",
+    "generate:routes": "node scripts/generate-route-manifest.mjs",
+    "generate:locales": "node scripts/generate-locale-routes.mjs",
+    "progress": "node scripts/plan-truth.mjs",
+    "verify": "pnpm format:check && pnpm lint && pnpm verify:source-safety && pnpm typecheck && pnpm test && pnpm verify:licenses && pnpm verify:assets && pnpm verify:trademarks && pnpm verify:routes && pnpm verify:conversions && pnpm verify:locales && pnpm verify:plan-sync",
+    "generate:conversions": "node scripts/generate-conversion-routes.mjs",
+    "verify:conversions": "node scripts/generate-conversion-routes.mjs --check",
+    "generate:sitemap": "node scripts/generate-sitemap.mjs",
+    "verify:spcc": "node scripts/spcc.mjs",
+    "generate:directory": "node scripts/generate-tool-directory.mjs",
+    "verify:directory": "node scripts/check-directory-fresh.mjs",
     "measure:batch-budget": "node scripts/measure-batch-budget.mjs"
   },
   "devDependencies": {
@@ -57,6 +68,11 @@
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm exec lint-staged"
+  },
+  "pnpm": {
+    "overrides": {
+      "unzipper": "0.11.3"
+    }
   },
   "lint-staged": {
     "*.{js,mjs,ts,svelte}": "eslint --max-warnings=0",

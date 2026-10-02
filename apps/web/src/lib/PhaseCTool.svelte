@@ -1,6 +1,7 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import SignaturePad from '$lib/SignaturePad.svelte';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
   // Aliased: this component already uses `page` for the target PDF page number.
   import { page as route } from '$app/state';
@@ -32,7 +33,22 @@
     description,
     operation,
     accept = '.pdf,application/pdf',
-  }: { title: string; description: string; operation: PhaseCOperation; accept?: string } = $props();
+    locale: localeProp,
+  }: {
+    title: string;
+    description: string;
+    operation: PhaseCOperation;
+    accept?: string;
+    /**
+     * The active UI locale, supplied by the `[locale]` layout via context.
+     * English routes sit outside that tree and resolve to `en` without change.
+     */
+    locale?: Locale;
+  } = $props();
+
+  const locale = $derived(localeProp ?? getLocaleContext());
+  const t = (key: string, fallback: string, ...values: Array<string | number | undefined>) =>
+    translate(locale, key, fallback, ...values);
 
   let files = $state<File[]>([]);
   let busy = $state(false);
@@ -42,7 +58,21 @@
   let downloadName = $state('edited.pdf');
   let find = $state('');
   let replacement = $state('');
-  let text = $state('Added locally');
+  let signatureImage = $state<Uint8Array | undefined>();
+  let uploadedSignature = $state<File>();
+  /**
+   * Shared by the `sign`, `watermark`, `fill-form`, and `add-text` tools.
+   *
+   * It must start EMPTY. It previously shipped pre-filled with `'Added locally'`,
+   * which was wrong twice over: a keyboard or screen-reader user who tabbed into
+   * the field and typed got `Added locallyA. Signer` concatenated onto the front,
+   * because a text input appends at the caret; and the pre-filled string was
+   * passed straight through as document content by `add-text`, `watermark`, and
+   * `fill-form`, so a user who never touched the field exported a PDF stamped
+   * with the placeholder. Each call site keeps its own fallback (`text || 'DRAFT'`)
+   * for the empty case, which is the behaviour that was actually intended.
+   */
+  let text = $state('');
   let note = $state('');
   let recipients = $state('recipient@example.test');
   let threshold = $state(32);
@@ -61,6 +91,11 @@
     downloadHref = undefined;
   }
 
+  function selectSignature(list: FileList | null) {
+    uploadedSignature = list?.[0];
+    signatureImage = undefined;
+  }
+
   function save(bytes: Uint8Array, name: string, type: string) {
     const url = globalThis.URL.createObjectURL(
       new globalThis.Blob([bytes.buffer as ArrayBuffer], { type }),
@@ -72,18 +107,22 @@
   async function run() {
     const file = files[0];
     if (!file && operation !== 'password-generator') {
-      error = 'Choose a local file first. Nothing is uploaded.';
+      error = t('phase.error.noFile', 'Choose a local file first. Nothing is uploaded.');
       return;
     }
     busy = true;
     error = '';
-    status = 'Working locally…';
+    status = t('shell.status.working', 'Working locally…');
     try {
       const engine = await import('@pdf-complianttools/engine');
       const bytes = file ? new Uint8Array(await file.arrayBuffer()) : undefined;
       if (operation === 'password-generator') {
         const generated = engine.generateSecurePassword({ length: 24, symbols: true });
-        status = `Generated a local password with about ${generated.entropyBits} bits of entropy. Copy it from this page; it is not stored.`;
+        status = t(
+          'phase.status.password',
+          'Generated a local password with about {value} bits of entropy. Copy it from this page; it is not stored.',
+          generated.entropyBits,
+        );
         note = generated.password;
       } else if (operation === 'editor') {
         const output = await engine.editTextRun(bytes!, {
@@ -93,8 +132,10 @@
           fallback: { page, text, x: 72, y: 72, size: 12 },
         });
         save(output, 'edited.pdf', 'application/pdf');
-        status =
-          'Text edit exported locally. If the font could not be edited in place, the engine used the labelled text-box remedy.';
+        status = t(
+          'phase.status.edit',
+          'Text edit exported locally. If the font could not be edited in place, the engine used the labelled text-box remedy.',
+        );
       } else if (operation === 'annotate') {
         const output = await engine.addAnnotation(bytes!, {
           page,
@@ -103,17 +144,17 @@
           contents: note || 'Local annotation',
         });
         save(output, 'annotated.pdf', 'application/pdf');
-        status = 'Standard PDF annotation exported locally.';
+        status = t('phase.status.annotate', 'Standard PDF annotation exported locally.');
       } else if (operation === 'add-text') {
         save(
           await engine.addTextToPdf(bytes!, { page, text, x: 72, y: 72, size: 14 }),
           'add-text.pdf',
           'application/pdf',
         );
-        status = 'Text box exported locally.';
+        status = t('phase.status.addText', 'Text box exported locally.');
       } else if (operation === 'add-image') {
         const image = files[1];
-        if (!image) throw new Error('Choose a PDF and a PNG/JPEG image.');
+        if (!image) throw new Error(t('phase.error.image', 'Choose a PDF and a PNG/JPEG image.'));
         save(
           await engine.addImageToPdf(bytes!, new Uint8Array(await image.arrayBuffer()), {
             page,
@@ -125,7 +166,7 @@
           'add-image.pdf',
           'application/pdf',
         );
-        status = 'Image placed locally.';
+        status = t('phase.status.addImage', 'Image placed locally.');
       } else if (operation === 'headers-footers') {
         save(
           await engine.addHeadersFooters(bytes!, {
@@ -135,7 +176,7 @@
           'headers-footers.pdf',
           'application/pdf',
         );
-        status = 'Header/footer tokens expanded locally.';
+        status = t('phase.status.headers', 'Header/footer tokens expanded locally.');
       } else if (operation === 'page-numbers') {
         save(
           await engine.addPageNumbers(bytes!, {
@@ -145,23 +186,24 @@
           'page-numbers.pdf',
           'application/pdf',
         );
-        status = 'Page numbers exported locally.';
+        status = t('phase.status.pageNumbers', 'Page numbers exported locally.');
       } else if (operation === 'watermark') {
         save(
           await engine.addWatermark(bytes!, { text: text || 'DRAFT', opacity: 0.25, rotation: 45 }),
           'watermarked.pdf',
           'application/pdf',
         );
-        status = 'Watermark exported locally.';
+        status = t('phase.status.watermark', 'Watermark exported locally.');
       } else if (operation === 'overlay') {
         const overlay = files[1];
-        if (!overlay) throw new Error('Choose a base PDF and an overlay PDF.');
+        if (!overlay)
+          throw new Error(t('phase.error.overlay', 'Choose a base PDF and an overlay PDF.'));
         save(
           await engine.overlayPdf(bytes!, new Uint8Array(await overlay.arrayBuffer())),
           'overlay.pdf',
           'application/pdf',
         );
-        status = 'PDF overlay exported locally.';
+        status = t('phase.status.overlay', 'PDF overlay exported locally.');
       } else if (operation === 'create-form') {
         save(
           await engine.createFormPdf(bytes!, [
@@ -171,24 +213,30 @@
           'fillable-form.pdf',
           'application/pdf',
         );
-        status = 'AcroForm fields created locally.';
+        status = t('phase.status.createForm', 'AcroForm fields created locally.');
       } else if (operation === 'fill-form') {
         save(
           await engine.fillFormPdf(bytes!, { name: text || 'Filled locally', agree: true }),
           'filled-form.pdf',
           'application/pdf',
         );
-        status = 'Supported AcroForm fields filled locally.';
+        status = t('phase.status.fillForm', 'Supported AcroForm fields filled locally.');
       } else if (operation === 'accessibility-audit') {
         const report = await engine.auditAccessibility(bytes!);
         note = `${report.imageCount} images; ${report.taggedImageCount} Figure tags; reading order: ${report.readingOrder}. ${report.warnings.join(' ') || 'No local audit warnings.'}`;
-        status =
-          'Accessibility audit complete. Authoring still requires manual review where tags are missing.';
+        status = t(
+          'phase.status.audit',
+          'Accessibility audit complete. Authoring still requires manual review where tags are missing.',
+        );
       } else if (operation === 'sign') {
+        const uploadedBytes = uploadedSignature
+          ? new Uint8Array(await uploadedSignature.arrayBuffer())
+          : undefined;
         save(
           await engine.signPdf(bytes!, {
             page,
             text: text || 'Signed locally',
+            imageBytes: uploadedBytes ?? signatureImage,
             x: 72,
             y: 72,
             width: 160,
@@ -198,8 +246,10 @@
           'signed-visible.pdf',
           'application/pdf',
         );
-        status =
-          'Visible signature appearance exported locally; it is not a certificate-backed digital signature.';
+        status = t(
+          'phase.status.sign',
+          'Visible signature appearance exported locally; it is not a certificate-backed digital signature.',
+        );
       } else if (operation === 'signature-background') {
         save(
           engine.removeSignatureBackground(new Uint8Array(await file!.arrayBuffer()), threshold),
@@ -217,8 +267,10 @@
           note || 'Please review and sign this document.',
         );
         save(packageBytes, 'signature-request.json', 'application/json');
-        status =
-          'A local request package is ready. Delivery is not sent: configure your own email or signing API explicitly.';
+        status = t(
+          'phase.status.requestPackage',
+          'A local request package is ready. Delivery is not sent: configure your own email or signing API explicitly.',
+        );
       } else if (operation === 'protect') {
         await engine.protectPdf();
       } else if (operation === 'unlock') {
@@ -244,21 +296,36 @@
       busy = false;
     }
   }
+  import { translate, type Locale } from '$lib/i18n';
+  import { getLocaleContext } from '../routes/__locale/context';
+
+  /** Hydration readiness — see the note in `ToolWorkspace.svelte`. */
+  // NOT `$derived(true)`, which the linter prefers: a constant derived value
+  // is also true during prerendering, so `data-hydrated="true"` would be
+  // baked into the served HTML and the flag would mean nothing. Verified in
+  // the build output — all 458 prerendered pages carry `data-hydrated="false"`.
+  // The flag has to flip on the client, which needs an effect.
+  // eslint-disable-next-line svelte/prefer-writable-derived
+  let hydrated = $state(false);
+  $effect(() => {
+    hydrated = true;
+  });
 </script>
 
 <svelte:head>
-  <title>{title} locally</title>
+  <title>{t('shell.title.locally', '{value} locally', title)}</title>
   <meta name="description" content={description} />
   <!-- safe-html-reviewed: JSON-LD needs a script element Svelte cannot emit; the payload is JSON.stringify from $lib/seo with "<" escaped, tested in scripts/seo.test.mjs -->
   {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
 </svelte:head>
 
-<section class="tool-page">
-  <p class="eyebrow">EDIT &amp; SECURITY</p>
+<section class="tool-page" data-hydrated={hydrated ? 'true' : 'false'}>
+  <p class="eyebrow">{t('shell.eyebrow.editSecurity', 'EDIT & SECURITY')}</p>
   <h1>{title}</h1>
   <p class="lede">{description}</p>
   <div class="trust">
-    <strong>Local-first.</strong> This route does not upload document bytes or credentials.
+    <strong>{t('shell.trust.strong', 'Local-first.')}</strong>
+    {t('phase.trust.body', 'This route does not upload document bytes or credentials.')}
   </div>
   {#if operation === 'signature-background'}
     <FileDrop
@@ -278,60 +345,96 @@
   <div class="panel">
     {#if operation === 'editor'}
       <label
-        >Existing text to replace<input
+        >{t('phase.replace.find', 'Existing text to replace')}<input
           bind:value={find}
-          placeholder="Simple literal text run"
+          placeholder={t('phase.replace.findPlaceholder', 'Simple literal text run')}
         /></label
       >
-      <label>Replacement<input bind:value={replacement} placeholder="Replacement text" /></label>
-      <label>Fallback text box<input bind:value={text} /></label>
+      <label
+        >{t('phase.replace.label', 'Replacement')}<input
+          bind:value={replacement}
+          placeholder={t('phase.replace.placeholder', 'Replacement text')}
+        /></label
+      >
+      <label>{t('phase.text.label', 'Fallback text box')}<input bind:value={text} /></label>
     {:else if operation === 'redact'}
       <label
-        >Text or regex to remove<input
+        >{t('phase.redact.label', 'Text or regex to remove')}<input
           bind:value={find}
-          placeholder="SSN, email, or a regular expression"
+          placeholder={t('phase.redact.placeholder', 'SSN, email, or a regular expression')}
         /></label
       >
       <p class="caution">
-        The local conservative fallback removes the complete content stream of matching pages, then
-        verifies text, structure, and metadata surfaces. Review before sharing.
+        {t(
+          'phase.caution.redact',
+          'The local conservative fallback removes the complete content stream of matching pages, then verifies text, structure, and metadata surfaces. Review before sharing.',
+        )}
       </p>
     {:else if operation === 'request-signature'}
       <label
-        >Recipients<input
+        >{t('phase.request.recipients', 'Recipients')}<input
           bind:value={recipients}
-          placeholder="one@example.com, two@example.com"
+          placeholder={t('phase.request.placeholder', 'one@example.com, two@example.com')}
         /></label
       >
-      <label>Message<textarea bind:value={note} rows="3"></textarea></label>
+      <label
+        >{t('phase.request.message', 'Message')}<textarea bind:value={note} rows="3"
+        ></textarea></label
+      >
     {:else if operation === 'accessibility-audit' || operation === 'verify-signature'}
       <p class="caution">
-        This is a read-only evidence report. Unsupported cryptographic or authoring claims remain
-        visible as remedies.
+        {t(
+          'phase.caution.readOnly',
+          'This is a read-only evidence report. Unsupported cryptographic or authoring claims remain visible as remedies.',
+        )}
       </p>
+    {:else if operation === 'sign'}
+      <SignaturePad
+        label={t('phase.sign.pad', 'Draw a signature')}
+        clearLabel={t('phase.sign.clear', 'Clear drawing')}
+        help={t(
+          'phase.sign.padHelp',
+          'Draw with a pointer, or use the text field below with a keyboard.',
+        )}
+        onchange={(bytes) => {
+          signatureImage = bytes;
+          uploadedSignature = undefined;
+        }}
+      />
+      <FileDrop
+        accept=".png,.jpg,.jpeg,image/png,image/jpeg"
+        onchange={selectSignature}
+        label={t('phase.sign.upload', 'Upload a PNG or JPEG signature')}
+      />
+      <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
     {:else if operation !== 'password-generator'}
-      <label>Text / note<input bind:value={text} /></label>
+      <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
     {/if}
     {#if operation !== 'password-generator' && operation !== 'signature-background'}
-      <label>Page<input type="number" min="1" bind:value={page} /></label>
+      <label>{t('phase.sign.page', 'Page')}<input type="number" min="1" bind:value={page} /></label>
     {/if}
     {#if operation === 'signature-background'}
       <label
-        >Background threshold<input type="number" min="0" max="255" bind:value={threshold} /></label
+        >{t('phase.signatureBackground.threshold', 'Background threshold')}<input
+          type="number"
+          min="0"
+          max="255"
+          bind:value={threshold}
+        /></label
       >
     {/if}
     <Button disabled={busy} onclick={run}
       >{busy
-        ? 'Working locally…'
+        ? t('shell.status.working', 'Working locally…')
         : operation === 'password-generator'
-          ? 'Generate locally'
-          : 'Run locally'}</Button
+          ? t('phase.action.generate', 'Generate locally')
+          : t('phase.action.run', 'Run locally')}</Button
     >
     {#if note}<p class="result" role="status">{note}</p>{/if}
     {#if status}<p class="status" role="status">{status}</p>{/if}
     {#if error}<p class="error" role="alert">{error}</p>{/if}
     {#if downloadHref}<a class="download" href={downloadHref} download={downloadName}
-        >Download {downloadName}</a
+        >{t('phase.download', 'Download')} {downloadName}</a
       >{/if}
   </div>
 </section>

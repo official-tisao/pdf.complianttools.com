@@ -1,6 +1,8 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
+  import { page } from '$app/state';
   import {
     createAiCallPlan,
     createDocumentContext,
@@ -22,6 +24,10 @@
 
   let { kind, title, description }: { kind: ToolKind; title: string; description: string } =
     $props();
+
+  const structuredData = $derived(
+    softwareApplicationLd({ name: title, description, path: page.url.pathname }),
+  );
 
   let file = $state<File | undefined>();
   let prompt = $state('');
@@ -165,11 +171,33 @@
       busy = false;
     }
   }
+
+  /** Hydration readiness — see the note in `ToolWorkspace.svelte`. */
+  // NOT `$derived(true)`, which the linter prefers: a constant derived value
+  // is also true during prerendering, so `data-hydrated="true"` would be
+  // baked into the served HTML and the flag would mean nothing. Verified in
+  // the build output — all 458 prerendered pages carry `data-hydrated="false"`.
+  // The flag has to flip on the client, which needs an effect.
+  // eslint-disable-next-line svelte/prefer-writable-derived
+  let hydrated = $state(false);
+  $effect(() => {
+    hydrated = true;
+  });
 </script>
 
-<svelte:head><title>{title}</title><meta name="description" content={description} /></svelte:head>
+<svelte:head>
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <!--
+    Appendix E requires structured data on every prerendered page. This shell
+    emitted only a title and description, which the SPCC check surfaced: four AI
+    routes were shipping with no JSON-LD at all.
+  -->
+  <!-- safe-html-reviewed: JSON-LD needs a script element Svelte cannot emit; the payload is JSON.stringify from $lib/seo with "<" escaped, tested in scripts/seo.test.mjs -->
+  {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
+</svelte:head>
 
-<section class="page">
+<section class="page" data-hydrated={hydrated ? 'true' : 'false'}>
   <p class="eyebrow">BYOK AI · LOCAL FIRST</p>
   <h1>{title}</h1>
   <p class="lede">{description}</p>

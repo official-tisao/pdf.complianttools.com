@@ -1,5 +1,5 @@
 <script lang="ts">
-  /* global HTMLInputElement, HTMLSelectElement, location, navigator */
+  /* global HTMLSelectElement, location, navigator */
   // Types are erased at build time, so the type-only import costs nothing. The
   // runtime imports use deep subpaths: the engine barrel re-exports every
   // module, so importing it eagerly would pull pdfjs, mammoth, exceljs and
@@ -24,6 +24,9 @@
   import ScanCapture from '$lib/ScanCapture.svelte';
   import { downloadBytes } from '$lib/download';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
+  import { translate, type Locale } from '$lib/i18n';
+  import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import { getLocaleContext } from '../routes/__locale/context';
   import { page } from '$app/state';
 
   let {
@@ -31,6 +34,7 @@
     title,
     description,
     children,
+    locale: localeProp,
   }: {
     kind:
       | 'create'
@@ -46,7 +50,13 @@
     title: string;
     description: string;
     children?: import('svelte').Snippet;
+    /** The active UI locale; every string below resolves through `translate`. */
+    locale?: Locale;
   } = $props();
+
+  const locale = $derived(localeProp ?? getLocaleContext());
+  const t = (key: string, fallback: string, ...values: Array<string | number | undefined>) =>
+    translate(locale, key, fallback, ...values);
   let status = $state('');
   // Every kind that renders its own control block in the markup below. The
   // invoice kinds deliberately aren't here: they supply their UI via `children`
@@ -102,8 +112,8 @@
   function download(bytes: Uint8Array, name: string, mime = 'application/pdf') {
     downloadBytes(bytes, name, mime);
   }
-  function selectFiles(event: Event) {
-    files = Array.from((event.currentTarget as HTMLInputElement).files ?? []);
+  function selectFiles(list: FileList | null) {
+    files = list ? Array.from(list) : [];
   }
   async function create() {
     // jspdf is ~950 KB. Only /create-pdf needs it, so it is loaded here
@@ -114,13 +124,13 @@
       pages: [{ title: 'Local PDF', lines: ['Created in your browser.', 'No file was uploaded.'] }],
     });
     download(bytes, 'created.pdf');
-    status = 'Created locally.';
+    status = t('feature.status.created', 'Created locally.');
   }
   async function qr() {
     const { generateQr } = await import('@pdf-complianttools/engine/qr');
     const result = await generateQr({ kind: 'text', value: text });
     download(result.pdf, 'qr-code.pdf');
-    status = `Generated deterministic QR version ${result.version}.`;
+    status = t('feature.status.qr', 'Generated deterministic QR version {value}.', result.version);
   }
   async function scan() {
     try {
@@ -134,16 +144,23 @@
       );
       const all = [...capturedFrames, ...imported];
       if (!all.length) {
-        status = 'Capture a page or add image files first.';
+        status = t('feature.status.scanEmpty', 'Capture a page or add image files first.');
         return;
       }
       const { assembleScans } = await import('@pdf-complianttools/engine/scan');
       download(await assembleScans(all), 'scan.pdf');
-      status = `Assembled ${all.length} page${all.length === 1 ? '' : 's'} locally. Nothing was uploaded.`;
+      status = t(
+        'feature.status.scanAssembled',
+        `Assembled {value} ${all.length === 1 ? 'page' : 'pages'} locally. Nothing was uploaded.`,
+        all.length,
+      );
     } catch (caught) {
       // PdfEngineError's message is its remedy, so the user gets an action
       // rather than a bare failure.
-      status = caught instanceof Error ? caught.message : 'The scan could not be assembled.';
+      status =
+        caught instanceof Error
+          ? caught.message
+          : t('feature.status.scanFailed', 'The scan could not be assembled.');
     }
   }
   async function pack() {
@@ -155,19 +172,25 @@
     );
     const { buildDocumentPack } = await import('@pdf-complianttools/engine');
     download(await buildDocumentPack('Document pack', attachments), 'document-pack.pdf');
-    status = 'Document pack built locally with a generated table of contents.';
+    status = t(
+      'feature.status.pack',
+      'Document pack built locally with a generated table of contents.',
+    );
   }
   async function webpage() {
     try {
       const { captureWebpageToPdf } = await import('@pdf-complianttools/engine');
       const result = await captureWebpageToPdf(text, endpoint);
       download(result.bytes, 'webpage.pdf');
-      status = 'Relay capture completed.';
+      status = t('feature.status.relay', 'Relay capture completed.');
     } catch (caught) {
       // PdfEngineError sets message to its remedy, so this surfaces the Relay's
       // own guidance — a blocked URL, a missing browser binary — rather than a
       // bare failure.
-      status = caught instanceof Error ? caught.message : 'The operation could not be completed.';
+      status =
+        caught instanceof Error
+          ? caught.message
+          : t('feature.status.failed', 'The operation could not be completed.');
     }
   }
   async function batch() {
@@ -185,11 +208,22 @@
       },
       onGovern: (concurrency, projected, max) => {
         if (concurrency < 2)
-          batchNote = `The memory governor reduced concurrency to ${concurrency} for ${Math.round(projected / 1024 / 1024)} MB of projected working set against a ${Math.round(max / 1024 / 1024)} MB budget.`;
+          batchNote = t(
+            'feature.batch.governor',
+            'Memory limits reduced concurrency to {value}; projected working set is {total} MB against a {extra} MB budget.',
+            concurrency,
+            Math.round(projected / 1024 / 1024),
+            Math.round(max / 1024 / 1024),
+          );
       },
     });
     const done = batchResults.filter((item) => item.status === 'succeeded').length;
-    status = `${done}/${batchResults.length} files completed locally. Download the results to retrieve them.`;
+    status = t(
+      'feature.status.batch',
+      '{value} of {total} files completed locally. Download the results to retrieve them.',
+      done,
+      batchResults.length,
+    );
   }
   async function retryFailed() {
     const failed = batchResults.filter((item) => item.status === 'failed');
@@ -207,8 +241,12 @@
     batchResults = batchResults.map((item) => byOriginal.get(item.index) ?? item);
     const stillFailing = batchResults.filter((item) => item.status === 'failed').length;
     status = stillFailing
-      ? `${stillFailing} file${stillFailing === 1 ? '' : 's'} still failing after a retry.`
-      : 'Every file completed after retrying the failures.';
+      ? t(
+          'feature.status.batchRetryFailed',
+          '{value} file(s) still failing after a retry.',
+          stillFailing,
+        )
+      : t('feature.status.batchRetryComplete', 'Every file completed after retrying the failures.');
   }
   async function downloadBatch() {
     if (!batchResults.length) return;
@@ -217,7 +255,10 @@
     const { zipBatchResults } = await import('@pdf-complianttools/engine/batch-zip');
     const { zipBytes } = zipBatchResults(batchResults);
     downloadBytes(zipBytes, 'batch-results.zip', 'application/zip');
-    status = 'Downloaded a ZIP of the completed files and a manifest of the rest.';
+    status = t(
+      'feature.status.batchDownload',
+      'Downloaded a ZIP of the completed files and a manifest of the rest.',
+    );
   }
   async function exportRecipe() {
     // Exported through the same schema as everything else, so a file a user keeps cannot carry
@@ -226,7 +267,10 @@
       const snapshot = JSON.parse(JSON.stringify(recipe)) as Recipe;
       const json = JSON.stringify(parseRecipe(snapshot), null, 2);
       downloadBytes(new TextEncoder().encode(json), 'recipe.json', 'application/json');
-      status = 'Exported recipe.json. It contains no document bytes.';
+      status = t(
+        'feature.status.recipeExported',
+        'Exported recipe.json. It contains no document bytes.',
+      );
     } catch (caught) {
       status =
         caught instanceof Error
@@ -239,7 +283,10 @@
       // A plain snapshot: IndexedDB's structured clone rejects a Svelte 5 `$state` proxy.
       const snapshot = JSON.parse(JSON.stringify(recipe)) as Recipe;
       await saveLocalJson('recipe.current', snapshot);
-      status = 'Saved to this browser. It will be here when you come back.';
+      status = t(
+        'feature.status.recipeSaved',
+        'Saved to this browser. It will be here when you come back.',
+      );
     } catch (caught) {
       // Sharing is not the only thing that saves, so this needed its own reporting: a rejection
       // here used to leave a blank status line and a button that looked inert.
@@ -308,7 +355,10 @@
         })
         .catch(() => {
           if (restoredFragment !== fragment) return;
-          status = 'That recipe link could not be read. Start a new recipe, or copy a fresh link.';
+          status = t(
+            'feature.status.recipeLoadFailed',
+            'That recipe link could not be read. Start a new recipe, or copy a fresh link.',
+          );
         });
       return;
     }
@@ -383,32 +433,35 @@
   {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
 </svelte:head>
 
-<section class="feature-page">
-  <p class="eyebrow">LOCAL WORKFLOW</p>
+<section class="feature-page" data-hydrated={hydrated ? 'true' : 'false'}>
+  <p class="eyebrow">{t('feature.eyebrow', 'LOCAL WORKFLOW')}</p>
   <h1>{title}</h1>
   <p class="lede">{description}</p>
   {#if kind === 'create'}
     <label
-      >Template <select bind:value={template}
-        ><option value="blank">Blank</option><option value="grid">Grid</option><option value="lined"
-          >Lined</option
-        ><option value="dot">Dot</option></select
+      >{t('feature.template.label', 'Template')}
+      <select bind:value={template}
+        ><option value="blank">{t('feature.template.blank', 'Blank')}</option><option value="grid"
+          >{t('feature.template.grid', 'Grid')}</option
+        ><option value="lined">{t('feature.template.lined', 'Lined')}</option><option value="dot"
+          >{t('feature.template.dot', 'Dot')}</option
+        ></select
       ></label
-    ><button onclick={create}>Create PDF</button>
+    ><button onclick={create}>{t('feature.action.create', 'Create PDF')}</button>
   {:else if kind === 'qr'}
-    <label>Text or URL <input bind:value={text} /></label><button onclick={qr}>Export QR PDF</button
+    <label>{t('feature.qr.label', 'Text or URL')} <input bind:value={text} /></label><button
+      onclick={qr}>{t('feature.qr.action', 'Export QR PDF')}</button
     >
   {:else if kind === 'scan'}
-    <!--
-      A real file input stays in the served HTML: §7.6 requires the no-JS
-      reference page to answer the query, and a scan route that only worked
-      through a camera would answer nothing without JavaScript.
-    -->
-    <label
-      >Scan images
-      <input type="file" accept="image/png,image/jpeg" multiple onchange={selectFiles} /></label
-    ><button disabled={!files.length && !capturedFrames.length} onclick={scan}
-      >Assemble scan to PDF</button
+    <p class="field-label">{t('feature.scan.label', 'Scan images')}</p>
+    <FileDrop
+      accept="image/png,image/jpeg"
+      multiple
+      onchange={selectFiles}
+      label={t('feature.scan.drop', 'Drop images here or choose files')}
+    />
+    <button disabled={!files.length && !capturedFrames.length} onclick={scan}
+      >{t('feature.scan.action', 'Assemble scan to PDF')}</button
     >
     <ScanCapture
       onframes={(next) => {
@@ -419,26 +472,42 @@
       }}
     />
   {:else if kind === 'pack'}
-    <label
-      >Documents to pack
-      <input type="file" accept="application/pdf,.pdf" multiple onchange={selectFiles} /></label
-    ><button disabled={!files.length} onclick={pack}>Build document pack</button>
+    <p class="field-label">{t('feature.pack.label', 'Documents to pack')}</p>
+    <FileDrop
+      accept="application/pdf,.pdf"
+      multiple
+      onchange={selectFiles}
+      label={t('feature.pack.drop', 'Drop PDFs here or choose files')}
+    />
+    <button disabled={!files.length} onclick={pack}
+      >{t('feature.pack.action', 'Build document pack')}</button
+    >
   {:else if kind === 'webpage'}
-    <label>Public webpage URL <input bind:value={text} /></label><label
-      >Your Relay endpoint <input
-        bind:value={endpoint}
-        placeholder="http://127.0.0.1:8787"
-      /></label
+    <label>{t('feature.webpage.label', 'Public webpage URL')} <input bind:value={text} /></label
+    ><label
+      >{t('feature.webpage.endpoint', 'Your Relay endpoint')}
+      <input bind:value={endpoint} placeholder="http://127.0.0.1:8787" /></label
     >
     <p class="note">
-      Webpage capture is explicit Relay mode. Local PDF tools do not need this endpoint.
+      {t(
+        'feature.webpage.note',
+        'Webpage capture is explicit Relay mode. Local PDF tools do not need this endpoint.',
+      )}
     </p>
-    <button disabled={!endpoint.trim()} onclick={webpage}>Capture with Relay</button>
+    <button disabled={!endpoint.trim()} onclick={webpage}
+      >{t('feature.webpage.action', 'Capture with Relay')}</button
+    >
   {:else if kind === 'batch'}
-    <label
-      >PDFs to process
-      <input type="file" accept="application/pdf,.pdf" multiple onchange={selectFiles} /></label
-    ><button disabled={!files.length} onclick={batch}>Run local batch</button>
+    <p class="field-label">{t('feature.batch.label', 'PDFs to process')}</p>
+    <FileDrop
+      accept="application/pdf,.pdf"
+      multiple
+      onchange={selectFiles}
+      label={t('feature.batch.drop', 'Drop PDFs here or choose files')}
+    />
+    <button disabled={!files.length} onclick={batch}
+      >{t('feature.batch.action', 'Run local batch')}</button
+    >
     {#if batchResults.length}
       <!-- Per-file rows (README §11.5). The page previously showed only an aggregate count, so
            a user could not tell which file failed or why. -->
@@ -447,7 +516,11 @@
           <li data-status={item.status}>
             <span class="batch-name">{files[at]?.name ?? `File ${item.index + 1}`}</span>
             <span class="batch-state">{item.status}</span>
-            {#if item.attempts > 1}<span class="batch-state">({item.attempts} attempts)</span>{/if}
+            {#if item.attempts > 1}
+              <span class="batch-state"
+                >({t('feature.batch.attempts', '{value} attempts', item.attempts)})</span
+              >
+            {/if}
             {#if item.error}
               <span class="batch-error">{item.error.remedy}</span>
             {/if}
@@ -457,19 +530,25 @@
       {#if batchNote}<p class="note">{batchNote}</p>{/if}
       <div class="batch-actions">
         {#if batchResults.some((item) => item.status === 'succeeded')}
-          <button onclick={downloadBatch}>Download results as ZIP</button>
+          <button onclick={downloadBatch}
+            >{t('feature.batch.download', 'Download results as ZIP')}</button
+          >
           <!-- Partial download: the ZIP carries whatever has completed so far, so a long
                batch can be collected mid-run rather than only at the end. -->
-          <button onclick={downloadBatch}>Download completed so far</button>
+          <button onclick={downloadBatch}
+            >{t('feature.batch.downloadPartial', 'Download completed so far')}</button
+          >
         {/if}
         {#if batchResults.some((item) => item.status === 'failed')}
-          <button onclick={retryFailed}>Retry failed only</button>
+          <button onclick={retryFailed}>{t('feature.batch.retry', 'Retry failed only')}</button>
         {/if}
       </div>
     {:else}
       <p class="note">
-        Concurrency and memory are bounded; failed files remain individually retryable in the engine
-        API.
+        {t(
+          'feature.batch.note',
+          'Concurrency and memory are bounded; failed files remain individually retryable in the engine API.',
+        )}
       </p>
     {/if}
   {:else if kind === 'recipe'}
@@ -483,50 +562,65 @@
                 aria-label={`Remove step ${index + 1}`}
                 onclick={() => {
                   recipe = { ...recipe, steps: recipe.steps.filter((_, at) => at !== index) };
-                }}>Remove</button
+                }}>{t('feature.recipe.remove', 'Remove')}</button
               >
             </li>
           {/each}
         </ol>
       {/if}
       <label
-        >Step <select
+        >{t('feature.recipe.step', 'Step')}
+        <select
           onchange={(event) => {
             const op = (event.currentTarget as HTMLSelectElement).value as
               'compress' | 'bates' | 'metadata';
             recipe = { ...recipe, steps: [...recipe.steps, { op, options: {} }] };
           }}
-          ><option value="compress">Compress</option><option value="bates">Bates numbering</option
-          ><option value="metadata">Metadata</option></select
+          ><option value="compress">{t('feature.recipe.compress', 'Compress')}</option><option
+            value="bates">{t('feature.recipe.bates', 'Bates numbering')}</option
+          ><option value="metadata">{t('feature.recipe.metadata', 'Metadata')}</option></select
         ></label
       >
       <p class="recipe-description">{describeRecipe(recipe)}</p>
       <div class="recipe-actions">
-        <button onclick={shareRecipe}>Copy document-free recipe link</button>
-        <button onclick={saveRecipe}>Save to this browser</button>
-        <button onclick={exportRecipe}>Export JSON</button>
+        <button onclick={shareRecipe}
+          >{t('feature.recipe.action', 'Copy document-free recipe link')}</button
+        >
+        <button onclick={saveRecipe}>{t('feature.recipe.save', 'Save to this browser')}</button>
+        <button onclick={exportRecipe}>{t('feature.recipe.export', 'Export JSON')}</button>
       </div>
     </div>
   {:else if kind === 'watch'}
-    <button onclick={startWatch}>Choose folders and start watching</button>{#if watcher}<button
+    <button onclick={startWatch}
+      >{t('feature.watch.start', 'Choose folders and start watching')}</button
+    >{#if watcher}<button
         onclick={() => {
           watcher?.pause();
           watcherState = watcher?.state ?? 'paused';
-        }}>Pause</button
+        }}>{t('feature.watch.pause', 'Pause')}</button
       ><button
         onclick={() => {
           watcher?.resume();
           watcherState = watcher?.state ?? 'running';
-        }}>Resume</button
+        }}>{t('feature.watch.resume', 'Resume')}</button
       ><button
         onclick={() => {
           watcher?.stop();
           watcherState = watcher?.state ?? 'stopped';
-        }}>Stop</button
+        }}>{t('feature.watch.stop', 'Stop')}</button
       >
       <p class="note" data-testid="watch-state">
-        State: {watcherState}. {#if watchOutputDir}Results are written to {watchOutputDir}/processed.{/if}
-        No folder is read before permission is granted.
+        {t(
+          'feature.watch.note',
+          'State: {value}. No folder is read before permission is granted.',
+          watcherState,
+        )}
+        {#if watchOutputDir}
+          {t(
+            'feature.watch.output',
+            'Results are written to {value}/processed.',
+            watchOutputDir,
+          )}{/if}
       </p>{/if}
     {#if watchedFiles.length}
       <ol class="watch-results">
@@ -535,7 +629,14 @@
             {#if file.status === 'succeeded'}
               <span class="ok">{file.name} → {file.outputName}</span>
             {:else}
-              <span class="bad">{file.name} failed: {file.error?.remedy}</span>
+              <span class="bad"
+                >{t(
+                  'feature.watch.failed',
+                  '{value} failed: {total}',
+                  file.name,
+                  file.error?.remedy,
+                )}</span
+              >
             {/if}
           </li>
         {/each}
@@ -543,7 +644,7 @@
     {/if}
   {/if}
   {#if !SELF_RENDERED.has(kind) && !children}
-    <p class="note">This tool has no controls yet. Nothing was run.</p>
+    <p class="note">{t('feature.noControls', 'This tool has no controls yet. Nothing was run.')}</p>
   {/if}
   {#if children}{@render children()}{/if}
   <p class="status" role="status" aria-live="polite">{status}</p>
@@ -554,6 +655,10 @@
     margin: auto;
     max-width: 960px;
     padding: 96px 40px 0;
+  }
+  .field-label {
+    font-weight: 600;
+    margin: 16px 0 6px;
   }
   .eyebrow {
     color: var(--color-muted);
