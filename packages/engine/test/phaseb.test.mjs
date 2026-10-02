@@ -13,6 +13,28 @@ import {
 
 const fixture = (name) => new URL(`../../../fixtures/conversion/${name}`, import.meta.url);
 
+async function readFirstPageTextItems(bytes) {
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const loadingTask = pdfjs.getDocument({ data: bytes.slice() });
+  const document = await loadingTask.promise;
+  try {
+    const page = await document.getPage(1);
+    const content = await page.getTextContent();
+    return content.items;
+  } finally {
+    await loadingTask.destroy();
+  }
+}
+
+function styleSignature(item) {
+  const transform = Array.isArray(item.transform) ? item.transform : [];
+  // The last two transform values are the text position, not its visual style.
+  return [
+    item.fontName,
+    ...transform.slice(0, 4).map((value) => Math.round(value * 100) / 100),
+  ].join('|');
+}
+
 test('format registry exposes only directionally available targets', () => {
   assert.equal(getFormatCapability('docx').status, 'supported');
   assert.equal(getFormatCapability('publisher').status, 'unavailable');
@@ -30,6 +52,51 @@ test('Markdown and CSV fixtures create valid PDFs with deterministic output', as
   assert.match(
     new TextDecoder().decode(await readFile(fixture('markdown-golden.md'))),
     /code blocks/u,
+  );
+});
+
+test('rich Markdown renders headings, lists, and emphasis with distinct PDF styles', async () => {
+  const markdown = [
+    '# Release Notes',
+    '',
+    'A body paragraph with ordinary text.',
+    '',
+    '- first item',
+    '- second item',
+    '',
+    '**Important**: this sentence is emphasized.',
+  ].join('\n');
+  const result = await convertToPdf('markdown', new TextEncoder().encode(markdown), {
+    fileName: 'rich-markdown.md',
+  });
+  const items = await readFirstPageTextItems(result.bytes);
+  const text = items.map((item) => item.str ?? '').join(' ');
+  const heading = items.find((item) => /Release Notes/iu.test(item.str ?? ''));
+  const body = items.find((item) => /ordinary text/iu.test(item.str ?? ''));
+  const listItem = items.find((item) => /first item/iu.test(item.str ?? ''));
+  const emphasis = items.find((item) => /Important/iu.test(item.str ?? ''));
+
+  assert.match(text, /Release Notes/iu);
+  assert.match(text, /first item/iu);
+  assert.match(text, /Important/iu);
+  assert.ok(heading, 'the heading must remain a visible text item');
+  assert.ok(body, 'the body paragraph must remain a visible text item');
+  assert.ok(listItem, 'the list item must remain a visible text item');
+  assert.ok(emphasis, 'the emphasized text must remain a visible text item');
+  assert.notEqual(
+    styleSignature(heading),
+    styleSignature(body),
+    'heading and body text must use different PDF styling',
+  );
+  assert.ok(
+    /^[•●▪*-]\s/u.test(listItem.str ?? '') ||
+      Math.abs((listItem.transform?.[4] ?? 0) - (body.transform?.[4] ?? 0)) >= 1,
+    'list items must have a visible marker or indentation',
+  );
+  assert.notEqual(
+    styleSignature(emphasis),
+    styleSignature(body),
+    'emphasized text must use different PDF styling',
   );
 });
 
