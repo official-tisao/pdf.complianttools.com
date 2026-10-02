@@ -1,6 +1,7 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import PdfPreview from '$lib/PdfPreview.svelte';
   import SignaturePad from '$lib/SignaturePad.svelte';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
   // Aliased: this component already uses `page` for the target PDF page number.
@@ -341,6 +342,9 @@
         ? 'Choose the base file, then the second local file'
         : 'Drop a PDF here or choose a local file'}
     />
+  {/if}
+  {#if operation !== 'signature-background' && operation !== 'password-generator'}
+    <PdfPreview file={files[0]} {locale} onerror={(message) => (error = message)} />
   {/if}
   <div class="panel">
     {#if operation === 'editor'}

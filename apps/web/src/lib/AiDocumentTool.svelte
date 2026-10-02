@@ -17,6 +17,7 @@
     type LocalAiResult,
   } from '@pdf-complianttools/engine';
   import AiCallConfirm from '$lib/AiCallConfirm.svelte';
+  import PdfPreview from '$lib/PdfPreview.svelte';
   import { getConfiguredConnection, sendConfirmed } from '$lib/ai-client';
 
   type ToolKind = 'chat' | 'learning' | 'translate';
@@ -215,6 +216,7 @@
       translatedPdf = undefined;
     }}
   />
+  <PdfPreview {file} onerror={(message) => (status = message)} />
   {#if kind === 'chat'}
     <label
       >Search or question<textarea

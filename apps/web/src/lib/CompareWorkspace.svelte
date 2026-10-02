@@ -2,6 +2,7 @@
   /* global HTMLElement, KeyboardEvent */
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import Button from '@pdf-complianttools/ui/Button.svelte';
+  import PdfPreview from '$lib/PdfPreview.svelte';
   import { comparePdfs, type CompareReport } from '@pdf-complianttools/engine';
 
   let before = $state<File>();
@@ -84,7 +85,8 @@
         multiple={false}
         label="Choose original PDF"
         onchange={takeBefore}
-      />{#if before}<p>{before.name}</p>{/if}
+      />{#if before}<p>{before.name}</p>
+        <PdfPreview file={before} />{/if}
     </div>
     <div>
       <h2>Revised</h2>
@@ -93,7 +95,8 @@
         multiple={false}
         label="Choose revised PDF"
         onchange={takeAfter}
-      />{#if after}<p>{after.name}</p>{/if}
+      />{#if after}<p>{after.name}</p>
+        <PdfPreview file={after} />{/if}
     </div>
   </div>
   <Button disabled={!before || !after} onclick={compare}>Compare locally</Button>

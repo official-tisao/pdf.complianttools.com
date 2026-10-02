@@ -1,6 +1,7 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import PdfPreview from '$lib/PdfPreview.svelte';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
   import { translate, type Locale } from '$lib/i18n';
   import { getLocaleContext } from '../routes/__locale/context';
@@ -120,7 +121,7 @@
   </div>
   {#if available}
     <FileDrop
-      {accept}
+      accept={direction === 'from-pdf' ? '.pdf,application/pdf' : accept}
       onchange={selectFiles}
       label={t('shell.convert.drop', `Drop a file here or choose ${format.toUpperCase()} input`)}
     />
@@ -138,6 +139,9 @@
           : t('shell.action.convert', 'Convert locally')}</Button
       >
     </div>
+    {#if direction === 'from-pdf'}
+      <PdfPreview file={files[0]} {locale} onerror={(message) => (error = message)} />
+    {/if}
     {#if message}<p class="message" role="status">{message}</p>{/if}
     {#if error}<p class="error" role="alert">{error}</p>{/if}
   {:else}
