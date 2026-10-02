@@ -151,7 +151,7 @@
       download(await assembleScans(all), 'scan.pdf');
       status = t(
         'feature.status.scanAssembled',
-        'Assembled {value} page(s) locally. Nothing was uploaded.',
+        `Assembled {value} ${all.length === 1 ? 'page' : 'pages'} locally. Nothing was uploaded.`,
         all.length,
       );
     } catch (caught) {
