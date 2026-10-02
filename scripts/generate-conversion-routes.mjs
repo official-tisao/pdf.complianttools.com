@@ -43,7 +43,7 @@ const page = ({ title, format, label, direction }) => `<script lang="ts">
   description="${descriptionFor(direction, label)}"
   format="${format}"
   direction="${direction}"
-  accept="${acceptFor(format)}"
+      accept="${acceptFor(format, direction)}"
 />
 `;
 
@@ -62,7 +62,8 @@ function descriptionFor(direction, label) {
  * approximate but documented; an over-broad accept is a UX annoyance, not a
  * correctness bug, because the engine types the failure.
  */
-function acceptFor(format) {
+function acceptFor(format, direction) {
+  if (direction === 'from-pdf') return '.pdf,application/pdf';
   const MIME = {
     docx: '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     xlsx: '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

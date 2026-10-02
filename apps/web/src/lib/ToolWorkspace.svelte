@@ -2,13 +2,11 @@
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import OptionPanel, { type OptionField } from '@pdf-complianttools/ui/OptionPanel.svelte';
-  import PageGrid from '@pdf-complianttools/ui/PageGrid.svelte';
+  import PdfPreview from '$lib/PdfPreview.svelte';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
   import { translate, type Locale } from '$lib/i18n';
   import { getLocaleContext } from '../routes/__locale/context';
   import { page } from '$app/state';
-  import { loadPdfJs } from '@pdf-complianttools/engine/pdfjs';
-  import type * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 
   let {
     title,
@@ -82,11 +80,6 @@
   let values = $state<Record<string, string | number | boolean>>({});
   let seeded = false;
   let status = $state('');
-  let pageCount = $state(0);
-  let previewDocument = $state<Awaited<ReturnType<typeof pdfjs.getDocument>['promise']>>();
-  let previewKey = $state('');
-  let selectedPage = $state(1);
-  let selectedPreview = $state('');
   const structuredData = $derived(
     softwareApplicationLd({ name: title, description, path: page.url.pathname }),
   );
@@ -109,45 +102,8 @@
       : '';
     const first = files[0];
     if (!first) {
-      pageCount = 0;
-      previewDocument = undefined;
-      previewKey = '';
-      selectedPreview = '';
       return;
     }
-    try {
-      // pdf.js is ~500 KB, so it remains lazy until a user selects a PDF. The
-      // document load already gives us the page count; doing a separate engine
-      // inspection first made the empty state linger before the page grid could
-      // appear.
-      const bytes = new Uint8Array(await first.arrayBuffer());
-      previewDocument = await (await loadPdfJs()).getDocument({ data: bytes.slice() }).promise;
-      pageCount = previewDocument.numPages;
-      previewKey = `${first.name}:${first.size}:${first.lastModified}`;
-      selectedPage = 1;
-      selectedPreview = pageCount > 0 ? await renderPreviewPage(1, 0.7) : '';
-    } catch (error) {
-      pageCount = 0;
-      previewDocument = undefined;
-      selectedPreview = '';
-      status = error instanceof Error ? error.message : 'This PDF could not be previewed locally.';
-    }
-  }
-  async function renderPreviewPage(pageNumber: number, scale: number): Promise<string> {
-    if (!previewDocument) return '';
-    const pdfPage = await previewDocument.getPage(pageNumber);
-    const viewport = pdfPage.getViewport({ scale });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.ceil(viewport.width);
-    canvas.height = Math.ceil(viewport.height);
-    const context = canvas.getContext('2d');
-    if (!context) return '';
-    await pdfPage.render({ canvas, canvasContext: context, viewport }).promise;
-    return canvas.toDataURL('image/png');
-  }
-  async function selectPreviewPage(pageNumber: number) {
-    selectedPage = pageNumber;
-    selectedPreview = await renderPreviewPage(pageNumber, 0.7);
   }
   function changeOption(key: string, value: string | number | boolean) {
     values = { ...values, [key]: value };
@@ -220,26 +176,7 @@
             )}</span
           ><Button disabled={files.length === 0 || !onrun} onclick={runTool}>{action}</Button>
         </div>
-        {#if pageCount > 0}
-          <PageGrid
-            {pageCount}
-            selected={[selectedPage]}
-            thumbnailKey={previewKey}
-            thumbnailLoader={(pageNumber) => renderPreviewPage(pageNumber, 0.22)}
-            onselect={(pageNumber) => void selectPreviewPage(pageNumber)}
-          />
-          {#if selectedPreview}
-            <div class="selected-page" aria-live="polite">
-              <h2>{t('shell.preview.selected', 'Selected page {value}', selectedPage)}</h2>
-              <img
-                src={selectedPreview}
-                alt={t('shell.preview.pageAlt', 'Preview of page {value}', selectedPage)}
-              />
-            </div>
-          {/if}
-        {:else}<p class="empty">
-            {t('shell.preview.empty', 'Page previews appear here after you select a PDF.')}
-          </p>{/if}
+        <PdfPreview file={files[0]} {locale} onerror={(message) => (status = message)} />
       </div>
       {#if options.length > 0}<OptionPanel fields={options} onchange={changeOption} />{/if}
     </div>
@@ -278,6 +215,7 @@
     max-width: 680px;
   }
   .workspace {
+    align-items: start;
     display: grid;
     gap: 24px;
     grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.8fr);
@@ -297,24 +235,8 @@
     margin-bottom: 24px;
   }
   .toolbar span,
-  .empty,
   .status {
     color: var(--color-muted);
-  }
-  .selected-page {
-    margin-top: 20px;
-  }
-  .selected-page h2 {
-    font-size: 1rem;
-    margin: 0 0 10px;
-  }
-  .selected-page img {
-    background: #fff;
-    border: 1px solid var(--color-hairline);
-    display: block;
-    max-height: 520px;
-    max-width: 100%;
-    object-fit: contain;
   }
   @media (max-width: 767px) {
     .tool-page {
