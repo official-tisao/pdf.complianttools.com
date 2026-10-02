@@ -1,7 +1,9 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import LoadingProgress from '$lib/LoadingProgress.svelte';
   import PdfPreview from '$lib/PdfPreview.svelte';
+  import type { ConversionResult } from '@pdf-complianttools/engine';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
   import { translate, type Locale } from '$lib/i18n';
   import { getLocaleContext } from '../routes/__locale/context';
@@ -44,6 +46,12 @@
   let busy = $state(false);
   let message = $state('');
   let error = $state('');
+  let previewFile = $state<File>();
+  let previewResult = $state<ConversionResult>();
+  let previewBusy = $state(false);
+  let previewProgress = $state<number | null>(null);
+  let operationProgress = $state<number | null>(null);
+  let previewGeneration = 0;
   // Derived: these come from $props(), and a caller can change them after mount.
   const structuredData = $derived(
     softwareApplicationLd({ name: title, description, path: route.url.pathname }),
@@ -53,18 +61,77 @@
     files = fileList ? Array.from(fileList) : [];
     message = '';
     error = '';
+    previewFile = undefined;
+    previewResult = undefined;
+    previewProgress = null;
+    const file = files[0];
+    if (direction === 'to-pdf' && file && available) void prepareOutputPreview(file);
+  }
+
+  function fileKey(file: File) {
+    return `${file.name}:${file.size}:${file.lastModified}`;
+  }
+
+  async function convertSelected(
+    file: File,
+    onProgress?: (value: number | null) => void,
+  ): Promise<ConversionResult> {
+    const { convertFile } = await import('@pdf-complianttools/engine');
+    onProgress?.(10);
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    onProgress?.(30);
+    onProgress?.(null);
+    return convertFile(direction, format as never, bytes, { fileName: file.name });
+  }
+
+  async function prepareOutputPreview(file: File) {
+    const generation = ++previewGeneration;
+    previewBusy = true;
+    previewProgress = 5;
+    try {
+      const result = await convertSelected(file, (value) => {
+        if (generation === previewGeneration) previewProgress = value;
+      });
+      previewProgress = 92;
+      const selectedFile = files[0];
+      if (
+        !selectedFile ||
+        generation !== previewGeneration ||
+        fileKey(file) !== fileKey(selectedFile)
+      )
+        return;
+      previewResult = result;
+      previewFile = new File([result.bytes.buffer as ArrayBuffer], result.suggestedName, {
+        type: result.mimeType,
+      });
+      previewProgress = 100;
+    } catch (caught) {
+      if (generation !== previewGeneration) return;
+      error =
+        caught instanceof Error
+          ? caught.message
+          : t('shell.convert.failed', 'The output preview could not be prepared locally.');
+    } finally {
+      if (generation === previewGeneration) {
+        previewBusy = false;
+        previewProgress = null;
+      }
+    }
   }
 
   async function convert() {
     const file = files[0];
     if (!file || !available) return;
     busy = true;
+    operationProgress = 5;
     message = '';
     error = '';
     try {
-      const { convertFile } = await import('@pdf-complianttools/engine');
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const result = await convertFile(direction, format as never, bytes, { fileName: file.name });
+      const result =
+        direction === 'to-pdf' && previewResult
+          ? previewResult
+          : await convertSelected(file, (value) => (operationProgress = value));
+      operationProgress = 92;
       const url = URL.createObjectURL(
         new Blob([result.bytes.buffer as ArrayBuffer], { type: result.mimeType }),
       );
@@ -73,6 +140,7 @@
       link.download = result.suggestedName;
       link.click();
       URL.revokeObjectURL(url);
+      operationProgress = 100;
       message =
         result.warnings.length > 0
           ? result.warnings.join(' ')
@@ -84,6 +152,7 @@
           : t('shell.convert.failed', 'The conversion could not be completed locally.');
     } finally {
       busy = false;
+      operationProgress = null;
     }
   }
 
@@ -123,7 +192,12 @@
     <FileDrop
       accept={direction === 'from-pdf' ? '.pdf,application/pdf' : accept}
       onchange={selectFiles}
-      label={t('shell.convert.drop', `Drop a file here or choose ${format.toUpperCase()} input`)}
+      label={t(
+        'shell.convert.drop',
+        direction === 'from-pdf'
+          ? 'Drop a PDF here or choose a PDF input'
+          : `Drop a file here or choose ${format.toUpperCase()} input`,
+      )}
     />
     <div class="toolbar">
       <span
@@ -139,7 +213,26 @@
           : t('shell.action.convert', 'Convert locally')}</Button
       >
     </div>
-    {#if direction === 'from-pdf'}
+    {#if previewBusy}
+      <LoadingProgress
+        value={previewProgress}
+        label="Preparing output preview"
+        detail={previewProgress == null
+          ? 'Conversion is still running locally…'
+          : `${Math.round(previewProgress)}% ready`}
+      />
+    {:else if busy}
+      <LoadingProgress
+        value={operationProgress}
+        label="Converting locally"
+        detail={operationProgress == null
+          ? 'Working locally…'
+          : `${Math.round(operationProgress)}% ready`}
+      />
+    {/if}
+    {#if direction === 'to-pdf'}
+      <PdfPreview file={previewFile} {locale} onerror={(message) => (error = message)} />
+    {:else}
       <PdfPreview file={files[0]} {locale} onerror={(message) => (error = message)} />
     {/if}
     {#if message}<p class="message" role="status">{message}</p>{/if}

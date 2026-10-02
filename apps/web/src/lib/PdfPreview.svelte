@@ -1,5 +1,6 @@
 <script lang="ts">
   import PageGrid from '@pdf-complianttools/ui/PageGrid.svelte';
+  import LoadingProgress from '$lib/LoadingProgress.svelte';
   import { loadPdfJs } from '@pdf-complianttools/engine/pdfjs';
   import type * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
   import { translate, type Locale } from '$lib/i18n';
@@ -26,6 +27,9 @@
   let selectedPage = $state(1);
   let selectedPreview = $state('');
   let previewError = $state('');
+  let previewPhase = $state<'idle' | 'loading' | 'thumbnails' | 'page' | 'ready'>('idle');
+  let previewProgress = $state<number | null>(null);
+  let loadedThumbnails = $state<number[]>([]);
   let loadGeneration = 0;
 
   $effect(() => {
@@ -37,8 +41,11 @@
     selectedPage = 1;
     selectedPreview = '';
     previewError = '';
-
     const currentFile = file;
+    previewPhase = currentFile ? 'loading' : 'idle';
+    previewProgress = currentFile ? null : 0;
+    loadedThumbnails = [];
+
     if (!currentFile) return;
 
     const generation = ++loadGeneration;
@@ -48,14 +55,25 @@
   async function loadPreview(currentFile: File, key: string, generation: number) {
     try {
       const bytes = new Uint8Array(await currentFile.arrayBuffer());
+      if (generation === loadGeneration && key === fileKey) previewProgress = 20;
       const document = await (await loadPdfJs()).getDocument({ data: bytes.slice() }).promise;
       if (generation !== loadGeneration || key !== fileKey) return;
 
       previewDocument = document;
       pageCount = document.numPages;
-      if (pageCount > 0) selectedPreview = await renderPreviewPage(1, 0.7);
+      previewProgress = 45;
+      if (pageCount > 0) {
+        selectedPreview = await renderPreviewPage(1, 0.7);
+        previewProgress = 60;
+        previewPhase = 'thumbnails';
+      } else {
+        previewPhase = 'ready';
+        previewProgress = 100;
+      }
     } catch (error) {
       if (generation !== loadGeneration || key !== fileKey) return;
+      previewPhase = 'idle';
+      previewProgress = null;
       const message =
         error instanceof Error ? error.message : 'This PDF could not be previewed locally.';
       previewError = message;
@@ -76,11 +94,49 @@
     return canvas.toDataURL('image/png');
   }
 
+  async function loadThumbnail(pageNumber: number): Promise<string> {
+    const key = fileKey;
+    const generation = loadGeneration;
+
+    function markThumbnailLoaded() {
+      if (generation !== loadGeneration || key !== fileKey || loadedThumbnails.includes(pageNumber))
+        return;
+      loadedThumbnails = [...loadedThumbnails, pageNumber];
+      const target = Math.max(1, Math.min(pageCount, 33));
+      previewProgress = Math.min(100, 60 + (loadedThumbnails.length / target) * 40);
+      if (loadedThumbnails.length >= target) {
+        previewProgress = 100;
+        previewPhase = 'ready';
+      }
+    }
+
+    try {
+      const src = await renderPreviewPage(pageNumber, 0.22);
+      markThumbnailLoaded();
+      return src;
+    } catch (error) {
+      markThumbnailLoaded();
+      throw error;
+    }
+  }
+
   async function selectPreviewPage(pageNumber: number) {
     selectedPage = pageNumber;
+    previewPhase = 'page';
+    previewProgress = null;
     selectedPreview = await renderPreviewPage(pageNumber, 0.7);
+    previewProgress = 100;
+    previewPhase = 'ready';
   }
 </script>
+
+{#if previewPhase === 'loading' || previewPhase === 'thumbnails' || previewPhase === 'page'}
+  <LoadingProgress
+    value={previewProgress}
+    label={previewPhase === 'page' ? `Opening page ${selectedPage}` : 'Preparing page previews'}
+    detail={previewProgress == null ? 'Working locally…' : `${Math.round(previewProgress)}% ready`}
+  />
+{/if}
 
 {#if pageCount > 0}
   <div class="pdf-preview">
@@ -88,7 +144,7 @@
       {pageCount}
       selected={[selectedPage]}
       thumbnailKey={fileKey}
-      thumbnailLoader={(pageNumber) => renderPreviewPage(pageNumber, 0.22)}
+      thumbnailLoader={loadThumbnail}
       onselect={(pageNumber) => void selectPreviewPage(pageNumber)}
     />
     {#if selectedPreview}
