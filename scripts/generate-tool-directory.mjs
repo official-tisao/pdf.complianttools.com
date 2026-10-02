@@ -100,6 +100,8 @@ const LABELS = {
 const escape = (value) =>
   String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
+const staticPath = (path) => (path === '/' || path.endsWith('.html') ? path : `${path}.html`);
+
 function render(directory) {
   const groups = directory.groups
     .map(
@@ -109,7 +111,7 @@ function render(directory) {
 ${group.items
   .map(
     (item) =>
-      `        <li><a href="${escape(item.path)}">${escape(item.title ?? LABELS[item.slug] ?? item.slug)}</a></li>`,
+      `        <li><a href="${escape(staticPath(item.path))}">${escape(item.title ?? LABELS[item.slug] ?? item.slug)}</a></li>`,
   )
   .join('\n')}
       </ul>

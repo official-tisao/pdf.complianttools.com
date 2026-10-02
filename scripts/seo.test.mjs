@@ -30,12 +30,14 @@ test('canonical URLs are absolute, strip query and hash, and never double-slash'
   const canonicalUrl = (path) => {
     const clean = path.split('?')[0]?.split('#')[0] ?? '/';
     const withSlash = clean.startsWith('/') ? clean : `/${clean}`;
-    return new URL(withSlash, 'https://pdf.complianttools.com').href;
+    const staticPath =
+      withSlash === '/' || withSlash.endsWith('.html') ? withSlash : `${withSlash}.html`;
+    return new URL(staticPath, 'https://pdf.complianttools.com').href;
   };
-  assert.equal(canonicalUrl('/merge'), 'https://pdf.complianttools.com/merge');
+  assert.equal(canonicalUrl('/merge'), 'https://pdf.complianttools.com/merge.html');
   assert.equal(canonicalUrl('/'), 'https://pdf.complianttools.com/');
-  assert.equal(canonicalUrl('/e-invoice?x=1'), 'https://pdf.complianttools.com/e-invoice');
-  assert.equal(canonicalUrl('/e-invoice#top'), 'https://pdf.complianttools.com/e-invoice');
+  assert.equal(canonicalUrl('/e-invoice?x=1'), 'https://pdf.complianttools.com/e-invoice.html');
+  assert.equal(canonicalUrl('/e-invoice#top'), 'https://pdf.complianttools.com/e-invoice.html');
 });
 
 test('the structured data claims no rating or review', () => {

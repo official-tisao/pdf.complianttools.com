@@ -1,5 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="8" fill="#1c1a17" />
-  <path d="M18 12h20l8 8v32H18z" fill="#f0eeea" />
-  <path d="M38 12v10h10M25 34h14M25 42h14" fill="none" stroke="#1c1a17" stroke-width="4" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>PDF Compliant Tools</title>
+  <rect width="64" height="64" rx="14" fill="#1c1a17"/>
+  <path d="M18 12h20l10 10v30H18z" fill="#f0eeea"/>
+  <path d="M38 12v12h10" fill="none" stroke="#1c1a17" stroke-width="4"/>
+  <path d="M25 39h14M25 47h9" fill="none" stroke="#1c1a17" stroke-linecap="round" stroke-width="4"/>
 </svg>

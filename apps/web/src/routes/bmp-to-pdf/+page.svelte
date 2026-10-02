@@ -14,5 +14,5 @@
   description="Convert BMP image files to PDF locally, in your browser. Nothing is uploaded."
   format="bmp"
   direction="to-pdf"
-  accept=".pdf,application/pdf"
+  accept=".bmp,image/bmp"
 />

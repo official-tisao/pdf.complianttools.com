@@ -1,6 +1,7 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import PdfPreview from '$lib/PdfPreview.svelte';
   import SeoTags from '$lib/SeoTags.svelte';
   import { readPdfMetadata, setPdfMetadata, type PdfMetadata } from '@pdf-complianttools/engine';
 
@@ -79,6 +80,7 @@
     label="Choose a PDF to inspect"
     onchange={selectFile}
   />
+  <PdfPreview {file} onerror={(message) => (status = message)} />
   {#if metadata}
     <div class="editor">
       <label>Title<input bind:value={title} /></label>

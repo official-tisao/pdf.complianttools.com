@@ -25,6 +25,8 @@ const escape = (value) =>
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;');
 
+const staticPath = (path) => (path === '/' || path.endsWith('.html') ? path : `${path}.html`);
+
 /**
  * Builds one `<url>` entry.
  *
@@ -33,7 +35,7 @@ const escape = (value) =>
  * `xhtml:link` requires the `xhtml` namespace declared on `<urlset>`.
  */
 export function urlEntry(path, { alternates = [], lastmod, changefreq, priority }) {
-  const lines = [`  <url>`, `    <loc>${escape(SITE_ORIGIN + path)}</loc>`];
+  const lines = [`  <url>`, `    <loc>${escape(SITE_ORIGIN + staticPath(path))}</loc>`];
   if (lastmod) lines.push(`    <lastmod>${lastmod}</lastmod>`);
   if (changefreq) lines.push(`    <changefreq>${changefreq}</changefreq>`);
   if (priority !== undefined) lines.push(`    <priority>${priority.toFixed(1)}</priority>`);
@@ -54,11 +56,17 @@ export function urlEntry(path, { alternates = [], lastmod, changefreq, priority 
  * fastest way to lose a crawler's trust in the whole file.
  */
 export function localizedPaths(path, serves = {}) {
+  if (path === '/') {
+    return [{ hreflang: 'en', href: `${SITE_ORIGIN}/` }];
+  }
   return ['en', 'ar']
     .filter((locale) => locale === 'en' || serves[locale] !== false)
     .map((locale) => ({
       hreflang: locale,
-      href: locale === 'en' ? `${SITE_ORIGIN}${path}` : `${SITE_ORIGIN}/${locale}${path}`,
+      href:
+        locale === 'en'
+          ? `${SITE_ORIGIN}${staticPath(path)}`
+          : `${SITE_ORIGIN}${staticPath(`/${locale}${path}`)}`,
     }));
 }
 

@@ -14,5 +14,5 @@
   description="Convert WebP image files to PDF locally, in your browser. Nothing is uploaded."
   format="webp"
   direction="to-pdf"
-  accept=".pdf,application/pdf"
+  accept=".webp,image/webp"
 />

@@ -63,6 +63,22 @@ export function canonicalPath(path: string): string {
 }
 
 /**
+ * The static adapter emits one HTML file per route. Keep internal links and
+ * crawler-facing URLs aligned with those files so a cache can key directly on
+ * the document name instead of relying on directory or extensionless rewrites.
+ */
+export function staticRoute(path: string): string {
+  const hashIndex = path.indexOf('#');
+  const queryIndex = path.indexOf('?');
+  const suffixIndex =
+    [hashIndex, queryIndex].filter((index) => index >= 0).sort()[0] ?? path.length;
+  const route = path.slice(0, suffixIndex);
+  const suffix = path.slice(suffixIndex);
+  if (route === '/' || route.endsWith('.html')) return path;
+  return `${route}.html${suffix}`;
+}
+
+/**
  * The `hreflang` set for one page: one alternate per real locale, each pointing
  * at *that locale's* URL.
  *
@@ -79,6 +95,9 @@ export function canonicalPath(path: string): string {
  */
 export function hreflangLinks(path: string): ReadonlyArray<{ hreflang: string; href: string }> {
   const base = canonicalPath(path);
+  // The landing page has no locale-prefixed counterpart. Do not manufacture
+  // `/ar/.html`, which is neither a real page nor a useful alternate.
+  if (base === '/') return [{ hreflang: 'en', href: canonicalUrl('/') }];
   return LOCALE_PREFIXES.filter((entry) => entry.hreflang !== null).map((entry) => ({
     hreflang: entry.hreflang,
     href: canonicalUrl(entry.prefix === 'en' ? base : `/${entry.prefix}${base}`),
@@ -90,7 +109,7 @@ export function canonicalUrl(path: string): string {
   const clean = path.split('?')[0]?.split('#')[0] ?? '/';
   const withSlash = clean.startsWith('/') ? clean : `/${clean}`;
   // "/" must not become a trailing-slash duplicate of itself.
-  return new URL(withSlash, SITE_ORIGIN).href;
+  return new URL(staticRoute(withSlash), SITE_ORIGIN).href;
 }
 
 /**

@@ -14,5 +14,5 @@
   description="Convert HEIC/HEIF image files to PDF locally, in your browser. Nothing is uploaded."
   format="heic"
   direction="to-pdf"
-  accept=".pdf,application/pdf"
+  accept=".heic,.heif,image/heic,image/heif"
 />

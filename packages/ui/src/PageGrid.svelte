@@ -59,7 +59,7 @@
       (_, index) => visibleStart + index,
     ),
   );
-  const isSelected = (page: number) => selected.includes(page);
+  const isSelected = (page: number) => selected.some((selectedPage) => selectedPage === page);
 
   // The grid is virtualized, so thumbnail work is demand-driven. The parent
   // owns pdf.js/pdfium and supplies a renderer; this package only coordinates

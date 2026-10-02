@@ -199,12 +199,11 @@ test('every prerendered page carries canonical, hreflang, and structured data', 
     await page.goto(route);
     const canonical = page.locator('link[rel="canonical"]');
     await expect(canonical, `${route} must have a canonical link`).toHaveCount(1);
-    expect(new URL((await canonical.getAttribute('href')) ?? '').pathname).toBe(
-      new URL(page.url()).pathname,
-    );
+    const expectedCanonical = route === '/' ? '/' : `${route}.html`;
+    expect(new URL((await canonical.getAttribute('href')) ?? '').pathname).toBe(expectedCanonical);
 
     const alternates = page.locator('link[rel="alternate"][hreflang]');
-    await expect(alternates).toHaveCount(2);
+    await expect(alternates).toHaveCount(route === '/' ? 1 : 2);
     const hrefs = await alternates.evaluateAll((links) =>
       links.map((link) => ({
         lang: link.getAttribute('hreflang'),
@@ -227,7 +226,7 @@ function assertDistinctLocales(route: string, hrefs: Array<{ lang: string | null
   );
   for (const { lang, href } of hrefs) {
     assert.ok(
-      href === `/${lang}${route}` || href === route,
+      href === `/${lang}${route}.html` || href === (route === '/' ? '/' : `${route}.html`),
       `${route}: hreflang="${lang}" points at ${href}`,
     );
   }
@@ -331,7 +330,9 @@ test('a saved recipe is restored on reload, not discarded', async ({ page }) => 
   });
 
   await page.getByRole('button', { name: /Save to this browser/i }).click();
-  await expect(page.locator('[role="status"]').filter({ hasText: /Saved to this browser/i })).toBeVisible();
+  await expect(
+    page.locator('[role="status"]').filter({ hasText: /Saved to this browser/i }),
+  ).toBeVisible();
 
   // The default recipe has one step. Removing it, then reloading, is the only way to tell a
   // restored recipe from a fresh default.
@@ -349,6 +350,24 @@ test('a saved recipe is restored on reload, not discarded', async ({ page }) => 
 test('the recipe route offers the export T70 requires', async ({ page }) => {
   await page.goto('/recipe');
   await expect(page.getByRole('button', { name: /Export JSON/i })).toBeVisible();
+});
+
+test('add-image separates the base PDF and image upload steps', async ({ page }) => {
+  await page.goto('/add-image');
+  await expect(page.locator('section[data-hydrated="true"]')).toBeVisible({ timeout: 30_000 });
+
+  const inputs = page.locator('input[type="file"]');
+  await expect(inputs).toHaveCount(2);
+  await expect(inputs.nth(0)).toHaveAttribute('accept', '.pdf,application/pdf');
+  await expect(inputs.nth(1)).toHaveAttribute('accept', '.png,.jpg,.jpeg,image/png,image/jpeg');
+
+  await inputs.nth(0).setInputFiles('fixtures/pdfs/one-page.pdf');
+  await expect(page.getByRole('status')).toContainText(/Choose the image in step 2/i);
+  await page.getByRole('button', { name: /Run locally/i }).click();
+  await expect(page.getByRole('alert')).toContainText(/image in step 2/i);
+
+  await inputs.nth(1).setInputFiles('fixtures/p7-04/skew-upright.png');
+  await expect(page.getByRole('status')).toContainText(/Base PDF and image selected/i);
 });
 
 test.describe('P7-07 batch runner', () => {

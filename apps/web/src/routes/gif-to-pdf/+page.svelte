@@ -14,5 +14,5 @@
   description="Convert GIF image files to PDF locally, in your browser. Nothing is uploaded."
   format="gif"
   direction="to-pdf"
-  accept=".pdf,application/pdf"
+  accept=".gif,image/gif"
 />

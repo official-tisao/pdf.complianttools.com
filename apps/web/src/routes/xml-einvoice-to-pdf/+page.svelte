@@ -14,5 +14,5 @@
   description="Convert XML e-invoice files to PDF locally, in your browser. Nothing is uploaded."
   format="xml-einvoice"
   direction="to-pdf"
-  accept=".pdf,application/pdf"
+  accept=".xml,application/xml,text/xml"
 />

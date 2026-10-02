@@ -14,5 +14,5 @@
   description="Convert Illustrator (AI) files to PDF locally, in your browser. Nothing is uploaded."
   format="ai"
   direction="to-pdf"
-  accept=".pdf,application/pdf"
+  accept=".ai,application/postscript"
 />

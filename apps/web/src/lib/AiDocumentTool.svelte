@@ -1,7 +1,7 @@
 <script lang="ts">
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
-  import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
+  import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd, staticRoute } from '$lib/seo';
   import { page } from '$app/state';
   import {
     createAiCallPlan,
@@ -246,7 +246,7 @@
       >{kind === 'translate' ? 'Check local availability' : 'Run locally first'}</Button
     ><Button variant="secondary" disabled={busy || !file} onclick={() => void prepareProvider()}
       >Prepare explicit AI request</Button
-    ><a href="/connect-ai">Connect your AI</a>
+    ><a href={staticRoute('/connect-ai')}>Connect your AI</a>
   </div>
   <p class="status" role="status">{status}</p>
   {#if context}<p class="context">

@@ -35,6 +35,8 @@ const LOCALIZABLE_SHELLS = new Set([
 ]);
 const localized = manifest.routes.filter((route) => LOCALIZABLE_SHELLS.has(route.shell));
 
+const staticPath = (path: string): string => (path === '/' ? '/' : `${path}.html`);
+
 test.describe('every localizable route is served in all three locales', () => {
   for (const { path } of localized) {
     test(`${path} has /en, /en-XA and /ar variants`, async ({ page }) => {
@@ -99,8 +101,12 @@ test.describe('every localized page advertises correct hreflang alternates', () 
         })),
       );
       const byLang = Object.fromEntries(hrefs.map((entry) => [entry.lang, entry.href]));
-      expect(byLang.en, `${path}: hreflang=en must point at the English URL`).toBe(path);
-      expect(byLang.ar, `${path}: hreflang=ar must point at the Arabic URL`).toBe(`/ar${path}`);
+      expect(byLang.en, `${path}: hreflang=en must point at the English URL`).toBe(
+        staticPath(path),
+      );
+      expect(byLang.ar, `${path}: hreflang=ar must point at the Arabic URL`).toBe(
+        staticPath(`/ar${path}`),
+      );
     });
   }
 });

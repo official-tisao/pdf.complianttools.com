@@ -14,5 +14,5 @@
   description="Convert Comic book archive files to PDF locally, in your browser. Nothing is uploaded."
   format="cbz"
   direction="to-pdf"
-  accept=".pdf,application/pdf"
+  accept=".cbz,application/vnd.comicbook+zip,application/zip"
 />

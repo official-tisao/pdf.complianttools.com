@@ -14,5 +14,5 @@
   description="Convert SVG image files to PDF locally, in your browser. Nothing is uploaded."
   format="svg"
   direction="to-pdf"
-  accept=".pdf,application/pdf"
+  accept=".svg,image/svg+xml"
 />

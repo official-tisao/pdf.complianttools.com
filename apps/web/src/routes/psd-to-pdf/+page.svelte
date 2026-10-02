@@ -14,5 +14,5 @@
   description="Convert Photoshop (PSD) files to PDF locally, in your browser. Nothing is uploaded."
   format="psd"
   direction="to-pdf"
-  accept=".pdf,application/pdf"
+  accept=".psd,image/vnd.adobe.photoshop"
 />

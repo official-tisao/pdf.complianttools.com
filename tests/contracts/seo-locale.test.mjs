@@ -26,6 +26,8 @@ const LOCALE_PREFIXES = [
 ];
 const SITE_ORIGIN = 'https://pdf.complianttools.com';
 
+const htmlRoute = (path) => (path === '/' || path.endsWith('.html') ? path : `${path}.html`);
+
 const canonicalPath = (path) => {
   const [head, ...rest] = path.split('/').filter(Boolean);
   return LOCALE_PREFIXES.some((entry) => entry.prefix === head) ? `/${rest.join('/')}` : path;
@@ -33,17 +35,19 @@ const canonicalPath = (path) => {
 
 const hreflangLinks = (path) => {
   const base = canonicalPath(path);
+  if (base === '/') return [{ hreflang: 'en', href: new URL('/', SITE_ORIGIN).href }];
   return LOCALE_PREFIXES.filter((entry) => entry.hreflang !== null).map((entry) => ({
     hreflang: entry.hreflang,
-    href: new URL(entry.prefix === 'en' ? base : `/${entry.prefix}${base}`, SITE_ORIGIN).href,
+    href: new URL(htmlRoute(entry.prefix === 'en' ? base : `/${entry.prefix}${base}`), SITE_ORIGIN)
+      .href,
   }));
 };
 
 test('an Arabic page advertises the English and Arabic URLs, not its own three times', () => {
   const links = hreflangLinks('/ar/crop-pdf');
   assert.deepEqual(links, [
-    { hreflang: 'en', href: 'https://pdf.complianttools.com/crop-pdf' },
-    { hreflang: 'ar', href: 'https://pdf.complianttools.com/ar/crop-pdf' },
+    { hreflang: 'en', href: 'https://pdf.complianttools.com/crop-pdf.html' },
+    { hreflang: 'ar', href: 'https://pdf.complianttools.com/ar/crop-pdf.html' },
   ]);
   // The specific regression: every href used to be identical.
   assert.equal(new Set(links.map((link) => link.href)).size, links.length);
@@ -89,9 +93,12 @@ test('the built Arabic page ships correct alternates', async () => {
   ];
   const byHreflang = Object.fromEntries(alternates.map(([, lang, href]) => [lang, href]));
 
-  assert.equal(byHreflang.en, 'https://pdf.complianttools.com/crop-pdf');
-  assert.equal(byHreflang.ar, 'https://pdf.complianttools.com/ar/crop-pdf');
+  assert.equal(byHreflang.en, 'https://pdf.complianttools.com/crop-pdf.html');
+  assert.equal(byHreflang.ar, 'https://pdf.complianttools.com/ar/crop-pdf.html');
   // The canonical must be the unprefixed URL, so all three variants resolve to
   // one document rather than competing with each other.
-  assert.match(html, /<link rel="canonical" href="https:\/\/pdf\.complianttools\.com\/crop-pdf"/u);
+  assert.match(
+    html,
+    /<link rel="canonical" href="https:\/\/pdf\.complianttools\.com\/crop-pdf\.html"/u,
+  );
 });

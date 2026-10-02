@@ -85,11 +85,45 @@
 
   function selectFiles(list: FileList | null) {
     files = list ? Array.from(list) : [];
-    status = files.length
-      ? `${files.length} file${files.length === 1 ? '' : 's'} selected locally.`
-      : '';
+    updateSelectionStatus();
     error = '';
     downloadHref = undefined;
+  }
+
+  function selectPrimaryFile(list: FileList | null) {
+    const primary = list?.[0];
+    files = primary ? [primary, ...(files[1] ? [files[1]] : [])] : [];
+    updateSelectionStatus();
+    error = '';
+    downloadHref = undefined;
+  }
+
+  function selectSecondaryFile(list: FileList | null) {
+    const secondary = list?.[0];
+    files = files[0] ? [files[0], ...(secondary ? [secondary] : [])] : [];
+    updateSelectionStatus();
+    error = '';
+    downloadHref = undefined;
+  }
+
+  function updateSelectionStatus() {
+    if (!files.length) {
+      status = '';
+      return;
+    }
+    if (operation === 'add-image') {
+      status = files[1]
+        ? 'Base PDF and image selected locally.'
+        : 'Base PDF selected locally. Choose the image in step 2.';
+      return;
+    }
+    if (operation === 'overlay') {
+      status = files[1]
+        ? 'Base PDF and overlay PDF selected locally.'
+        : 'Base PDF selected locally. Choose the overlay PDF in step 2.';
+      return;
+    }
+    status = `${files.length} file${files.length === 1 ? '' : 's'} selected locally.`;
   }
 
   function selectSignature(list: FileList | null) {
@@ -109,6 +143,20 @@
     const file = files[0];
     if (!file && operation !== 'password-generator') {
       error = t('phase.error.noFile', 'Choose a local file first. Nothing is uploaded.');
+      return;
+    }
+    if (operation === 'add-image' && !files[1]) {
+      error = t(
+        'phase.error.imageStep',
+        'Choose a PNG/JPEG image in step 2 before running this tool.',
+      );
+      return;
+    }
+    if (operation === 'overlay' && !files[1]) {
+      error = t(
+        'phase.error.overlayStep',
+        'Choose the overlay PDF in step 2 before running this tool.',
+      );
       return;
     }
     busy = true;
@@ -334,14 +382,50 @@
       onchange={selectFiles}
       label="Drop an 8-bit RGBA PNG signature photo"
     />
+  {:else if operation === 'add-image'}
+    <div class="file-steps">
+      <div class="file-step">
+        <span class="step-label">{t('phase.files.basePdf', '1. Base PDF')}</span>
+        <FileDrop
+          accept=".pdf,application/pdf"
+          multiple={false}
+          onchange={selectPrimaryFile}
+          label={t('phase.files.basePdfImage', 'Choose the PDF you want to place an image on')}
+        />
+      </div>
+      <div class="file-step">
+        <span class="step-label">{t('phase.files.image', '2. Image to place')}</span>
+        <FileDrop
+          accept=".png,.jpg,.jpeg,image/png,image/jpeg"
+          multiple={false}
+          onchange={selectSecondaryFile}
+          label={t('phase.files.chooseImage', 'Choose a PNG or JPEG image')}
+        />
+      </div>
+    </div>
+  {:else if operation === 'overlay'}
+    <div class="file-steps">
+      <div class="file-step">
+        <span class="step-label">{t('phase.files.basePdf', '1. Base PDF')}</span>
+        <FileDrop
+          accept=".pdf,application/pdf"
+          multiple={false}
+          onchange={selectPrimaryFile}
+          label={t('phase.files.basePdfOverlay', 'Choose the PDF underneath')}
+        />
+      </div>
+      <div class="file-step">
+        <span class="step-label">{t('phase.files.overlayPdf', '2. Overlay PDF')}</span>
+        <FileDrop
+          accept=".pdf,application/pdf"
+          multiple={false}
+          onchange={selectSecondaryFile}
+          label={t('phase.files.chooseOverlay', 'Choose the PDF to place on top')}
+        />
+      </div>
+    </div>
   {:else}
-    <FileDrop
-      {accept}
-      onchange={selectFiles}
-      label={operation === 'add-image' || operation === 'overlay'
-        ? 'Choose the base file, then the second local file'
-        : 'Drop a PDF here or choose a local file'}
-    />
+    <FileDrop {accept} onchange={selectFiles} label="Drop a PDF here or choose a local file" />
   {/if}
   {#if operation !== 'signature-background' && operation !== 'password-generator'}
     <PdfPreview file={files[0]} {locale} onerror={(message) => (error = message)} />
@@ -471,6 +555,19 @@
     margin: 24px 0;
     padding: 14px 18px;
   }
+  .file-steps {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 24px;
+  }
+  .file-step {
+    display: grid;
+    gap: 8px;
+  }
+  .step-label {
+    font-weight: 600;
+  }
   .panel {
     background: var(--color-white);
     border-radius: var(--radius-panel);
@@ -507,6 +604,9 @@
     .tool-page {
       padding-inline: 24px;
       padding-top: 72px;
+    }
+    .file-steps {
+      grid-template-columns: 1fr;
     }
   }
 </style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { staticRoute } from '$lib/seo';
   import AiEscalationList from '$lib/AiEscalationList.svelte';
   import SeoTags from '$lib/SeoTags.svelte';
 </script>
@@ -29,7 +30,7 @@
     remain independently owned by their workstreams.
   </p>
   <AiEscalationList />
-  <a href="/connect-ai">Connect your AI</a>
+  <a href={staticRoute('/connect-ai')}>Connect your AI</a>
 </section>
 
 <style>

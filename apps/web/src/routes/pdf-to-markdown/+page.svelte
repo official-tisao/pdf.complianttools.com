@@ -3,6 +3,7 @@
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import AiEscalationList from '$lib/AiEscalationList.svelte';
+  import PdfPreview from '$lib/PdfPreview.svelte';
 
   let file = $state<File | undefined>();
   let markdown = $state('');
@@ -50,6 +51,7 @@
       file = list?.[0];
     }}
   />
+  <PdfPreview {file} onerror={(message) => (status = message)} />
   <label
     ><input type="checkbox" bind:checked={allowAi} /> I explicitly want to enable the registered BYOK
     escalation after reviewing local output.</label

@@ -2,7 +2,7 @@
   /* global HTMLElement */
   import '@pdf-complianttools/ui/tokens.css';
   import { page } from '$app/state';
-  import { canonicalPath, canonicalUrl, hreflangLinks } from '$lib/seo';
+  import { canonicalPath, canonicalUrl, hreflangLinks, staticRoute } from '$lib/seo';
   import '$lib/configure-pdfjs';
   import ToolDirectory from '$lib/ToolDirectory.svelte';
 
@@ -34,6 +34,7 @@
 
 <svelte:head>
   <meta name="theme-color" content="#f0eeea" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <!--
     No site-wide <meta name="description"> here on purpose. SvelteKit does NOT
     dedupe <svelte:head> entries by attribute name, so shipping a default here
@@ -58,16 +59,16 @@
 <header class="site-header">
   <a class="brand" href="/">pdf.complianttools.com</a>
   <nav aria-label="Primary navigation">
-    <a href="/merge">Merge</a>
-    <a href="/convert">Convert</a>
-    <a href="/create-pdf">Create</a>
-    <a href="/invoice-creator">Invoices</a>
-    <a href="/e-invoice">E-invoice</a>
-    <a href="/pdf-to-markdown">PDF to Markdown</a>
-    <a href="/recipe">Recipes</a>
-    <a href="/batch">Batch</a>
-    <a href="/ai/chat-with-pdf">AI tools</a>
-    <a href="/connect-ai">Connect AI</a>
+    <a href={staticRoute('/merge')}>Merge</a>
+    <a href={staticRoute('/convert')}>Convert</a>
+    <a href={staticRoute('/create-pdf')}>Create</a>
+    <a href={staticRoute('/invoice-creator')}>Invoices</a>
+    <a href={staticRoute('/e-invoice')}>E-invoice</a>
+    <a href={staticRoute('/pdf-to-markdown')}>PDF to Markdown</a>
+    <a href={staticRoute('/recipe')}>Recipes</a>
+    <a href={staticRoute('/batch')}>Batch</a>
+    <a href={staticRoute('/ai/chat-with-pdf')}>AI tools</a>
+    <a href={staticRoute('/connect-ai')}>Connect AI</a>
     <a href="/#tools">Tools</a>
   </nav>
   <span class="mode" aria-label="Processing mode">Local-first</span>

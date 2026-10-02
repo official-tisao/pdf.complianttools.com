@@ -1,11 +1,13 @@
 <script lang="ts">
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import PdfPreview from '$lib/PdfPreview.svelte';
   import SeoTags from '$lib/SeoTags.svelte';
   import { inspectStructure, type StructureReport } from '@pdf-complianttools/engine';
   let report = $state<StructureReport>();
+  let file = $state<File>();
   let status = $state('Choose a PDF to inspect locally.');
   async function inspect(files: FileList | null) {
-    const file = files?.[0];
+    file = files?.[0];
     if (!file) return;
     try {
       report = await inspectStructure(new Uint8Array(await file.arrayBuffer()));
@@ -42,6 +44,7 @@
     label="Choose a PDF to inspect"
     onchange={inspect}
   />
+  <PdfPreview {file} onerror={(message) => (status = message)} />
   {#if report}<div class="report">
       <dl>
         <div>

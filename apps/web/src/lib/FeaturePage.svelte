@@ -26,6 +26,7 @@
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
   import { translate, type Locale } from '$lib/i18n';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import PdfPreview from '$lib/PdfPreview.svelte';
   import { getLocaleContext } from '../routes/__locale/context';
   import { page } from '$app/state';
 
@@ -479,6 +480,7 @@
       onchange={selectFiles}
       label={t('feature.pack.drop', 'Drop PDFs here or choose files')}
     />
+    <PdfPreview file={files[0]} {locale} onerror={(message) => (status = message)} />
     <button disabled={!files.length} onclick={pack}
       >{t('feature.pack.action', 'Build document pack')}</button
     >
@@ -505,6 +507,7 @@
       onchange={selectFiles}
       label={t('feature.batch.drop', 'Drop PDFs here or choose files')}
     />
+    <PdfPreview file={files[0]} {locale} onerror={(message) => (status = message)} />
     <button disabled={!files.length} onclick={batch}
       >{t('feature.batch.action', 'Run local batch')}</button
     >

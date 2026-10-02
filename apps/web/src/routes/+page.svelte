@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { staticRoute } from '$lib/seo';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
 
@@ -33,8 +34,10 @@
       inside a button is invalid HTML and gives the tap target no accessible
       role. These are navigation, so they are links.
     -->
-    <a class="button button-primary" href="/merge">Start with Merge PDF</a>
-    <a class="button button-secondary" href="/ai/chat-with-pdf">Explore local-first AI</a>
+    <a class="button button-primary" href={staticRoute('/merge')}>Start with Merge PDF</a>
+    <a class="button button-secondary" href={staticRoute('/ai/chat-with-pdf')}
+      >Explore local-first AI</a
+    >
     <a class="button button-secondary" href="/#tools">Browse tools</a>
   </div>
   <FileDrop onchange={acceptFiles} />
@@ -65,12 +68,12 @@
   <nav class="tool-directory" aria-labelledby="directory-heading">
     <h3 id="directory-heading">Create and invoices</h3>
     <ul>
-      <li><a href="/create-pdf">Blank / templated PDF creator</a></li>
-      <li><a href="/invoice-creator">Invoice creator with saved templates</a></li>
-      <li><a href="/e-invoice">Electronic invoice (UBL-style XML)</a></li>
-      <li><a href="/qr-code">QR code generator</a></li>
-      <li><a href="/document-pack-builder">Document pack builder</a></li>
-      <li><a href="/scan-to-pdf">Scan to PDF</a></li>
+      <li><a href={staticRoute('/create-pdf')}>Blank / templated PDF creator</a></li>
+      <li><a href={staticRoute('/invoice-creator')}>Invoice creator with saved templates</a></li>
+      <li><a href={staticRoute('/e-invoice')}>Electronic invoice (UBL-style XML)</a></li>
+      <li><a href={staticRoute('/qr-code')}>QR code generator</a></li>
+      <li><a href={staticRoute('/document-pack-builder')}>Document pack builder</a></li>
+      <li><a href={staticRoute('/scan-to-pdf')}>Scan to PDF</a></li>
     </ul>
   </nav>
 </section>

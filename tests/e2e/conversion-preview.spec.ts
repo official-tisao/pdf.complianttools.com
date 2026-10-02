@@ -23,18 +23,26 @@ async function expectRenderedPdfPreview(page: import('@playwright/test').Page) {
   await expect(page.getByRole('img', { name: /page 1/i })).toBeVisible();
 }
 
+async function chooseAfterHydration(
+  page: import('@playwright/test').Page,
+  fixture: string,
+) {
+  await expect(page.locator('section[data-hydrated="true"]')).toBeVisible({ timeout: 30_000 });
+  await page.locator('input[type="file"]').setInputFiles(fixture);
+}
+
 test('to-PDF ConversionTool previews the generated PDF after Markdown is attached', async ({
   page,
 }) => {
   await page.goto('/text-pdf');
-  await page.locator('input[type="file"]').setInputFiles(markdownFixture);
+  await chooseAfterHydration(page, markdownFixture);
 
   await expectRenderedPdfPreview(page);
 });
 
 test('from-PDF ConversionTool previews the attached source PDF', async ({ page }) => {
-  await page.goto('/pdf-to-image');
-  await page.locator('input[type="file"]').setInputFiles(pdfFixture);
+  await page.goto('/pdf-to-jpg');
+  await chooseAfterHydration(page, pdfFixture);
 
   await expectRenderedPdfPreview(page);
 });

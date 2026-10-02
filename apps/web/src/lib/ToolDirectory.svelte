@@ -10,179 +10,179 @@
 -->
 <nav class="tool-directory" aria-labelledby="directory-heading">
   <h2 id="directory-heading">Every tool</h2>
-  <section class="directory-group">
-    <h2>Organize pages</h2>
-    <ul>
-      <li><a href="/bates-numbering">Bates numbering</a></li>
-      <li><a href="/crop-pdf">Crop pages</a></li>
-      <li><a href="/extract-pages">Extract pages</a></li>
-      <li><a href="/halve-pages">Halve pages</a></li>
-      <li><a href="/insert-pages">Insert pages</a></li>
-      <li><a href="/merge">Merge PDFs</a></li>
-      <li><a href="/organize">Organize pages</a></li>
-      <li><a href="/pages-per-sheet">Pages per sheet</a></li>
-      <li><a href="/remove-pages">Remove pages</a></li>
-      <li><a href="/resize-pdf-pages">Change page size</a></li>
-      <li><a href="/rotate-pdf">Rotate pages</a></li>
-      <li><a href="/split">Split PDF</a></li>
-    </ul>
-  </section>
-  <section class="directory-group">
-    <h2>Convert to and from PDF</h2>
-    <ul>
-      <li><a href="/bmp-to-pdf">BMP image to PDF</a></li>
-      <li><a href="/cbz-to-pdf">Comic book archive to PDF</a></li>
-      <li><a href="/csv-to-pdf">Comma-separated values to PDF</a></li>
-      <li><a href="/docx-to-pdf">Word (DOCX) to PDF</a></li>
-      <li><a href="/epub-to-pdf">EPUB to PDF</a></li>
-      <li><a href="/gif-to-pdf">GIF image to PDF</a></li>
-      <li><a href="/heic-to-pdf">HEIC/HEIF image to PDF</a></li>
-      <li><a href="/html-to-pdf">Pasted HTML to PDF</a></li>
-      <li><a href="/jpg-to-pdf">JPEG image to PDF</a></li>
-      <li><a href="/markdown-to-pdf">Markdown to PDF</a></li>
-      <li><a href="/odg-to-pdf">OpenDocument Graphics to PDF</a></li>
-      <li><a href="/odp-to-pdf">OpenDocument Presentation to PDF</a></li>
-      <li><a href="/ods-to-pdf">OpenDocument Spreadsheet to PDF</a></li>
-      <li><a href="/odt-to-pdf">OpenDocument Text to PDF</a></li>
-      <li><a href="/pdf-to-cbz">PDF to Comic book archive</a></li>
-      <li><a href="/pdf-to-csv">PDF to Comma-separated values</a></li>
-      <li><a href="/pdf-to-docx">PDF to Word (DOCX)</a></li>
-      <li><a href="/pdf-to-epub">PDF to EPUB</a></li>
-      <li><a href="/pdf-to-html">PDF to Pasted HTML</a></li>
-      <li><a href="/pdf-to-jpg">PDF to JPEG image</a></li>
-      <li><a href="/pdf-to-markdown">PDF to Markdown</a></li>
-      <li><a href="/pdf-to-odg">PDF to OpenDocument Graphics</a></li>
-      <li><a href="/pdf-to-odp">PDF to OpenDocument Presentation</a></li>
-      <li><a href="/pdf-to-ods">PDF to OpenDocument Spreadsheet</a></li>
-      <li><a href="/pdf-to-odt">PDF to OpenDocument Text</a></li>
-      <li><a href="/pdf-to-pdf-epub">PDF to EPUB extracted from PDF</a></li>
-      <li><a href="/pdf-to-pdf-html">PDF to HTML extracted from PDF</a></li>
-      <li><a href="/pdf-to-pdf-image">PDF to Rendered PDF pages</a></li>
-      <li><a href="/pdf-to-pdf-markdown">PDF to Markdown extracted from PDF</a></li>
-      <li><a href="/pdf-to-pdf-odp">PDF to ODP extracted from PDF</a></li>
-      <li><a href="/pdf-to-pdf-ods">PDF to ODS extracted from PDF</a></li>
-      <li><a href="/pdf-to-pdf-odt">PDF to ODT extracted from PDF</a></li>
-      <li><a href="/pdf-to-pdf-rtf">PDF to RTF extracted from PDF</a></li>
-      <li><a href="/pdf-to-pdf-txt">PDF to Text extracted from PDF</a></li>
-      <li><a href="/pdf-to-png">PDF to PNG image</a></li>
-      <li><a href="/pdf-to-pptx">PDF to PowerPoint (PPTX)</a></li>
-      <li><a href="/pdf-to-rtf">PDF to Rich Text Format</a></li>
-      <li><a href="/pdf-to-txt">PDF to Plain text</a></li>
-      <li><a href="/pdf-to-xlsx">PDF to Excel (XLSX)</a></li>
-      <li><a href="/pdf-to-zip">PDF to ZIP of pages or images</a></li>
-      <li><a href="/png-to-pdf">PNG image to PDF</a></li>
-      <li><a href="/pptx-to-pdf">PowerPoint (PPTX) to PDF</a></li>
-      <li><a href="/psd-to-pdf">Photoshop (PSD) to PDF</a></li>
-      <li><a href="/rtf-to-pdf">Rich Text Format to PDF</a></li>
-      <li><a href="/svg-to-pdf">SVG image to PDF</a></li>
-      <li><a href="/txt-to-pdf">Plain text to PDF</a></li>
-      <li><a href="/webp-to-pdf">WebP image to PDF</a></li>
-      <li><a href="/xlsx-to-pdf">Excel (XLSX) to PDF</a></li>
-      <li><a href="/xml-einvoice-to-pdf">XML e-invoice to PDF</a></li>
-      <li><a href="/zip-to-pdf">ZIP of pages or images to PDF</a></li>
-    </ul>
-  </section>
-  <section class="directory-group">
-    <h2>Other formats</h2>
-    <ul>
-      <li><a href="/bank-statement-to-excel">Bank statement → Excel</a></li>
-      <li><a href="/csv-pdf">CSV ⇄ PDF</a></li>
-      <li><a href="/design-file-to-pdf">Design files → PDF</a></li>
-      <li><a href="/epub-pdf">EPUB ⇄ PDF</a></li>
-      <li><a href="/excel-pdf">Excel ⇄ PDF</a></li>
-      <li><a href="/html-pdf">HTML ⇄ PDF</a></li>
-      <li><a href="/image-to-pdf">Images → PDF</a></li>
-      <li><a href="/odf-pdf">OpenDocument ⇄ PDF</a></li>
-      <li><a href="/other-formats-to-pdf">Legacy formats → PDF</a></li>
-      <li><a href="/ppt-pdf">PowerPoint ⇄ PDF</a></li>
-      <li><a href="/text-pdf">Text, RTF and Markdown ⇄ PDF</a></li>
-      <li><a href="/word-pdf">Word ⇄ PDF</a></li>
-    </ul>
-  </section>
-  <section class="directory-group">
-    <h2>Optimize and repair</h2>
-    <ul>
-      <li><a href="/compress-pdf">Compress PDF</a></li>
-      <li><a href="/flatten-pdf">Flatten PDF</a></li>
-      <li><a href="/optimize-for-web">Optimize for web</a></li>
-      <li><a href="/repair-pdf">Repair PDF</a></li>
-    </ul>
-  </section>
-  <section class="directory-group">
-    <h2>Export</h2>
-    <ul>
-      <li><a href="/bookmarks">Bookmarks</a></li>
-      <li><a href="/extract-images">Extract embedded images</a></li>
-      <li><a href="/ocr-pdf">OCR a PDF</a></li>
-      <li><a href="/pdf-to-image">PDF → images</a></li>
-      <li><a href="/pdf-to-pdfa">PDF/A conformance</a></li>
-      <li><a href="/rasterize-pdf">Rasterize PDF</a></li>
-    </ul>
-  </section>
-  <section class="directory-group">
-    <h2>Edit and inspect</h2>
-    <ul>
-      <li><a href="/add-image">Add an image</a></li>
-      <li><a href="/add-text">Add text</a></li>
-      <li><a href="/annotate">Annotate</a></li>
-      <li><a href="/compare-pdf">Compare PDFs</a></li>
-      <li><a href="/create-form">Create a form</a></li>
-      <li><a href="/editor">PDF editor</a></li>
-      <li><a href="/fill-form">Fill a form</a></li>
-      <li><a href="/headers-footers">Headers and footers</a></li>
-      <li><a href="/page-numbers">Page numbers</a></li>
-      <li><a href="/pdf-inspector">Inspect structure</a></li>
-      <li><a href="/pdf-metadata">Edit metadata</a></li>
-      <li><a href="/pdf-overlay">Overlay a PDF</a></li>
-      <li><a href="/view-pdf">View a PDF</a></li>
-      <li><a href="/watermark-pdf">Watermark</a></li>
-    </ul>
-  </section>
-  <section class="directory-group">
-    <h2>Sign, protect, redact</h2>
-    <ul>
-      <li><a href="/password-generator">Password generator</a></li>
-      <li><a href="/pdf-accessibility">Accessibility tagging</a></li>
-      <li><a href="/protect-pdf">Protect a PDF</a></li>
-      <li><a href="/redact-pdf">Redact a PDF</a></li>
-      <li><a href="/remove-signature-background">Remove a signature background</a></li>
-      <li><a href="/request-signature">Request signatures</a></li>
-      <li><a href="/sign-pdf">Sign a PDF</a></li>
-      <li><a href="/unlock-pdf">Unlock a PDF</a></li>
-      <li><a href="/verify-signature">Verify a signature</a></li>
-    </ul>
-  </section>
-  <section class="directory-group">
-    <h2>Create</h2>
-    <ul>
-      <li><a href="/create-pdf">Create a PDF</a></li>
-      <li><a href="/document-pack-builder">Document pack</a></li>
-      <li><a href="/e-invoice">Electronic invoice</a></li>
-      <li><a href="/invoice-creator">Invoice creator</a></li>
-      <li><a href="/qr-code">QR code</a></li>
-      <li><a href="/scan-to-pdf">Scan to PDF</a></li>
-    </ul>
-  </section>
-  <section class="directory-group">
-    <h2>Workflows</h2>
-    <ul>
-      <li><a href="/batch">Batch runner</a></li>
-      <li><a href="/recipe">Recipe builder</a></li>
-      <li><a href="/watch">Folder watcher</a></li>
-      <li><a href="/webpage-to-pdf">Webpage → PDF</a></li>
-    </ul>
-  </section>
-  <section class="directory-group">
-    <h2>AI (optional, BYOK)</h2>
-    <ul>
-      <li><a href="/ai-to-pdf">Illustrator (AI) to PDF</a></li>
-      <li><a href="/ai/chat-with-pdf">Chat with a PDF</a></li>
-      <li><a href="/ai/escalations">AI escalation routes</a></li>
-      <li><a href="/ai/generate-pdf">Generate a PDF</a></li>
-      <li><a href="/ai/summarize">Summarize a PDF</a></li>
-      <li><a href="/ai/translate">Translate a PDF</a></li>
-    </ul>
-  </section>
+    <section class="directory-group">
+      <h2>Organize pages</h2>
+      <ul>
+        <li><a href="/bates-numbering.html">Bates numbering</a></li>
+        <li><a href="/crop-pdf.html">Crop pages</a></li>
+        <li><a href="/extract-pages.html">Extract pages</a></li>
+        <li><a href="/halve-pages.html">Halve pages</a></li>
+        <li><a href="/insert-pages.html">Insert pages</a></li>
+        <li><a href="/merge.html">Merge PDFs</a></li>
+        <li><a href="/organize.html">Organize pages</a></li>
+        <li><a href="/pages-per-sheet.html">Pages per sheet</a></li>
+        <li><a href="/remove-pages.html">Remove pages</a></li>
+        <li><a href="/resize-pdf-pages.html">Change page size</a></li>
+        <li><a href="/rotate-pdf.html">Rotate pages</a></li>
+        <li><a href="/split.html">Split PDF</a></li>
+      </ul>
+    </section>
+    <section class="directory-group">
+      <h2>Convert to and from PDF</h2>
+      <ul>
+        <li><a href="/bmp-to-pdf.html">BMP image to PDF</a></li>
+        <li><a href="/cbz-to-pdf.html">Comic book archive to PDF</a></li>
+        <li><a href="/csv-to-pdf.html">Comma-separated values to PDF</a></li>
+        <li><a href="/docx-to-pdf.html">Word (DOCX) to PDF</a></li>
+        <li><a href="/epub-to-pdf.html">EPUB to PDF</a></li>
+        <li><a href="/gif-to-pdf.html">GIF image to PDF</a></li>
+        <li><a href="/heic-to-pdf.html">HEIC/HEIF image to PDF</a></li>
+        <li><a href="/html-to-pdf.html">Pasted HTML to PDF</a></li>
+        <li><a href="/jpg-to-pdf.html">JPEG image to PDF</a></li>
+        <li><a href="/markdown-to-pdf.html">Markdown to PDF</a></li>
+        <li><a href="/odg-to-pdf.html">OpenDocument Graphics to PDF</a></li>
+        <li><a href="/odp-to-pdf.html">OpenDocument Presentation to PDF</a></li>
+        <li><a href="/ods-to-pdf.html">OpenDocument Spreadsheet to PDF</a></li>
+        <li><a href="/odt-to-pdf.html">OpenDocument Text to PDF</a></li>
+        <li><a href="/pdf-to-cbz.html">PDF to Comic book archive</a></li>
+        <li><a href="/pdf-to-csv.html">PDF to Comma-separated values</a></li>
+        <li><a href="/pdf-to-docx.html">PDF to Word (DOCX)</a></li>
+        <li><a href="/pdf-to-epub.html">PDF to EPUB</a></li>
+        <li><a href="/pdf-to-html.html">PDF to Pasted HTML</a></li>
+        <li><a href="/pdf-to-jpg.html">PDF to JPEG image</a></li>
+        <li><a href="/pdf-to-markdown.html">PDF to Markdown</a></li>
+        <li><a href="/pdf-to-odg.html">PDF to OpenDocument Graphics</a></li>
+        <li><a href="/pdf-to-odp.html">PDF to OpenDocument Presentation</a></li>
+        <li><a href="/pdf-to-ods.html">PDF to OpenDocument Spreadsheet</a></li>
+        <li><a href="/pdf-to-odt.html">PDF to OpenDocument Text</a></li>
+        <li><a href="/pdf-to-pdf-epub.html">PDF to EPUB extracted from PDF</a></li>
+        <li><a href="/pdf-to-pdf-html.html">PDF to HTML extracted from PDF</a></li>
+        <li><a href="/pdf-to-pdf-image.html">PDF to Rendered PDF pages</a></li>
+        <li><a href="/pdf-to-pdf-markdown.html">PDF to Markdown extracted from PDF</a></li>
+        <li><a href="/pdf-to-pdf-odp.html">PDF to ODP extracted from PDF</a></li>
+        <li><a href="/pdf-to-pdf-ods.html">PDF to ODS extracted from PDF</a></li>
+        <li><a href="/pdf-to-pdf-odt.html">PDF to ODT extracted from PDF</a></li>
+        <li><a href="/pdf-to-pdf-rtf.html">PDF to RTF extracted from PDF</a></li>
+        <li><a href="/pdf-to-pdf-txt.html">PDF to Text extracted from PDF</a></li>
+        <li><a href="/pdf-to-png.html">PDF to PNG image</a></li>
+        <li><a href="/pdf-to-pptx.html">PDF to PowerPoint (PPTX)</a></li>
+        <li><a href="/pdf-to-rtf.html">PDF to Rich Text Format</a></li>
+        <li><a href="/pdf-to-txt.html">PDF to Plain text</a></li>
+        <li><a href="/pdf-to-xlsx.html">PDF to Excel (XLSX)</a></li>
+        <li><a href="/pdf-to-zip.html">PDF to ZIP of pages or images</a></li>
+        <li><a href="/png-to-pdf.html">PNG image to PDF</a></li>
+        <li><a href="/pptx-to-pdf.html">PowerPoint (PPTX) to PDF</a></li>
+        <li><a href="/psd-to-pdf.html">Photoshop (PSD) to PDF</a></li>
+        <li><a href="/rtf-to-pdf.html">Rich Text Format to PDF</a></li>
+        <li><a href="/svg-to-pdf.html">SVG image to PDF</a></li>
+        <li><a href="/txt-to-pdf.html">Plain text to PDF</a></li>
+        <li><a href="/webp-to-pdf.html">WebP image to PDF</a></li>
+        <li><a href="/xlsx-to-pdf.html">Excel (XLSX) to PDF</a></li>
+        <li><a href="/xml-einvoice-to-pdf.html">XML e-invoice to PDF</a></li>
+        <li><a href="/zip-to-pdf.html">ZIP of pages or images to PDF</a></li>
+      </ul>
+    </section>
+    <section class="directory-group">
+      <h2>Other formats</h2>
+      <ul>
+        <li><a href="/bank-statement-to-excel.html">Bank statement → Excel</a></li>
+        <li><a href="/csv-pdf.html">CSV ⇄ PDF</a></li>
+        <li><a href="/design-file-to-pdf.html">Design files → PDF</a></li>
+        <li><a href="/epub-pdf.html">EPUB ⇄ PDF</a></li>
+        <li><a href="/excel-pdf.html">Excel ⇄ PDF</a></li>
+        <li><a href="/html-pdf.html">HTML ⇄ PDF</a></li>
+        <li><a href="/image-to-pdf.html">Images → PDF</a></li>
+        <li><a href="/odf-pdf.html">OpenDocument ⇄ PDF</a></li>
+        <li><a href="/other-formats-to-pdf.html">Legacy formats → PDF</a></li>
+        <li><a href="/ppt-pdf.html">PowerPoint ⇄ PDF</a></li>
+        <li><a href="/text-pdf.html">Text, RTF and Markdown ⇄ PDF</a></li>
+        <li><a href="/word-pdf.html">Word ⇄ PDF</a></li>
+      </ul>
+    </section>
+    <section class="directory-group">
+      <h2>Optimize and repair</h2>
+      <ul>
+        <li><a href="/compress-pdf.html">Compress PDF</a></li>
+        <li><a href="/flatten-pdf.html">Flatten PDF</a></li>
+        <li><a href="/optimize-for-web.html">Optimize for web</a></li>
+        <li><a href="/repair-pdf.html">Repair PDF</a></li>
+      </ul>
+    </section>
+    <section class="directory-group">
+      <h2>Export</h2>
+      <ul>
+        <li><a href="/bookmarks.html">Bookmarks</a></li>
+        <li><a href="/extract-images.html">Extract embedded images</a></li>
+        <li><a href="/ocr-pdf.html">OCR a PDF</a></li>
+        <li><a href="/pdf-to-image.html">PDF → images</a></li>
+        <li><a href="/pdf-to-pdfa.html">PDF/A conformance</a></li>
+        <li><a href="/rasterize-pdf.html">Rasterize PDF</a></li>
+      </ul>
+    </section>
+    <section class="directory-group">
+      <h2>Edit and inspect</h2>
+      <ul>
+        <li><a href="/add-image.html">Add an image</a></li>
+        <li><a href="/add-text.html">Add text</a></li>
+        <li><a href="/annotate.html">Annotate</a></li>
+        <li><a href="/compare-pdf.html">Compare PDFs</a></li>
+        <li><a href="/create-form.html">Create a form</a></li>
+        <li><a href="/editor.html">PDF editor</a></li>
+        <li><a href="/fill-form.html">Fill a form</a></li>
+        <li><a href="/headers-footers.html">Headers and footers</a></li>
+        <li><a href="/page-numbers.html">Page numbers</a></li>
+        <li><a href="/pdf-inspector.html">Inspect structure</a></li>
+        <li><a href="/pdf-metadata.html">Edit metadata</a></li>
+        <li><a href="/pdf-overlay.html">Overlay a PDF</a></li>
+        <li><a href="/view-pdf.html">View a PDF</a></li>
+        <li><a href="/watermark-pdf.html">Watermark</a></li>
+      </ul>
+    </section>
+    <section class="directory-group">
+      <h2>Sign, protect, redact</h2>
+      <ul>
+        <li><a href="/password-generator.html">Password generator</a></li>
+        <li><a href="/pdf-accessibility.html">Accessibility tagging</a></li>
+        <li><a href="/protect-pdf.html">Protect a PDF</a></li>
+        <li><a href="/redact-pdf.html">Redact a PDF</a></li>
+        <li><a href="/remove-signature-background.html">Remove a signature background</a></li>
+        <li><a href="/request-signature.html">Request signatures</a></li>
+        <li><a href="/sign-pdf.html">Sign a PDF</a></li>
+        <li><a href="/unlock-pdf.html">Unlock a PDF</a></li>
+        <li><a href="/verify-signature.html">Verify a signature</a></li>
+      </ul>
+    </section>
+    <section class="directory-group">
+      <h2>Create</h2>
+      <ul>
+        <li><a href="/create-pdf.html">Create a PDF</a></li>
+        <li><a href="/document-pack-builder.html">Document pack</a></li>
+        <li><a href="/e-invoice.html">Electronic invoice</a></li>
+        <li><a href="/invoice-creator.html">Invoice creator</a></li>
+        <li><a href="/qr-code.html">QR code</a></li>
+        <li><a href="/scan-to-pdf.html">Scan to PDF</a></li>
+      </ul>
+    </section>
+    <section class="directory-group">
+      <h2>Workflows</h2>
+      <ul>
+        <li><a href="/batch.html">Batch runner</a></li>
+        <li><a href="/recipe.html">Recipe builder</a></li>
+        <li><a href="/watch.html">Folder watcher</a></li>
+        <li><a href="/webpage-to-pdf.html">Webpage → PDF</a></li>
+      </ul>
+    </section>
+    <section class="directory-group">
+      <h2>AI (optional, BYOK)</h2>
+      <ul>
+        <li><a href="/ai-to-pdf.html">Illustrator (AI) to PDF</a></li>
+        <li><a href="/ai/chat-with-pdf.html">Chat with a PDF</a></li>
+        <li><a href="/ai/escalations.html">AI escalation routes</a></li>
+        <li><a href="/ai/generate-pdf.html">Generate a PDF</a></li>
+        <li><a href="/ai/summarize.html">Summarize a PDF</a></li>
+        <li><a href="/ai/translate.html">Translate a PDF</a></li>
+      </ul>
+    </section>
 </nav>
 
 <style>

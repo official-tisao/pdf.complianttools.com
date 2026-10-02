@@ -33,7 +33,8 @@ test('every URL in the sitemap exists in the build', async (t) => {
     new RegExp(`${SITE_ORIGIN.replaceAll('.', '\\.')}([^"<]*)`, 'gu'),
   )) {
     const path = match[1];
-    const relative = path === '/' ? 'index.html' : `${path.replace(/^\//u, '')}.html`;
+    const relative =
+      path === '/' ? 'index.html' : `${path.replace(/^\//u, '').replace(/\.html$/u, '')}.html`;
     assert.ok(
       existsSync(new URL(relative, buildRoot)),
       `sitemap advertises ${path}, which is not in the build`,
@@ -57,13 +58,19 @@ test('the sitemap covers every route in the manifest that ships', async (t) => {
   const sitemap = await readSitemap();
   const missing = manifest.routes
     .map((route) => route.path)
-    .filter((path) => !sitemap.includes(`${SITE_ORIGIN}${path}<`));
+    .filter((path) => {
+      const expected = path === '/' ? `${SITE_ORIGIN}/` : `${SITE_ORIGIN}${path}.html`;
+      return !sitemap.includes(`${expected}<`);
+    });
   assert.deepEqual(missing, [], 'routes with no sitemap entry');
 });
 
 test('localized routes advertise their Arabic alternate', async () => {
   const sitemap = await readSitemap();
-  assert.match(sitemap, /hreflang="ar" href="https:\/\/pdf\.complianttools\.com\/ar\/merge"/u);
+  assert.match(
+    sitemap,
+    /hreflang="ar" href="https:\/\/pdf\.complianttools\.com\/ar\/merge\.html"/u,
+  );
   // …and the landing page, which has no Arabic variant, must not claim one.
   assert.ok(
     !/hreflang="ar" href="https:\/\/pdf\.complianttools\.com\/\/"/u.test(sitemap),

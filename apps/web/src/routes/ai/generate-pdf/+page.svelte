@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { staticRoute } from '$lib/seo';
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import {
     createAiCallPlan,
@@ -110,7 +111,7 @@
   >
   <div class="actions">
     <Button disabled={busy} onclick={() => void prepare()}>Prepare explicit AI request</Button><a
-      href="/connect-ai">Connect your AI</a
+      href={staticRoute('/connect-ai')}>Connect your AI</a
     >
   </div>
   <p class="status" role="status">{status}</p>

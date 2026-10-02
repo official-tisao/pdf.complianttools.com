@@ -2,6 +2,7 @@
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import SeoTags from '$lib/SeoTags.svelte';
+  import PdfPreview from '$lib/PdfPreview.svelte';
   import {
     OCR_MODELS,
     getOcrCapability,
@@ -71,6 +72,7 @@
     label="Choose a scanned PDF"
     onchange={selectFile}
   />
+  <PdfPreview {file} onerror={(message) => (status = message)} />
   <section class="disclosure" aria-labelledby="download-heading">
     <h2 id="download-heading">Model and language disclosure</h2>
     <p>

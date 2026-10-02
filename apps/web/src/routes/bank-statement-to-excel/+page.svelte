@@ -2,6 +2,7 @@
   import SeoTags from '$lib/SeoTags.svelte';
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import PdfPreview from '$lib/PdfPreview.svelte';
 
   let file = $state<File | undefined>();
   let status = $state('');
@@ -57,6 +58,7 @@
       file = list?.[0];
     }}
   />
+  {#if file?.name.toLowerCase().endsWith('.pdf')}<PdfPreview {file} />{/if}
   <Button onclick={extract}>Extract to XLSX</Button>
   <p class="status" role="status">{status}</p>
   {#if downloadHref}<a class="download" href={downloadHref} download="bank-statement.xlsx"

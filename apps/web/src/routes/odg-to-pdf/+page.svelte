@@ -14,5 +14,5 @@
   description="Convert OpenDocument Graphics files to PDF locally, in your browser. Nothing is uploaded."
   format="odg"
   direction="to-pdf"
-  accept=".pdf,application/pdf"
+  accept=".odg,application/vnd.oasis.opendocument.graphics"
 />

@@ -14,5 +14,5 @@
   description="Convert Markdown files to PDF locally, in your browser. Nothing is uploaded."
   format="markdown"
   direction="to-pdf"
-  accept=".pdf,application/pdf"
+  accept=".md,.markdown,text/markdown,text/plain"
 />

@@ -1,4 +1,5 @@
 import { unzipSync, zipSync, zlibSync } from 'fflate';
+import { PDFDocument, StandardFonts, rgb, type PDFFont } from 'pdf-lib';
 import { PdfEngineError } from '../errors.js';
 import { mergePdfBuffers } from '../pdf/merge.js';
 import type {
@@ -19,6 +20,7 @@ import {
   stripHtml,
   stripRtf,
   textPagesToPdf,
+  wrapText,
 } from './pdf-text.js';
 import { imageToPdf, renderPdfPageToPng } from './images.js';
 
@@ -494,7 +496,352 @@ function decodeText(bytes: Uint8Array): string {
 }
 
 async function markdownToPdf(markdown: string, options: ConversionOptions): Promise<Uint8Array> {
-  return textPagesToPdf([markdownToBlocks(markdown)], options);
+  return markdownPagesToPdf(markdown, options);
+}
+
+type MarkdownBlock =
+  | { kind: 'heading'; level: number; text: string }
+  | { kind: 'paragraph'; text: string }
+  | { kind: 'bullet' | 'ordered'; text: string; indent: number; marker: string }
+  | { kind: 'quote'; text: string }
+  | { kind: 'code'; lines: readonly string[] }
+  | { kind: 'rule' }
+  | { kind: 'table'; headers: readonly string[]; rows: readonly (readonly string[])[] };
+
+type InlineRun = { text: string; emphasis: 'regular' | 'bold' | 'italic' | 'code'; link?: boolean };
+
+/**
+ * Markdown used to be flattened into uppercase lines before PDF creation.
+ * That was deterministic, but it discarded the document's visual hierarchy:
+ * headings, emphasis, links, code, quotes, lists, and tables all became the
+ * same 10pt text. Keep the parser deliberately small and local, but retain the
+ * visual grammar users expect from a Markdown document.
+ */
+function parseMarkdownBlocks(markdown: string): readonly MarkdownBlock[] {
+  const lines = markdown.replaceAll('\r\n', '\n').split('\n');
+  const blocks: MarkdownBlock[] = [];
+  let paragraph: string[] = [];
+  let code: string[] | undefined;
+
+  const flushParagraph = () => {
+    if (paragraph.length === 0) return;
+    blocks.push({ kind: 'paragraph', text: paragraph.join(' ').trim() });
+    paragraph = [];
+  };
+
+  const tableRow = (line: string): string[] =>
+    line
+      .trim()
+      .replace(/^\|/u, '')
+      .replace(/\|$/u, '')
+      .split('|')
+      .map((cell) => cell.trim());
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? '';
+    if (code) {
+      if (/^\s*```/u.test(line)) {
+        blocks.push({ kind: 'code', lines: code });
+        code = undefined;
+      } else code.push(line);
+      continue;
+    }
+    if (/^\s*```/u.test(line)) {
+      flushParagraph();
+      code = [];
+      continue;
+    }
+    if (!line.trim()) {
+      flushParagraph();
+      continue;
+    }
+
+    const heading = /^\s*(#{1,6})\s+(.+?)\s*#*\s*$/u.exec(line);
+    if (heading) {
+      flushParagraph();
+      blocks.push({ kind: 'heading', level: heading[1]?.length ?? 1, text: heading[2] ?? '' });
+      continue;
+    }
+    if (/^\s*(?:[-*_]\s*){3,}$/u.test(line)) {
+      flushParagraph();
+      blocks.push({ kind: 'rule' });
+      continue;
+    }
+    if (
+      /^\s*\|.*\|\s*$/u.test(line) &&
+      index + 1 < lines.length &&
+      /^\s*\|?\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)+\|?\s*$/u.test(lines[index + 1] ?? '')
+    ) {
+      flushParagraph();
+      const headers = tableRow(line);
+      const rows: string[][] = [];
+      index += 2;
+      while (index < lines.length && /^\s*\|.*\|\s*$/u.test(lines[index] ?? '')) {
+        rows.push(tableRow(lines[index] ?? ''));
+        index += 1;
+      }
+      index -= 1;
+      blocks.push({ kind: 'table', headers, rows });
+      continue;
+    }
+
+    const list = /^(\s*)([-+*]|\d+[.)])\s+(.+)$/u.exec(line);
+    if (list) {
+      flushParagraph();
+      blocks.push({
+        kind: /^\d/u.test(list[2] ?? '') ? 'ordered' : 'bullet',
+        indent: Math.floor((list[1]?.length ?? 0) / 2),
+        marker: list[2] ?? '-',
+        text: list[3] ?? '',
+      });
+      continue;
+    }
+    const quote = /^\s*>\s?(.*)$/u.exec(line);
+    if (quote) {
+      flushParagraph();
+      blocks.push({ kind: 'quote', text: quote[1] ?? '' });
+      continue;
+    }
+    paragraph.push(line.trim());
+  }
+  if (code) blocks.push({ kind: 'code', lines: code });
+  flushParagraph();
+  return blocks;
+}
+
+function inlineMarkdown(value: string): readonly InlineRun[] {
+  const runs: InlineRun[] = [];
+  const pattern = /\[([^\]]+)\]\([^\s)]+\)|(`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/gu;
+  let cursor = 0;
+  for (const match of value.matchAll(pattern)) {
+    const start = match.index ?? 0;
+    if (start > cursor) runs.push({ text: value.slice(cursor, start), emphasis: 'regular' });
+    const token = match[0] ?? '';
+    if (token.startsWith('[')) {
+      runs.push({ text: match[1] ?? token, emphasis: 'regular', link: true });
+    } else if (token.startsWith('`')) {
+      runs.push({ text: token.slice(1, -1), emphasis: 'code' });
+    } else if (token.startsWith('**') || token.startsWith('__')) {
+      runs.push({ text: token.slice(2, -2), emphasis: 'bold' });
+    } else {
+      runs.push({ text: token.slice(1, -1), emphasis: 'italic' });
+    }
+    cursor = start + token.length;
+  }
+  if (cursor < value.length) runs.push({ text: value.slice(cursor), emphasis: 'regular' });
+  return runs.length > 0 ? runs : [{ text: value, emphasis: 'regular' }];
+}
+
+async function markdownPagesToPdf(
+  markdown: string,
+  options: ConversionOptions,
+): Promise<Uint8Array> {
+  const document = await PDFDocument.create();
+  const regular = await document.embedFont(StandardFonts.Helvetica);
+  const bold = await document.embedFont(StandardFonts.HelveticaBold);
+  const italic = await document.embedFont(StandardFonts.HelveticaOblique);
+  const codeFont = await document.embedFont(StandardFonts.Courier);
+  const pageSize: [number, number] =
+    options.pageSize === 'a4'
+      ? [595.28, 841.89]
+      : options.pageSize === 'legal'
+        ? [612, 1008]
+        : [612, 792];
+  const margin = options.margin ?? 48;
+  const contentWidth = pageSize[0] - margin * 2;
+  let page = document.addPage(pageSize as [number, number]);
+  let y = pageSize[1] - margin;
+
+  const fontFor = (emphasis: InlineRun['emphasis']): PDFFont =>
+    emphasis === 'bold'
+      ? bold
+      : emphasis === 'italic'
+        ? italic
+        : emphasis === 'code'
+          ? codeFont
+          : regular;
+  const sizeFor = (emphasis: InlineRun['emphasis'], size: number) =>
+    emphasis === 'code' ? Math.max(8.5, size - 1) : size;
+  const newPage = () => {
+    page = document.addPage(pageSize as [number, number]);
+    y = pageSize[1] - margin;
+  };
+  const ensureSpace = (height: number) => {
+    if (y - height < margin) newPage();
+  };
+
+  function wrapRuns(runs: readonly InlineRun[], size: number, width: number): InlineRun[][] {
+    const lines: InlineRun[][] = [[]];
+    let lineWidth = 0;
+    for (const run of runs) {
+      const pieces = run.text.split(/(\s+)/u).filter(Boolean);
+      for (const piece of pieces) {
+        const font = fontFor(run.emphasis);
+        const pieceSize = sizeFor(run.emphasis, size);
+        const pieceWidth = font.widthOfTextAtSize(piece, pieceSize);
+        const isWhitespace = /^\s+$/u.test(piece);
+        if (isWhitespace) {
+          if (lines.at(-1)?.length) {
+            lines.at(-1)?.push({ ...run, text: ' ' });
+            lineWidth += pieceWidth;
+          }
+          continue;
+        }
+        if (lineWidth > 0 && lineWidth + pieceWidth > width) {
+          lines.push([]);
+          lineWidth = 0;
+        }
+        lines.at(-1)?.push({ ...run, text: piece });
+        lineWidth += pieceWidth;
+      }
+    }
+    return lines.filter((line) => line.length > 0);
+  }
+
+  function drawRuns(runs: readonly InlineRun[], x: number, baseline: number, size: number) {
+    let cursor = x;
+    for (const run of runs) {
+      const font = fontFor(run.emphasis);
+      const runSize = sizeFor(run.emphasis, size);
+      const width = font.widthOfTextAtSize(run.text, runSize);
+      page.drawText(run.text, {
+        x: cursor,
+        y: baseline,
+        size: runSize,
+        font,
+        color: run.link ? rgb(0.08, 0.25, 0.52) : rgb(0.12, 0.11, 0.1),
+      });
+      if (run.link) {
+        page.drawLine({
+          start: { x: cursor, y: baseline - 1.5 },
+          end: { x: cursor + width, y: baseline - 1.5 },
+          thickness: 0.5,
+          color: rgb(0.08, 0.25, 0.52),
+        });
+      }
+      cursor += width;
+    }
+  }
+
+  function drawTextBlock(
+    text: string,
+    size: number,
+    lineHeight: number,
+    x = margin,
+    width = contentWidth,
+  ) {
+    const lines = wrapRuns(inlineMarkdown(text), size, width);
+    for (const line of lines) {
+      ensureSpace(lineHeight);
+      drawRuns(line, x, y - size, size);
+      y -= lineHeight;
+    }
+  }
+
+  for (const block of parseMarkdownBlocks(markdown)) {
+    if (block.kind === 'heading') {
+      const size = [26, 21, 16, 13, 11, 10][block.level - 1] ?? 10;
+      y -= block.level === 1 ? 8 : 5;
+      drawTextBlock(block.text, size, size + 4);
+      y -= block.level === 1 ? 8 : 4;
+    } else if (block.kind === 'paragraph') {
+      drawTextBlock(block.text, 10.5, 15);
+      y -= 5;
+    } else if (block.kind === 'bullet' || block.kind === 'ordered') {
+      const indent = margin + 14 + block.indent * 12;
+      const marker = block.kind === 'ordered' ? `${block.marker} ` : '- ';
+      ensureSpace(15);
+      page.drawText(marker, {
+        x: indent - 14,
+        y: y - 10.5,
+        size: 10.5,
+        font: regular,
+        color: rgb(0.12, 0.11, 0.1),
+      });
+      drawTextBlock(block.text, 10.5, 15, indent, contentWidth - (indent - margin));
+      y -= 2;
+    } else if (block.kind === 'quote') {
+      const startY = y;
+      drawTextBlock(block.text, 10.5, 15, margin + 14, contentWidth - 14);
+      page.drawRectangle({
+        x: margin,
+        y: y + 3,
+        width: 3,
+        height: Math.max(15, startY - y - 3),
+        color: rgb(0.48, 0.5, 0.55),
+      });
+      y -= 4;
+    } else if (block.kind === 'rule') {
+      ensureSpace(12);
+      y -= 5;
+      page.drawLine({
+        start: { x: margin, y },
+        end: { x: pageSize[0] - margin, y },
+        thickness: 1,
+        color: rgb(0.75, 0.75, 0.75),
+      });
+      y -= 8;
+    } else if (block.kind === 'code') {
+      const codeLines = block.lines.flatMap((line) => wrapText(line, 88));
+      const height = Math.max(24, codeLines.length * 12 + 12);
+      ensureSpace(height);
+      page.drawRectangle({
+        x: margin,
+        y: y - height + 5,
+        width: contentWidth,
+        height,
+        color: rgb(0.95, 0.95, 0.95),
+        borderColor: rgb(0.82, 0.82, 0.82),
+        borderWidth: 0.5,
+      });
+      for (const line of codeLines) {
+        page.drawText(line, {
+          x: margin + 8,
+          y: y - 12,
+          size: 8.5,
+          font: codeFont,
+          color: rgb(0.12, 0.11, 0.1),
+        });
+        y -= 12;
+      }
+      y -= 12;
+    } else if (block.kind === 'table') {
+      const columns = Math.max(block.headers.length, ...block.rows.map((row) => row.length));
+      const columnWidth = contentWidth / Math.max(1, columns);
+      const rows = [block.headers, ...block.rows];
+      for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+        ensureSpace(22);
+        const row = rows[rowIndex] ?? [];
+        if (rowIndex === 0)
+          page.drawRectangle({
+            x: margin,
+            y: y - 17,
+            width: contentWidth,
+            height: 20,
+            color: rgb(0.92, 0.94, 0.97),
+          });
+        for (let column = 0; column < columns; column += 1) {
+          page.drawText((row[column] ?? '').slice(0, 42), {
+            x: margin + column * columnWidth + 5,
+            y: y - 12,
+            size: 8.5,
+            font: rowIndex === 0 ? bold : regular,
+            color: rgb(0.12, 0.11, 0.1),
+            maxWidth: columnWidth - 10,
+          });
+        }
+        page.drawLine({
+          start: { x: margin, y: y - 18 },
+          end: { x: pageSize[0] - margin, y: y - 18 },
+          thickness: 0.5,
+          color: rgb(0.75, 0.75, 0.75),
+        });
+        y -= 20;
+      }
+      y -= 8;
+    }
+  }
+  return document.save();
 }
 
 async function htmlToPdf(html: string, options: ConversionOptions): Promise<Uint8Array> {
