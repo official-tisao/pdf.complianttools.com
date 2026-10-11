@@ -2,6 +2,7 @@ import { PDFArray, PDFDocument, PDFDict, PDFName, StandardFonts, degrees, rgb } 
 import { unzlibSync, zlibSync } from 'fflate';
 import { PdfEngineError } from '../errors.js';
 import { extractPdfTextPages } from '../conversion/pdf-text.js';
+import { loadPdfJs } from './pdfjs.js';
 import type {
   AnnotationKind,
   AnnotationOptions,
@@ -731,6 +732,7 @@ export async function createFormPdf(
 
 export type FormFieldInfo = Readonly<{
   name: string;
+  label?: string;
   type: string;
   value?: string | boolean | readonly string[];
   options?: readonly string[];
@@ -756,39 +758,191 @@ type PdfWidget = ReturnType<
 function widgetPageNumber(document: PDFDocument, widget: PdfWidget): number | undefined {
   const pages = document.getPages();
   const directPageRef = widget.P();
-  const directIndex = pages.findIndex(
-    (page) => page.ref.toString() === directPageRef?.toString(),
-  );
+  const directIndex = pages.findIndex((page) => page.ref.toString() === directPageRef?.toString());
   if (directIndex >= 0) return directIndex + 1;
 
   const widgetRef = document.context.getObjectRef(widget.dict);
   const page = widgetRef ? document.findPageForAnnotationRef(widgetRef) : undefined;
   if (!page) return undefined;
-  const pageIndex = pages.findIndex((candidate) => candidate.ref.toString() === page.ref.toString());
+  const pageIndex = pages.findIndex(
+    (candidate) => candidate.ref.toString() === page.ref.toString(),
+  );
   return pageIndex >= 0 ? pageIndex + 1 : undefined;
 }
 
+type PdfJsWidgetAnnotation = {
+  subtype?: string;
+  id?: string;
+  fieldName?: string;
+  fieldType?: string;
+  fieldValue?: string | readonly string[] | null;
+  rect?: readonly number[];
+  exportValue?: string;
+  buttonValue?: string;
+  checkBox?: boolean;
+  radioButton?: boolean;
+  pushButton?: boolean;
+  hidden?: boolean;
+  alternativeText?: string;
+  options?: readonly { exportValue?: string; displayValue?: string }[];
+};
+
+type PdfJsFieldWidget = PdfJsWidgetAnnotation & { page: number };
+
+function pdfJsType(widget: PdfJsWidgetAnnotation): string {
+  if (widget.fieldType === 'Tx') return 'PDFTextField';
+  if (widget.fieldType === 'Ch') return 'PDFDropdown';
+  if (widget.fieldType === 'Sig') return 'PDFSignature';
+  if (widget.fieldType === 'Btn' && widget.radioButton) return 'PDFRadioGroup';
+  if (widget.fieldType === 'Btn' && widget.checkBox) return 'PDFCheckBox';
+  return 'PDFButton';
+}
+
+function pdfJsWidgetRectangle(rect: readonly number[] | undefined): FormFieldWidget | undefined {
+  if (!rect || rect.length < 4 || !rect.every(Number.isFinite)) return undefined;
+  const [x1, y1, x2, y2] = rect;
+  if (x1 === undefined || y1 === undefined || x2 === undefined || y2 === undefined)
+    return undefined;
+  return {
+    page: 0,
+    x: Math.min(x1, x2),
+    y: Math.min(y1, y2),
+    width: Math.abs(x2 - x1),
+    height: Math.abs(y2 - y1),
+  };
+}
+
+async function loadPdfJsFieldWidgets(bytes: Uint8Array): Promise<{
+  document: Awaited<ReturnType<Awaited<ReturnType<typeof loadPdfJs>>['getDocument']>['promise']>;
+  loadingTask: ReturnType<Awaited<ReturnType<typeof loadPdfJs>>['getDocument']>;
+  widgets: readonly PdfJsFieldWidget[];
+}> {
+  const pdfjs = await loadPdfJs();
+  const loadingTask = pdfjs.getDocument({ data: bytes.slice(), enableXfa: true, password: '' });
+  const document = await loadingTask.promise;
+  const widgets: PdfJsFieldWidget[] = [];
+  for (let page = 1; page <= document.numPages; page += 1) {
+    const pdfPage = await document.getPage(page);
+    const annotations = (await pdfPage.getAnnotations({
+      intent: 'display',
+    })) as unknown as readonly PdfJsWidgetAnnotation[];
+    for (const annotation of annotations) {
+      if (
+        annotation.subtype !== 'Widget' ||
+        !annotation.fieldName ||
+        !annotation.id ||
+        annotation.hidden ||
+        (annotation.fieldType === 'Btn' && annotation.pushButton)
+      )
+        continue;
+      widgets.push({ ...annotation, page });
+    }
+  }
+  return { document, loadingTask, widgets };
+}
+
+function groupPdfJsFields(widgets: readonly PdfJsFieldWidget[]): readonly FormFieldInfo[] {
+  const groups = new Map<string, PdfJsFieldWidget[]>();
+  for (const widget of widgets) {
+    const group = groups.get(widget.fieldName!);
+    if (group) group.push(widget);
+    else groups.set(widget.fieldName!, [widget]);
+  }
+  return [...groups.entries()].map(([name, group]) => {
+    const first = group[0]!;
+    const type = pdfJsType(first);
+    const fieldWidgets = group.flatMap((widget) => {
+      const rectangle = pdfJsWidgetRectangle(widget.rect);
+      return rectangle ? [{ ...rectangle, page: widget.page }] : [];
+    });
+    const options = [
+      ...new Set(
+        group.flatMap((widget) =>
+          (widget.options ?? [])
+            .map((option) => option.exportValue ?? option.displayValue ?? '')
+            .filter(Boolean),
+        ),
+      ),
+    ];
+    const label = first.alternativeText?.trim();
+    const base = { name, type, widgets: fieldWidgets, ...(label ? { label } : {}) };
+    if (type === 'PDFCheckBox')
+      return {
+        ...base,
+        value: group.some(
+          (widget) =>
+            widget.fieldValue !== undefined &&
+            widget.fieldValue !== null &&
+            widget.fieldValue !== 'Off',
+        ),
+      };
+    if (type === 'PDFRadioGroup') {
+      const value = group.find(
+        (widget) =>
+          widget.fieldValue !== undefined &&
+          widget.fieldValue !== null &&
+          widget.fieldValue !== 'Off',
+      )?.fieldValue;
+      return {
+        ...base,
+        ...(options.length > 0 ? { options } : {}),
+        ...(value !== undefined && value !== null ? { value: String(value) } : {}),
+      };
+    }
+    if (type === 'PDFDropdown') {
+      const value = first.fieldValue;
+      return {
+        ...base,
+        ...(options.length > 0 ? { options } : {}),
+        ...(value !== undefined && value !== null ? { value } : {}),
+      };
+    }
+    if (type === 'PDFSignature') return base;
+    return { ...base, value: first.fieldValue ?? '' };
+  });
+}
+
+async function inspectFormFieldsWithPdfJs(bytes: Uint8Array): Promise<readonly FormFieldInfo[]> {
+  const loaded = await loadPdfJsFieldWidgets(bytes);
+  try {
+    return groupPdfJsFields(loaded.widgets);
+  } finally {
+    await loaded.loadingTask.destroy();
+  }
+}
+
+function hasPdfJsFormBoundary(bytes: Uint8Array): boolean {
+  const source = new TextDecoder('latin1').decode(bytes);
+  return /\/XFA\b|\/Encrypt\b/u.test(source);
+}
+
 export async function inspectFormFields(bytes: Uint8Array): Promise<readonly FormFieldInfo[]> {
-  const document = await load(bytes, 'inspect form fields');
+  if (hasPdfJsFormBoundary(bytes)) return inspectFormFieldsWithPdfJs(bytes);
+  let document: PDFDocument;
+  try {
+    document = await load(bytes, 'inspect form fields');
+  } catch (error) {
+    try {
+      return await inspectFormFieldsWithPdfJs(bytes);
+    } catch {
+      throw error;
+    }
+  }
   return document
     .getForm()
     .getFields()
     .flatMap((field): FormFieldInfo[] => {
       const type = field.constructor.name;
-      const widgets = field.acroField
-        .getWidgets()
-        .flatMap((widget): FormFieldWidget[] => {
-          const page = widgetPageNumber(document, widget);
-          if (!page) return [];
-          const rectangle = widget.getRectangle();
-          return [{ page, ...rectangle }];
-        });
+      const widgets = field.acroField.getWidgets().flatMap((widget): FormFieldWidget[] => {
+        const page = widgetPageNumber(document, widget);
+        if (!page) return [];
+        const rectangle = widget.getRectangle();
+        return [{ page, ...rectangle }];
+      });
       const base = { name: field.getName(), type, widgets };
       if (type === 'PDFTextField') {
         const value = document.getForm().getTextField(field.getName()).getText();
-        return value === undefined
-          ? [base]
-          : [{ ...base, value }];
+        return value === undefined ? [base] : [{ ...base, value }];
       }
       if (type === 'PDFCheckBox')
         return [
@@ -826,11 +980,55 @@ export async function inspectFormFields(bytes: Uint8Array): Promise<readonly For
     });
 }
 
+function pdfJsStorageValue(
+  widget: PdfJsFieldWidget,
+  value: string | boolean | readonly string[],
+): string | readonly string[] | undefined {
+  if (widget.fieldType === 'Tx' || widget.fieldType === 'Ch')
+    return Array.isArray(value) ? [...value] : String(value);
+  if (widget.fieldType === 'Btn' && widget.checkBox)
+    return value === true ? (widget.exportValue ?? 'Yes') : 'Off';
+  if (widget.fieldType === 'Btn' && widget.radioButton) {
+    const selected = Array.isArray(value) ? value[0] : String(value);
+    return selected && selected === (widget.buttonValue ?? widget.exportValue) ? selected : 'Off';
+  }
+  return undefined;
+}
+
+async function fillFormPdfWithPdfJs(
+  bytes: Uint8Array,
+  values: Readonly<Record<string, string | boolean | readonly string[]>>,
+): Promise<Uint8Array> {
+  const loaded = await loadPdfJsFieldWidgets(bytes);
+  try {
+    for (const widget of loaded.widgets) {
+      const value = values[widget.fieldName!];
+      if (value === undefined || !widget.id) continue;
+      const storageValue = pdfJsStorageValue(widget, value);
+      if (storageValue !== undefined)
+        loaded.document.annotationStorage.setValue(widget.id, { value: storageValue });
+    }
+    return new Uint8Array(await loaded.document.saveDocument());
+  } finally {
+    await loaded.loadingTask.destroy();
+  }
+}
+
 export async function fillFormPdf(
   bytes: Uint8Array,
   values: Readonly<Record<string, string | boolean | readonly string[]>>,
 ): Promise<Uint8Array> {
-  const document = await load(bytes, 'fill form fields');
+  if (hasPdfJsFormBoundary(bytes)) return fillFormPdfWithPdfJs(bytes, values);
+  let document: PDFDocument;
+  try {
+    document = await load(bytes, 'fill form fields');
+  } catch (error) {
+    try {
+      return await fillFormPdfWithPdfJs(bytes, values);
+    } catch {
+      throw error;
+    }
+  }
   const form = document.getForm();
   for (const [name, value] of Object.entries(values)) {
     const field = form.getFieldMaybe(name);

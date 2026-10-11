@@ -91,7 +91,9 @@
     loading = true;
     try {
       const bytes = new Uint8Array(await currentFile.arrayBuffer());
-      const document = await (await loadPdfJs()).getDocument({ data: bytes.slice() }).promise;
+      const document = await (
+        await loadPdfJs()
+      ).getDocument({ data: bytes.slice(), enableXfa: true, password: '' }).promise;
       if (generation !== loadGeneration || key !== fileKey) return;
 
       pdfDocument = document;
@@ -199,6 +201,10 @@
     if (typeof value === 'string') return value;
     if (typeof value === 'boolean') return '';
     return value[0] ?? '';
+  }
+
+  function fieldLabel(field: FormFieldInfo): string {
+    return field.label ?? field.name;
   }
 
   function widgetStyle(widget: FormFieldWidget): string {
@@ -319,7 +325,8 @@
                     <input
                       class="field-control text-control"
                       style={widgetStyle(entry.widget)}
-                      aria-label={entry.field.name}
+                      aria-label={fieldLabel(entry.field)}
+                      title={fieldLabel(entry.field)}
                       value={stringValue(entry.field)}
                       oninput={(event) =>
                         updateValue(
@@ -333,7 +340,8 @@
                       class="field-control checkbox-control"
                       style={widgetStyle(entry.widget)}
                       type="button"
-                      aria-label={entry.field.name}
+                      aria-label={fieldLabel(entry.field)}
+                      title={fieldLabel(entry.field)}
                       aria-pressed={valueFor(entry.field) === true}
                       onclick={() => updateValue(entry.field.name, valueFor(entry.field) !== true)}
                       >{valueFor(entry.field) === true ? '✓' : ''}</button
@@ -342,7 +350,8 @@
                     <select
                       class="field-control select-control"
                       style={widgetStyle(entry.widget)}
-                      aria-label={entry.field.name}
+                      aria-label={fieldLabel(entry.field)}
+                      title={fieldLabel(entry.field)}
                       value={stringValue(entry.field)}
                       onchange={(event) =>
                         updateValue(
@@ -350,7 +359,7 @@
                           (event.currentTarget as { value: string }).value,
                         )}
                     >
-                      <option value="">{entry.field.name}</option>
+                      <option value="">{fieldLabel(entry.field)}</option>
                       {#each entry.field.options ?? [] as option (option)}<option value={option}
                           >{option}</option
                         >{/each}
@@ -361,7 +370,7 @@
                       style={widgetStyle(entry.widget)}
                       title={entry.field.type}
                     >
-                      {entry.field.name}
+                      {fieldLabel(entry.field)}
                     </span>
                   {/if}
                 {/each}
