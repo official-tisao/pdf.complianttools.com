@@ -845,10 +845,11 @@ export async function fillFormPdf(
         break;
       }
       case 'PDFRadioGroup':
-        form.getRadioGroup(name).select(String(value));
+        if (String(value).length > 0) form.getRadioGroup(name).select(String(value));
         break;
       case 'PDFDropdown':
-        form.getDropdown(name).select(Array.isArray(value) ? [...value] : String(value));
+        if (Array.isArray(value) ? value.length > 0 : String(value).length > 0)
+          form.getDropdown(name).select(Array.isArray(value) ? [...value] : String(value));
         break;
       case 'PDFSignature':
         throw new PdfEngineError({

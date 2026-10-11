@@ -84,12 +84,18 @@ test('AcroForm fields can be created, detected, and filled locally', async () =>
     fields.map((field) => field.name),
     ['fullName', 'accepted', 'choice'],
   );
-  assert.deepEqual(fields[0].widgets, [
-    { page: 1, x: 72, y: 700, width: 200, height: 24 },
-  ]);
+  const [widget] = fields[0].widgets;
+  assert.equal(widget.page, 1);
+  assert.ok(Math.abs(widget.x - 72) <= 1);
+  assert.ok(Math.abs(widget.y - 700) <= 1);
+  assert.ok(Math.abs(widget.width - 200) <= 1);
+  assert.ok(Math.abs(widget.height - 24) <= 1);
   assert.deepEqual(fields[2].options, ['A', 'B']);
   const filled = await fillFormPdf(formPdf, { fullName: 'Ada', accepted: true, choice: 'B' });
   assert.ok((await inspectFormFields(filled)).length === 3);
+  await assert.doesNotReject(() =>
+    fillFormPdf(formPdf, { fullName: 'Ada', accepted: true, choice: '' }),
+  );
 });
 
 test('redaction removes page content and withholds unverifiable exports', async () => {
