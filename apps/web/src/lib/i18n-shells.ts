@@ -195,6 +195,10 @@ export const shellArabic: Readonly<Record<string, string>> = {
   'phase.form.open': 'فتح المحرر بملء الشاشة',
   'phase.form.openPage': 'فتح الصفحة {value} في محرر النموذج',
   'phase.form.loading': 'جارٍ تحميل نموذج PDF محليًا…',
+  'phase.form.xfaUnsupported':
+    'تتوفر معاينة PDF، لكن لا يمكن تحرير حقول نموذج XFA هنا. استخدم نموذج AcroForm غير مشفر أو قارئ PDF محليًا متوافقًا.',
+  'phase.form.encryptedUnsupported':
+    'تتوفر معاينة PDF، لكن لا يمكن تحرير حقول النموذج المشفرة هنا. فك تشفيره بقارئ PDF محلي موثوق أو اختر نموذج AcroForm غير مشفر.',
   'phase.form.eyebrow': 'ملء نموذج PDF',
   'phase.form.editorTitle': 'محرر PDF القابل للتعبئة',
   'phase.form.instructions':

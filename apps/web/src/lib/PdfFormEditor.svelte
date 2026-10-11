@@ -92,15 +92,22 @@
     try {
       const bytes = new Uint8Array(await currentFile.arrayBuffer());
       const document = await (await loadPdfJs()).getDocument({ data: bytes.slice() }).promise;
-      const detectedFields = await inspectFormFields(bytes);
       if (generation !== loadGeneration || key !== fileKey) return;
 
       pdfDocument = document;
       pageCount = document.numPages;
-      fields = detectedFields;
-      values = Object.fromEntries(
-        detectedFields.map((field) => [field.name, initialValue(field)]),
-      );
+      try {
+        const detectedFields = await inspectFormFields(bytes);
+        fields = detectedFields;
+        values = Object.fromEntries(
+          detectedFields.map((field) => [field.name, initialValue(field)]),
+        );
+      } catch (caught) {
+        fields = [];
+        values = {};
+        error = describeInspectionError(bytes, caught);
+        onerror?.(error);
+      }
       await renderPage(1, 0.9);
     } catch (caught) {
       if (generation !== loadGeneration || key !== fileKey) return;
@@ -109,6 +116,23 @@
     } finally {
       if (generation === loadGeneration) loading = false;
     }
+  }
+
+  function describeInspectionError(bytes: Uint8Array, caught: unknown): string {
+    const source = new TextDecoder('latin1').decode(bytes);
+    if (/\/XFA\b/u.test(source))
+      return t(
+        'phase.form.xfaUnsupported',
+        'This PDF preview is available, but its XFA form fields cannot be edited here. Use an unencrypted AcroForm PDF or a compatible local PDF reader.',
+      );
+    if (/\/Encrypt\b/u.test(source))
+      return t(
+        'phase.form.encryptedUnsupported',
+        'This PDF preview is available, but its encrypted form fields cannot be edited here. Decrypt it with a trusted local PDF reader or choose an unencrypted AcroForm PDF.',
+      );
+    return caught instanceof Error
+      ? caught.message
+      : 'This PDF form could not be inspected locally.';
   }
 
   function initialValue(field: FormFieldInfo): FormValue {
@@ -203,7 +227,11 @@
         <h2 id="form-preview-heading">{t('phase.form.previewTitle', 'PDF form preview')}</h2>
         <p>
           {formFieldCount
-            ? t('phase.form.fieldCount', '{value} fillable fields detected locally.', formFieldCount)
+            ? t(
+                'phase.form.fieldCount',
+                '{value} fillable fields detected locally.',
+                formFieldCount,
+              )
             : t('phase.form.noFields', 'No supported AcroForm fields were detected.')}
         </p>
       </div>
@@ -215,23 +243,23 @@
       aria-label={t('phase.form.openPage', 'Open page {value} in the form editor', activePage)}
       onclick={openEditor}
     >
-      {#if pageImage}<img src={pageImage} alt={t('shell.preview.pageAlt', 'Preview of page {value}', activePage)} />{/if}
+      {#if pageImage}<img
+          src={pageImage}
+          alt={t('shell.preview.pageAlt', 'Preview of page {value}', activePage)}
+        />{/if}
     </button>
   </section>
 {:else if loading}
-  <p class="status" role="status" aria-live="polite">{t('phase.form.loading', 'Loading the PDF form locally…')}</p>
+  <p class="status" role="status" aria-live="polite">
+    {t('phase.form.loading', 'Loading the PDF form locally…')}
+  </p>
 {:else if error}
   <p class="error" role="alert">{error}</p>
 {/if}
 
 {#if editorOpen && pdfDocument}
   <div class="editor-backdrop">
-    <dialog
-      open
-      class="editor-modal"
-      aria-modal="true"
-      aria-labelledby="form-editor-heading"
-    >
+    <dialog open class="editor-modal" aria-modal="true" aria-labelledby="form-editor-heading">
       <header class="editor-header">
         <div>
           <p class="eyebrow">{t('phase.form.eyebrow', 'FILL PDF FORM')}</p>
@@ -243,7 +271,12 @@
             )}
           </p>
         </div>
-        <button class="close-button" type="button" aria-label={t('phase.form.close', 'Close editor')} onclick={closeEditor}>
+        <button
+          class="close-button"
+          type="button"
+          aria-label={t('phase.form.close', 'Close editor')}
+          onclick={closeEditor}
+        >
           ×
         </button>
       </header>
@@ -252,7 +285,7 @@
           <h3 id="form-pages-heading">{t('phase.form.pages', 'Pages')}</h3>
           <PageGrid
             variant="rail"
-            pageCount={pageCount}
+            {pageCount}
             selected={[activePage]}
             thumbnailKey={fileKey}
             thumbnailLoader={renderThumbnail}
@@ -261,12 +294,23 @@
         </aside>
         <main class="editor-canvas-area">
           <div class="canvas-toolbar" aria-live="polite">
-            <span>{t('phase.form.currentPage', 'Page {value} of {total}', activePage, pageCount)}</span>
-            <span>{t('phase.form.currentFields', '{value} fields on this page', activeFieldCount)}</span>
+            <span
+              >{t('phase.form.currentPage', 'Page {value} of {total}', activePage, pageCount)}</span
+            >
+            <span
+              >{t(
+                'phase.form.currentFields',
+                '{value} fields on this page',
+                activeFieldCount,
+              )}</span
+            >
           </div>
           {#if pageImage}
             <div class="document-page" style={`aspect-ratio: ${pageWidth} / ${pageHeight}`}>
-              <img src={pageImage} alt={t('shell.preview.pageAlt', 'Preview of page {value}', activePage)} />
+              <img
+                src={pageImage}
+                alt={t('shell.preview.pageAlt', 'Preview of page {value}', activePage)}
+              />
               <div class="field-layer">
                 {#each activeWidgets as entry (entry.field.name + '-' + entry.widget.x + '-' + entry.widget.y)}
                   {#if entry.field.type === 'PDFRadioGroup' && !isFirstWidgetOnPage(entry)}
@@ -277,7 +321,11 @@
                       style={widgetStyle(entry.widget)}
                       aria-label={entry.field.name}
                       value={stringValue(entry.field)}
-                      oninput={(event) => updateValue(entry.field.name, (event.currentTarget as { value: string }).value)}
+                      oninput={(event) =>
+                        updateValue(
+                          entry.field.name,
+                          (event.currentTarget as { value: string }).value,
+                        )}
                     />
                   {:else if entry.field.type === 'PDFCheckBox'}
                     <button
@@ -288,20 +336,31 @@
                       aria-label={entry.field.name}
                       aria-pressed={valueFor(entry.field) === true}
                       onclick={() => updateValue(entry.field.name, valueFor(entry.field) !== true)}
-                    >{valueFor(entry.field) === true ? '✓' : ''}</button>
+                      >{valueFor(entry.field) === true ? '✓' : ''}</button
+                    >
                   {:else if entry.field.type === 'PDFDropdown' || entry.field.type === 'PDFRadioGroup'}
                     <select
                       class="field-control select-control"
                       style={widgetStyle(entry.widget)}
                       aria-label={entry.field.name}
                       value={stringValue(entry.field)}
-                      onchange={(event) => updateValue(entry.field.name, (event.currentTarget as { value: string }).value)}
+                      onchange={(event) =>
+                        updateValue(
+                          entry.field.name,
+                          (event.currentTarget as { value: string }).value,
+                        )}
                     >
                       <option value="">{entry.field.name}</option>
-                      {#each entry.field.options ?? [] as option (option)}<option value={option}>{option}</option>{/each}
+                      {#each entry.field.options ?? [] as option (option)}<option value={option}
+                          >{option}</option
+                        >{/each}
                     </select>
                   {:else}
-                    <span class="field-control unsupported-control" style={widgetStyle(entry.widget)} title={entry.field.type}>
+                    <span
+                      class="field-control unsupported-control"
+                      style={widgetStyle(entry.widget)}
+                      title={entry.field.type}
+                    >
                       {entry.field.name}
                     </span>
                   {/if}
@@ -311,7 +370,10 @@
           {/if}
           {#if activeFieldCount === 0}
             <p class="empty-page" role="status">
-              {t('phase.form.noPageFields', 'This page has no supported fillable fields. Choose another page from the rail.')}
+              {t(
+                'phase.form.noPageFields',
+                'This page has no supported fillable fields. Choose another page from the rail.',
+              )}
             </p>
           {/if}
         </main>
