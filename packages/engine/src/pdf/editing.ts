@@ -733,7 +733,40 @@ export type FormFieldInfo = Readonly<{
   name: string;
   type: string;
   value?: string | boolean | readonly string[];
+  options?: readonly string[];
+  widgets: readonly FormFieldWidget[];
 }>;
+
+export type FormFieldWidget = Readonly<{
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}>;
+
+type PdfWidget = ReturnType<
+  ReturnType<PDFDocument['getForm']>['getFields']
+>[number]['acroField'] extends { getWidgets: () => infer Widgets }
+  ? Widgets extends readonly (infer Widget)[]
+    ? Widget
+    : never
+  : never;
+
+function widgetPageNumber(document: PDFDocument, widget: PdfWidget): number | undefined {
+  const pages = document.getPages();
+  const directPageRef = widget.P();
+  const directIndex = pages.findIndex(
+    (page) => page.ref.toString() === directPageRef?.toString(),
+  );
+  if (directIndex >= 0) return directIndex + 1;
+
+  const widgetRef = document.context.getObjectRef(widget.dict);
+  const page = widgetRef ? document.findPageForAnnotationRef(widgetRef) : undefined;
+  if (!page) return undefined;
+  const pageIndex = pages.findIndex((candidate) => candidate.ref.toString() === page.ref.toString());
+  return pageIndex >= 0 ? pageIndex + 1 : undefined;
+}
 
 export async function inspectFormFields(bytes: Uint8Array): Promise<readonly FormFieldInfo[]> {
   const document = await load(bytes, 'inspect form fields');
@@ -742,35 +775,54 @@ export async function inspectFormFields(bytes: Uint8Array): Promise<readonly For
     .getFields()
     .flatMap((field): FormFieldInfo[] => {
       const type = field.constructor.name;
+      const widgets = field.acroField
+        .getWidgets()
+        .flatMap((widget): FormFieldWidget[] => {
+          const page = widgetPageNumber(document, widget);
+          if (!page) return [];
+          const rectangle = widget.getRectangle();
+          return [{ page, ...rectangle }];
+        });
+      const base = { name: field.getName(), type, widgets };
       if (type === 'PDFTextField') {
         const value = document.getForm().getTextField(field.getName()).getText();
         return value === undefined
-          ? [{ name: field.getName(), type }]
-          : [{ name: field.getName(), type, value }];
+          ? [base]
+          : [{ ...base, value }];
       }
       if (type === 'PDFCheckBox')
         return [
           {
-            name: field.getName(),
-            type,
+            ...base,
             value: document.getForm().getCheckBox(field.getName()).isChecked(),
           },
         ];
       if (type === 'PDFRadioGroup') {
         const value = document.getForm().getRadioGroup(field.getName()).getSelected();
         return value === undefined
-          ? [{ name: field.getName(), type }]
-          : [{ name: field.getName(), type, value }];
+          ? [
+              {
+                ...base,
+                options: document.getForm().getRadioGroup(field.getName()).getOptions(),
+              },
+            ]
+          : [
+              {
+                ...base,
+                options: document.getForm().getRadioGroup(field.getName()).getOptions(),
+                value,
+              },
+            ];
       }
       if (type === 'PDFDropdown')
         return [
           {
-            name: field.getName(),
-            type,
+            ...base,
+            options: document.getForm().getDropdown(field.getName()).getOptions(),
             value: document.getForm().getDropdown(field.getName()).getSelected(),
           },
         ];
-      return [{ name: field.getName(), type }];
+      return [base];
     });
 }
 

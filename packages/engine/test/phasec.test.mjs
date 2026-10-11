@@ -84,6 +84,10 @@ test('AcroForm fields can be created, detected, and filled locally', async () =>
     fields.map((field) => field.name),
     ['fullName', 'accepted', 'choice'],
   );
+  assert.deepEqual(fields[0].widgets, [
+    { page: 1, x: 72, y: 700, width: 200, height: 24 },
+  ]);
+  assert.deepEqual(fields[2].options, ['A', 'B']);
   const filled = await fillFormPdf(formPdf, { fullName: 'Ada', accepted: true, choice: 'B' });
   assert.ok((await inspectFormFields(filled)).length === 3);
 });
