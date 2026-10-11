@@ -188,5 +188,23 @@ export const shellArabic: Readonly<Record<string, string>> = {
   'phase.status.overlay': 'صُدِّر تراكب PDF محليًا.',
   'phase.status.createForm': 'أُنشئت حقول AcroForm محليًا.',
   'phase.status.fillForm': 'مُلئت حقول AcroForm المدعومة محليًا.',
+  'phase.error.noFields': 'لم يتم العثور على حقول AcroForm مدعومة في ملف PDF هذا.',
+  'phase.form.previewTitle': 'معاينة نموذج PDF',
+  'phase.form.fieldCount': 'تم اكتشاف {value} حقول قابلة للتعبئة محليًا.',
+  'phase.form.noFields': 'لم يتم اكتشاف حقول AcroForm مدعومة.',
+  'phase.form.open': 'فتح المحرر بملء الشاشة',
+  'phase.form.openPage': 'فتح الصفحة {value} في محرر النموذج',
+  'phase.form.loading': 'جارٍ تحميل نموذج PDF محليًا…',
+  'phase.form.eyebrow': 'ملء نموذج PDF',
+  'phase.form.editorTitle': 'محرر PDF القابل للتعبئة',
+  'phase.form.instructions':
+    'انقر فوق حقل مميز في الصفحة لإدخال قيمته أو اختيارها. تبقى التغييرات في هذا المتصفح حتى التصدير.',
+  'phase.form.close': 'إغلاق المحرر',
+  'phase.form.pages': 'الصفحات',
+  'phase.form.currentPage': 'الصفحة {value} من {total}',
+  'phase.form.currentFields': '{value} حقول في هذه الصفحة',
+  'phase.form.noPageFields': 'لا توجد حقول قابلة للتعبئة في هذه الصفحة. اختر صفحة أخرى من الشريط.',
+  'phase.form.panelHelp':
+    'افتح المحرر بملء الشاشة أعلاه، وانقر فوق الحقول المميزة في PDF، ثم أغلق المحرر وصدّر النموذج المكتمل محليًا.',
   'phase.status.audit': 'اكتمل فحص الوصول. ما زال التحرير يدويًا مطلوبًا حيث تنقص الوسوم.',
 };

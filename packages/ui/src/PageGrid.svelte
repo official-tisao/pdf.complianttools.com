@@ -9,6 +9,7 @@
     reorderable = false,
     thumbnailLoader,
     thumbnailKey = '',
+    variant = 'grid',
   }: {
     pageCount?: number;
     selected?: readonly number[];
@@ -27,6 +28,8 @@
     thumbnailLoader?: (page: number) => Promise<string>;
     /** Changes when the selected PDF changes, invalidating cached thumbnails. */
     thumbnailKey?: string;
+    /** Uses a compact two-column layout when the grid is displayed in a rail. */
+    variant?: 'grid' | 'rail';
   } = $props();
   let focused = $state(1);
   let scrollTop = $state(0);
@@ -159,6 +162,7 @@
 
 <div
   class="grid"
+  class:rail={variant === 'rail'}
   role="grid"
   aria-label="PDF pages"
   aria-activedescendant={`page-cell-${focused}`}
@@ -212,6 +216,11 @@
     outline: 3px solid var(--color-focus, #1c1a17);
     outline-offset: 4px;
   }
+  .grid.rail {
+    border: 0;
+    max-height: none;
+    padding: 0;
+  }
   .spacer {
     position: relative;
   }
@@ -224,6 +233,11 @@
     position: absolute;
     right: 0;
     top: 0;
+  }
+  .grid.rail .visible {
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 2px;
   }
   .cell {
     min-width: 0;

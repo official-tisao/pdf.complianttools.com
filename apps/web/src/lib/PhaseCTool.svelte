@@ -2,6 +2,7 @@
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import PdfPreview from '$lib/PdfPreview.svelte';
+  import PdfFormEditor from '$lib/PdfFormEditor.svelte';
   import SignaturePad from '$lib/SignaturePad.svelte';
   import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
   // Aliased: this component already uses `page` for the target PDF page number.
@@ -78,6 +79,7 @@
   let recipients = $state('recipient@example.test');
   let threshold = $state(32);
   let page = $state(1);
+  let formValues = $state<Record<string, string | boolean | readonly string[]>>({});
   // Derived: these come from $props(), and a caller can change them after mount.
   const structuredData = $derived(
     softwareApplicationLd({ name: title, description, path: route.url.pathname }),
@@ -85,6 +87,7 @@
 
   function selectFiles(list: FileList | null) {
     files = list ? Array.from(list) : [];
+    formValues = {};
     status = files.length
       ? `${files.length} file${files.length === 1 ? '' : 's'} selected locally.`
       : '';
@@ -216,11 +219,11 @@
         );
         status = t('phase.status.createForm', 'AcroForm fields created locally.');
       } else if (operation === 'fill-form') {
-        save(
-          await engine.fillFormPdf(bytes!, { name: text || 'Filled locally', agree: true }),
-          'filled-form.pdf',
-          'application/pdf',
-        );
+        if (Object.keys(formValues).length === 0)
+          throw new Error(
+            t('phase.error.noFields', 'No supported AcroForm fields were found in this PDF.'),
+          );
+        save(await engine.fillFormPdf(bytes!, formValues), 'filled-form.pdf', 'application/pdf');
         status = t('phase.status.fillForm', 'Supported AcroForm fields filled locally.');
       } else if (operation === 'accessibility-audit') {
         const report = await engine.auditAccessibility(bytes!);
@@ -344,7 +347,16 @@
     />
   {/if}
   {#if operation !== 'signature-background' && operation !== 'password-generator'}
-    <PdfPreview file={files[0]} {locale} onerror={(message) => (error = message)} />
+    {#if operation === 'fill-form'}
+      <PdfFormEditor
+        file={files[0]}
+        {locale}
+        onvalueschange={(values) => (formValues = values)}
+        onerror={(message) => (error = message)}
+      />
+    {:else}
+      <PdfPreview file={files[0]} {locale} onerror={(message) => (error = message)} />
+    {/if}
   {/if}
   <div class="panel">
     {#if operation === 'editor'}
@@ -385,6 +397,13 @@
         >{t('phase.request.message', 'Message')}<textarea bind:value={note} rows="3"
         ></textarea></label
       >
+    {:else if operation === 'fill-form'}
+      <p class="caution">
+        {t(
+          'phase.form.panelHelp',
+          'Open the full-screen editor above, click the highlighted fields on the PDF, then close the editor and export the completed form locally.',
+        )}
+      </p>
     {:else if operation === 'accessibility-audit' || operation === 'verify-signature'}
       <p class="caution">
         {t(
@@ -411,10 +430,10 @@
         label={t('phase.sign.upload', 'Upload a PNG or JPEG signature')}
       />
       <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
-    {:else if operation !== 'password-generator'}
+    {:else}
       <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
     {/if}
-    {#if operation !== 'password-generator' && operation !== 'signature-background'}
+    {#if operation !== 'password-generator' && operation !== 'signature-background' && operation !== 'fill-form'}
       <label>{t('phase.sign.page', 'Page')}<input type="number" min="1" bind:value={page} /></label>
     {/if}
     {#if operation === 'signature-background'}
