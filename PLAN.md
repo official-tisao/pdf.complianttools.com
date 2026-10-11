@@ -590,6 +590,11 @@ signature verification use the shared security boundaries but do not wait for co
 
 - [x] AcroForm field types: text, checkbox, radio group, dropdown, date, signature field
 - [x] Fill: detect existing AcroForm fields and render an input overlay
+- [x] Fill editor: open the selected PDF page in a full-screen overlay with a top-right close
+      control; keep all page thumbnails in a side rail and switch the main canvas when a page is
+      selected.
+- [x] Fill interaction: position text, checkbox, dropdown, and radio controls over the detected
+      PDF widgets; close the editor without losing values, then export the completed PDF locally.
 - [x] Escalation entry for flat/scanned-form field-guessing added to the register **before** any
       adapter code
 - Limitation: certificate-backed signature field authoring and flat/scanned-form guessing remain
