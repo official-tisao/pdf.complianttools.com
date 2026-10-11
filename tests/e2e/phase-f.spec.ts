@@ -2,6 +2,22 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import { PDFDocument } from 'pdf-lib';
+
+const createFillablePdfFixture = async (): Promise<Buffer> => {
+  const document = await PDFDocument.create();
+  const firstPage = document.addPage([612, 792]);
+  document.addPage([612, 792]);
+  const form = document.getForm();
+  form.createTextField('fullName').addToPage(firstPage, {
+    x: 72,
+    y: 700,
+    width: 200,
+    height: 24,
+  });
+  form.updateFieldAppearances();
+  return Buffer.from(await document.save());
+};
 
 /**
  * The invoice routes are prerendered, so their static markup accepts input
@@ -43,6 +59,33 @@ test('webpage capture makes the explicit Relay boundary visible', async ({ page 
   await page.goto('/webpage-to-pdf');
   await expect(page.getByText(/explicit Relay mode/i)).toBeVisible();
   await expect(page.getByRole('button', { name: /Capture with Relay/i })).toBeVisible();
+});
+
+test('fill form opens a full-screen editor with a page rail', async ({ page }) => {
+  await page.goto('/fill-form');
+  await expect(page.locator('.tool-page[data-hydrated="true"]')).toBeVisible({ timeout: 30_000 });
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'fillable-fixture.pdf',
+    mimeType: 'application/pdf',
+    buffer: await createFillablePdfFixture(),
+  });
+
+  await expect(page.getByRole('heading', { name: 'PDF form preview' })).toBeVisible();
+  await expect(page.getByText(/1 fillable fields? detected locally\./)).toBeVisible();
+  await page.getByRole('button', { name: 'Open full-screen editor', exact: true }).click();
+
+  await expect(page.getByRole('dialog', { name: 'Fillable PDF editor' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pages', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Page 1', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.getByRole('button', { name: 'Page 2', exact: true })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'fullName', exact: true })).toBeVisible();
+
+  await page.getByRole('textbox', { name: 'fullName', exact: true }).fill('Browser test');
+  await page.getByRole('button', { name: 'Close editor', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Fillable PDF editor' })).toBeHidden();
 });
 
 test('with no Relay configured the app is fully usable and says so honestly', async ({ page }) => {
@@ -331,7 +374,9 @@ test('a saved recipe is restored on reload, not discarded', async ({ page }) => 
   });
 
   await page.getByRole('button', { name: /Save to this browser/i }).click();
-  await expect(page.locator('[role="status"]').filter({ hasText: /Saved to this browser/i })).toBeVisible();
+  await expect(
+    page.locator('[role="status"]').filter({ hasText: /Saved to this browser/i }),
+  ).toBeVisible();
 
   // The default recipe has one step. Removing it, then reloading, is the only way to tell a
   // restored recipe from a fresh default.
