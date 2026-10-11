@@ -595,11 +595,14 @@ signature verification use the shared security boundaries but do not wait for co
       selected.
 - [x] Fill interaction: position text, checkbox, dropdown, and radio controls over the detected
       PDF widgets; close the editor without losing values, then export the completed PDF locally.
+- [x] CRA compatibility: detect and fill owner-encrypted, XFA-backed CRA widgets through PDF.js
+      annotation storage, preserving encryption and embedded JavaScript in the incremental export;
+      embedded PDF JavaScript is never executed by the local app.
 - [x] Escalation entry for flat/scanned-form field-guessing added to the register **before** any
       adapter code
 - Limitation: certificate-backed signature field authoring and flat/scanned-form guessing remain
   typed unsupported; the local UI directs users to manual placement or an explicit BYOK path.
-- **Spec:** README §4.6, §13.1.3 · **Done when:** STCC for the local path on a real AcroForm fixture
+- **Spec:** README §4.6, §13.1.3 · **Done when:** STCC for the local path on real AcroForm and CRA encrypted/XFA fixtures
 
 #### P4-06 · Alt-text & tagging assistant, local path (T52)
 
@@ -1649,7 +1652,7 @@ Mirrors README §5. Checked only when SFCC (§0.4) holds.
 | PDF 1.0–2.0                         | D/E        | 0                   |  [ ]   |
 | PDF/A 1b/2b/3b                      | D/E        | A                   |  [ ]   |
 | PDF/X                               | D          | — (⚠ VERIFY demand) |  [ ]   |
-| AcroForm/XFA                        | D/E        | C                   |  [ ]   |
+| AcroForm/XFA                        | D/E        | C                   |  [x]   |
 | DOCX/DOC                            | D/E        | B                   |  [x]   |
 | XLSX/XLS                            | D/E        | B                   |  [x]   |
 | PPTX/PPT                            | D/E        | B                   |  [x]   |
