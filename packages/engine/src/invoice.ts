@@ -111,7 +111,7 @@ export async function createInvoicePdf(invoice: InvoiceData): Promise<InvoiceRes
     description: 'Structured UBL invoice data',
   });
   return {
-    pdf: await document.save({ useObjectStreams: true, addDefaultPage: false }),
+    pdf: await document.save({ addDefaultPage: false }),
     xml,
     totals,
   };
