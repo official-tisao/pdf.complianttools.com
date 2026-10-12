@@ -2,6 +2,10 @@
   import AiDocumentTool from '$lib/AiDocumentTool.svelte';
 </script>
 
+<svelte:head>
+  <title>Translate PDF — AI (T67, no local fallback)</title>
+</svelte:head>
+
 <AiDocumentTool
   kind="translate"
   title="Translate a PDF"

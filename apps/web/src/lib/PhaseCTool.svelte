@@ -338,9 +338,11 @@
     <FileDrop
       {accept}
       onchange={selectFiles}
-      label={operation === 'add-image' || operation === 'overlay'
-        ? 'Choose the base file, then the second local file'
-        : 'Drop a PDF here or choose a local file'}
+      label={operation === 'add-image'
+        ? 'First: choose a PDF file, then: choose a PNG/JPEG image (two files required)'
+        : operation === 'overlay'
+          ? 'Choose the base file, then the second local file'
+          : 'Drop a PDF here or choose a local file'}
     />
   {/if}
   {#if operation !== 'signature-background' && operation !== 'password-generator'}

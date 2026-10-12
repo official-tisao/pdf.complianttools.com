@@ -2,6 +2,10 @@
   import AiDocumentTool from '$lib/AiDocumentTool.svelte';
 </script>
 
+<svelte:head>
+  <title>Summarize, Quiz & Flashcards — AI (T66)</title>
+</svelte:head>
+
 <AiDocumentTool
   kind="learning"
   title="Summarize, quiz, flashcards, and mind map"
