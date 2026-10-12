@@ -346,6 +346,11 @@ no key, offline-capable · `◐` = local primary path with an optional, explicit
 | T51 | PDF Overlay / Stamp          | `/pdf-overlay`       | Local        | Composite one PDF's pages onto another's as a stamp layer (e.g. letterhead)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | T52 | Alt-Text & Tagging Assistant | `/pdf-accessibility` | Local ⇗AI    | Structure-tag audit (heading order, reading order, untagged images) drafted locally; optional AI-authored alt-text descriptions per flagged image                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
+PDF-input tools in this group share the local preview contract: selecting a PDF keeps the page
+grid visible, and the preview can open a full-screen selected-page modal with a thumbnail rail,
+close control, and Escape. `/view-pdf` is the dedicated full reader and keeps its own navigation
+surface.
+
 ### 4.7 Sign & protect
 
 | #   | Tool                               | Route                          | Mode      | Notes                                                                                                                                                                                                                                                                  |

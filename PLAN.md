@@ -598,6 +598,9 @@ signature verification use the shared security boundaries but do not wait for co
 - [x] CRA compatibility: detect and fill owner-encrypted, XFA-backed CRA widgets through PDF.js
       annotation storage, preserving encryption and embedded JavaScript in the incremental export;
       embedded PDF JavaScript is never executed by the local app.
+- [x] Shared PDF edit/inspect preview: PDF-input routes use the same local page grid and full-screen
+      selected-page modal with a thumbnail rail, close control, and Escape; `/view-pdf` retains its
+      dedicated full reader.
 - [x] Escalation entry for flat/scanned-form field-guessing added to the register **before** any
       adapter code
 - Limitation: certificate-backed signature field authoring and flat/scanned-form guessing remain
