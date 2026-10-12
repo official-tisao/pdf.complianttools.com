@@ -77,6 +77,9 @@
     configured; this build reports that capability instead of silently substituting a different
     renderer.
   </p>
+  <div class="trust">
+    <strong>Local-first.</strong> This route does not upload document bytes or credentials.
+  </div>
   <div class="inputs">
     <div>
       <h2>Original</h2>
@@ -166,6 +169,12 @@
   .inputs p,
   .report-header span {
     color: var(--color-muted);
+  }
+  .trust {
+    background: var(--color-platinum);
+    border-radius: var(--radius-panel);
+    margin: 24px 0;
+    padding: 14px 18px;
   }
   .inputs {
     display: grid;

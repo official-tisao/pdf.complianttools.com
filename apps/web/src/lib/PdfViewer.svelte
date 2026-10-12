@@ -136,6 +136,9 @@
     <p class="eyebrow">LOCAL READER</p>
     <h1 id="viewer-heading">PDF viewer</h1>
     <p class="lede">Read, search, navigate, zoom, and print without uploading the document.</p>
+    <div class="trust">
+      <strong>Local-first.</strong> This route does not upload document bytes or credentials.
+    </div>
   </div>
   <FileDrop
     accept=".pdf,application/pdf"
@@ -283,6 +286,12 @@
   .status,
   .outline p {
     color: var(--color-muted);
+  }
+  .trust {
+    background: var(--color-platinum);
+    border-radius: var(--radius-panel);
+    margin-top: 24px;
+    padding: 14px 18px;
   }
   .toolbar,
   .search-row,

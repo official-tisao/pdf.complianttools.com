@@ -1,14 +1,23 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import PdfPreview from '$lib/PdfPreview.svelte';
   import SeoTags from '$lib/SeoTags.svelte';
   import { inspectStructure, type StructureReport } from '@pdf-complianttools/engine';
   let report = $state<StructureReport>();
+  let file = $state<File>();
   let status = $state('Choose a PDF to inspect locally.');
+  let hydrated = $state(false);
+  onMount(() => {
+    hydrated = true;
+  });
   async function inspect(files: FileList | null) {
-    const file = files?.[0];
-    if (!file) return;
+    const selectedFile = files?.[0];
+    if (!selectedFile) return;
+    // Keep the selected PDF available to the shared preview while the report is generated.
+    file = selectedFile;
     try {
-      report = await inspectStructure(new Uint8Array(await file.arrayBuffer()));
+      report = await inspectStructure(new Uint8Array(await selectedFile.arrayBuffer()));
       status = 'Structure report ready. No document bytes left this page.';
     } catch (error) {
       status =
@@ -29,19 +38,23 @@
   name="PDF structure inspector"
   description="Inspect PDF pages, version, encryption, fonts, tags, and object counts locally."
 />
-<section class="page">
+<section class="page" data-hydrated={hydrated ? 'true' : 'false'}>
   <p class="eyebrow">STRUCTURE</p>
   <h1>Structure inspector</h1>
   <p class="lede">
     Inspect page count, byte size, version, encryption, active content, fonts, and available tag
     nodes without uploading.
   </p>
+  <div class="trust">
+    <strong>Local-first.</strong> This route does not upload document bytes or credentials.
+  </div>
   <FileDrop
     accept=".pdf,application/pdf"
     multiple={false}
     label="Choose a PDF to inspect"
     onchange={inspect}
   />
+  <PdfPreview {file} onerror={(message) => (status = message)} />
   {#if report}<div class="report">
       <dl>
         <div>
@@ -105,6 +118,12 @@
   .status,
   .report p {
     color: var(--color-muted);
+  }
+  .trust {
+    background: var(--color-platinum);
+    border-radius: var(--radius-panel);
+    margin: 24px 0;
+    padding: 14px 18px;
   }
   .report {
     background: var(--color-white);

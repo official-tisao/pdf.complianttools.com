@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
+  import PdfPreview from '$lib/PdfPreview.svelte';
   import SeoTags from '$lib/SeoTags.svelte';
   import { readPdfMetadata, setPdfMetadata, type PdfMetadata } from '@pdf-complianttools/engine';
 
@@ -14,6 +16,10 @@
   let strip = $state(false);
   let downloadUrl = $state('');
   let status = $state('Choose a PDF to inspect and edit its metadata locally.');
+  let hydrated = $state(false);
+  onMount(() => {
+    hydrated = true;
+  });
 
   async function selectFile(files: FileList | null) {
     file = files?.[0];
@@ -66,19 +72,23 @@
   name="PDF metadata editor"
   description="Read and edit PDF document information locally without uploading the file."
 />
-<section class="page">
+<section class="page" data-hydrated={hydrated ? 'true' : 'false'}>
   <p class="eyebrow">DOCUMENT INFO</p>
   <h1>Metadata editor</h1>
   <p class="lede">
     Read and write standard Info fields, dates, and the app’s namespaced custom XMP locally.
     Strip-all is explicit.
   </p>
+  <div class="trust">
+    <strong>Local-first.</strong> This route does not upload document bytes or credentials.
+  </div>
   <FileDrop
     accept=".pdf,application/pdf"
     multiple={false}
     label="Choose a PDF to inspect"
     onchange={selectFile}
   />
+  <PdfPreview {file} onerror={(message) => (status = message)} />
   {#if metadata}
     <div class="editor">
       <label>Title<input bind:value={title} /></label>
@@ -141,6 +151,12 @@
   .status,
   details p {
     color: var(--color-muted);
+  }
+  .trust {
+    background: var(--color-platinum);
+    border-radius: var(--radius-panel);
+    margin: 24px 0;
+    padding: 14px 18px;
   }
   .editor {
     background: var(--color-white);
