@@ -12,6 +12,7 @@
 <svelte:head>
   <title>AI Tools — Chat, Summarize, Translate, Generate</title>
   <meta name="description" content="PDF AI tools (local first, BYOK escalation)." />
+  <!-- safe-html-reviewed: JSON-LD payload emitted via {@html} inside <svelte:head>; payload is jsonLdPayload from $lib/seo with "<" escaped, matching PhaseCTool pattern -->
   {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
 </svelte:head>
 
