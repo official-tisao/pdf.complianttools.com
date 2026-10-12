@@ -65,7 +65,7 @@ export async function createInvoicePdf(invoice: InvoiceData): Promise<InvoiceRes
   });
   const xml = invoiceToUblXml(invoice);
   const totals = invoiceTotals(invoice);
-  const document = await PDFDocument.create();
+  const document = await PDFDocument.create({ updateMetadata: false });
   const page = document.addPage([612, 792]);
   const font = await document.embedFont(StandardFonts.Helvetica);
   const bold = await document.embedFont(StandardFonts.HelveticaBold);

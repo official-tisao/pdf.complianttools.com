@@ -116,7 +116,7 @@ export async function generateQr(payload: QrPayload): Promise<QrRender> {
     Array.from({ length: qr.modules.size }, (_, col) => qr.modules.get(row, col) === 1),
   );
   const png = matrixPng(modules);
-  const pdf = await PDFDocument.create();
+  const pdf = await PDFDocument.create({ updateMetadata: false });
   const image = await pdf.embedPng(png);
   const page = pdf.addPage([612, 792]);
   page.drawImage(image, { x: 96, y: 240, width: 420, height: 420 });
