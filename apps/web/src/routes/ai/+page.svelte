@@ -1,18 +1,18 @@
 <script lang="ts">
+  import { JSONLD_OPEN, JSONLD_CLOSE, jsonLdPayload } from '$lib/seo';
+  const structuredData = jsonLdPayload({
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'AI Tools',
+    description: 'PDF AI tools (local first, BYOK escalation).',
+    url: 'https://pdf.complianttools.com/ai',
+  });
 </script>
 
 <svelte:head>
   <title>AI Tools — Chat, Summarize, Translate, Generate</title>
   <meta name="description" content="PDF AI tools (local first, BYOK escalation)." />
-  <script type="application/ld+json">
-    {JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "AI Tools",
-      "description": "PDF AI tools (local first, BYOK escalation).",
-      "url": "https://pdf.complianttools.com/ai"
-    })}
-  </script>
+  {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
 </svelte:head>
 
 <main class="panel">
