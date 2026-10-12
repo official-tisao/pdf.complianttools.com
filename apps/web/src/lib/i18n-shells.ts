@@ -154,6 +154,7 @@ export const shellArabic: Readonly<Record<string, string>> = {
   'phase.replace.label': 'البديل',
   'phase.replace.placeholder': 'نص البديل',
   'phase.text.label': 'مربع النص الاحتياطي',
+  'phase.addText.label': 'النص لإضافته إلى PDF',
   'phase.redact.label': 'نص أو تعبير نمطي لإزالته',
   'phase.redact.placeholder': 'رقم هوية أو بريد أو تعبير نمطي',
   'phase.request.recipients': 'المستلمون',
