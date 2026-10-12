@@ -88,6 +88,48 @@ test('fill form opens a full-screen editor with a page rail', async ({ page }) =
   await expect(page.getByRole('dialog', { name: 'Fillable PDF editor' })).toBeHidden();
 });
 
+test('shared PDF edit previews open a full-screen page rail and close with Escape', async ({
+  page,
+}) => {
+  await page.goto('/add-text');
+  await expect(page.locator('.tool-page[data-hydrated="true"]')).toBeVisible({ timeout: 30_000 });
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'preview-fixture.pdf',
+    mimeType: 'application/pdf',
+    buffer: await createFillablePdfFixture(),
+  });
+
+  await expect(page.getByRole('heading', { name: 'PDF preview', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Open full-screen preview', exact: true }).click();
+  const previewDialog = page.getByRole('dialog', { name: 'Full-screen PDF preview' });
+  await expect(previewDialog).toBeVisible();
+  await expect(
+    previewDialog.getByRole('heading', { name: 'Preview PDF', exact: true }),
+  ).toBeVisible();
+  await expect(previewDialog.getByRole('button', { name: 'Page 2', exact: true })).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(previewDialog).toBeHidden();
+});
+
+test('standalone edit inspectors reuse the same PDF preview surface', async ({ page }) => {
+  for (const route of ['/pdf-inspector', '/pdf-metadata']) {
+    await page.goto(route);
+    await expect(page.locator('.page[data-hydrated="true"]')).toBeVisible({ timeout: 30_000 });
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'standalone-preview-fixture.pdf',
+      mimeType: 'application/pdf',
+      buffer: await createFillablePdfFixture(),
+    });
+    await expect(page.getByRole('heading', { name: 'PDF preview', exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(
+      page.getByRole('button', { name: 'Open full-screen preview', exact: true }),
+    ).toBeVisible();
+  }
+});
+
 test('with no Relay configured the app is fully usable and says so honestly', async ({ page }) => {
   // The first half of P7-06's Done-when: no Relay, no broken app. The other ten
   // tools are local and must keep working, and the capture button must refuse
