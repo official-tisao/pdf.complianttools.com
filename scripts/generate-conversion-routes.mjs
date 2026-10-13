@@ -80,6 +80,7 @@ function acceptFor(format, direction) {
     zip: '.zip,application/zip',
     png: '.png,image/png',
     jpg: '.jpg,.jpeg,image/jpeg',
+    ai: '.ai,application/postscript,application/pdf',
   };
   return MIME[format] ?? '.pdf,application/pdf';
 }
