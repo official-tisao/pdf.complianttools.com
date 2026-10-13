@@ -65,10 +65,12 @@ export async function createInvoicePdf(invoice: InvoiceData): Promise<InvoiceRes
   });
   const xml = invoiceToUblXml(invoice);
   const totals = invoiceTotals(invoice);
-  const document = await PDFDocument.create();
+  const document = await PDFDocument.create({ updateMetadata: false });
   const page = document.addPage([612, 792]);
-  const font = await document.embedFont(StandardFonts.Helvetica);
-  const bold = await document.embedFont(StandardFonts.HelveticaBold);
+  const [font, bold] = await Promise.all([
+    document.embedFont(StandardFonts.Helvetica),
+    document.embedFont(StandardFonts.HelveticaBold),
+  ]);
   page.drawText(`Invoice ${invoice.invoiceNumber}`, { x: 48, y: 744, size: 20, font: bold });
   page.drawText(
     `Issued ${invoice.issueDate}${invoice.dueDate ? ` · Due ${invoice.dueDate}` : ''}`,
@@ -111,7 +113,7 @@ export async function createInvoicePdf(invoice: InvoiceData): Promise<InvoiceRes
     description: 'Structured UBL invoice data',
   });
   return {
-    pdf: await document.save({ useObjectStreams: true, addDefaultPage: false }),
+    pdf: await document.save({ addDefaultPage: false }),
     xml,
     totals,
   };

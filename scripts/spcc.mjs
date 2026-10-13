@@ -63,6 +63,7 @@ const NO_FILE_INPUT = [
   ['/e-invoice', 'builds a PDF from form fields; there is no document to pick'],
   ['/ai/generate-pdf', 'generates a PDF from a prompt; there is no document to pick'],
   ['/ai/escalations', 'lists escalation routes; it is an index, not a tool'],
+  ['/ai', 'AI landing/index page; links subroutes, takes no document'],
   ['/connect-ai', 'configures a provider connection; it takes no document'],
   ['/webpage-to-pdf', 'takes a URL and a Relay endpoint, not a document'],
   [

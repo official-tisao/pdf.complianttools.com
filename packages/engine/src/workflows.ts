@@ -39,7 +39,7 @@ export async function buildDocumentPack(
 }
 
 export async function addPackCover(title: string, subtitle?: string): Promise<Uint8Array> {
-  const document = await PDFDocument.create();
+  const document = await PDFDocument.create({ updateMetadata: false });
   const page = document.addPage([612, 792]);
   const font = await document.embedFont(StandardFonts.HelveticaBold);
   page.drawText(title, { x: 60, y: 650, size: 28, font });
