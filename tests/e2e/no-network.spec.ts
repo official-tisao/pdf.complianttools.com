@@ -1,10 +1,14 @@
 import { expect, test } from '@playwright/test';
 
-test('local landing page has a real file input and no third-party requests', async ({ page }) => {
+test('local landing page has a real file input and no third-party requests', async ({
+  page,
+  baseURL,
+}) => {
   const externalRequests: string[] = [];
+  const firstPartyOrigin = new URL(baseURL ?? 'http://127.0.0.1:4173').origin;
   page.on('request', (request) => {
     const url = request.url();
-    if (!url.startsWith('http://127.0.0.1:4173')) externalRequests.push(url);
+    if (!url.startsWith(firstPartyOrigin)) externalRequests.push(url);
   });
   await page.goto('/');
   await expect(
@@ -29,10 +33,12 @@ test('the landing page remains readable and selectable with JavaScript disabled'
 
 test('AI local fallback does not issue a request and cannot prepare without a file', async ({
   page,
+  baseURL,
 }) => {
   const externalRequests: string[] = [];
+  const firstPartyOrigin = new URL(baseURL ?? 'http://127.0.0.1:4173').origin;
   page.on('request', (request) => {
-    if (!request.url().startsWith('http://127.0.0.1:4173')) externalRequests.push(request.url());
+    if (!request.url().startsWith(firstPartyOrigin)) externalRequests.push(request.url());
   });
   await page.goto('/ai/summarize');
   await expect(

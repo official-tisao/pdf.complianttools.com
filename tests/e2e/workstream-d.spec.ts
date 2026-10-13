@@ -16,10 +16,11 @@ test('Workstream D routes expose local file controls and honest capability copy'
   }
 });
 
-test('viewer and compare route shells make no external requests', async ({ page }) => {
+test('viewer and compare route shells make no external requests', async ({ page, baseURL }) => {
   const externalRequests: string[] = [];
+  const firstPartyOrigin = new URL(baseURL ?? 'http://127.0.0.1:4173').origin;
   page.on('request', (request) => {
-    if (!request.url().startsWith('http://127.0.0.1:4173')) externalRequests.push(request.url());
+    if (!request.url().startsWith(firstPartyOrigin)) externalRequests.push(request.url());
   });
   await page.goto('/view-pdf');
   await expect(page.getByRole('heading', { name: 'PDF viewer' })).toBeVisible();
