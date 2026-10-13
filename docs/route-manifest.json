@@ -1,6 +1,6 @@
 {
   "generated": "by scripts/generate-route-manifest.mjs — do not hand-edit",
-  "routeCount": 126,
+  "routeCount": 127,
   "deadControls": [
     "/bookmarks",
     "/pdf-to-pdfa",
@@ -27,6 +27,13 @@
       "localized": false,
       "opBinding": null,
       "op": "add-text"
+    },
+    {
+      "path": "/ai",
+      "shell": "bespoke",
+      "localized": false,
+      "opBinding": null,
+      "op": null
     },
     {
       "path": "/ai-to-pdf",

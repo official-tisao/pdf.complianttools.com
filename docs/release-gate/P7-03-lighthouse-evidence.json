@@ -1,6 +1,6 @@
 {
   "task": "P7-03",
-  "date": "2026-10-01",
+  "date": "2026-10-12",
   "evidenceType": "Lighthouse mobile audit of the production build",
   "environment": {
     "lighthouse": "13.5.0",
@@ -38,13 +38,13 @@
           "score": 0.5,
           "items": [
             {
-              "wastedMs": 305
+              "wastedMs": 314
             },
             {
-              "wastedMs": 305
+              "wastedMs": 164
             },
             {
-              "wastedMs": 155
+              "wastedMs": 314
             }
           ]
         },
@@ -53,12 +53,6 @@
           "title": "First Contentful Paint",
           "score": 0.93,
           "displayValue": "1.6 s"
-        },
-        {
-          "id": "max-potential-fid",
-          "title": "Max Potential First Input Delay",
-          "score": 0.98,
-          "displayValue": "90 ms"
         },
         {
           "id": "largest-contentful-paint",
@@ -94,7 +88,7 @@
           "displayValue": "Est savings of 21 KiB",
           "items": [
             {
-              "wastedMs": 29420
+              "wastedMs": 28612
             }
           ]
         },
@@ -106,43 +100,43 @@
         {
           "id": "render-blocking-insight",
           "title": "Render-blocking requests",
-          "score": 0.5,
-          "displayValue": "Est savings of 10 ms",
+          "score": 0,
+          "displayValue": "Est savings of 150 ms",
           "items": [
             {
-              "wastedMs": 305
+              "wastedMs": 302
             },
             {
-              "wastedMs": 305
+              "wastedMs": 302
             },
             {
-              "wastedMs": 305
+              "wastedMs": 152
             }
           ]
         },
         {
           "id": "first-contentful-paint",
           "title": "First Contentful Paint",
-          "score": 0.82,
-          "displayValue": "2.1 s"
+          "score": 0.83,
+          "displayValue": "2.0 s"
         },
         {
           "id": "largest-contentful-paint",
           "title": "Largest Contentful Paint",
-          "score": 0.96,
-          "displayValue": "2.1 s"
+          "score": 0.97,
+          "displayValue": "2.0 s"
         },
         {
           "id": "speed-index",
           "title": "Speed Index",
           "score": 0.99,
-          "displayValue": "2.1 s"
+          "displayValue": "2.0 s"
         },
         {
           "id": "interactive",
           "title": "Time to Interactive",
           "score": 0.99,
-          "displayValue": "2.1 s"
+          "displayValue": "2.0 s"
         }
       ]
     },
@@ -177,13 +171,13 @@
           "displayValue": "Est savings of 100 ms",
           "items": [
             {
-              "wastedMs": 306
+              "wastedMs": 302
             },
             {
-              "wastedMs": 306
+              "wastedMs": 302
             },
             {
-              "wastedMs": 306
+              "wastedMs": 302
             }
           ]
         },
@@ -198,12 +192,6 @@
           "title": "Largest Contentful Paint",
           "score": 0.99,
           "displayValue": "1.7 s"
-        },
-        {
-          "id": "max-potential-fid",
-          "title": "Max Potential First Input Delay",
-          "score": 0.99,
-          "displayValue": "70 ms"
         }
       ]
     }

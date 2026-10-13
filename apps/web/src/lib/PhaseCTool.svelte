@@ -336,11 +336,17 @@
     />
   {:else}
     <FileDrop
-      {accept}
+      accept={operation === 'add-text'
+        ? '.pdf,.png,.jpeg,application/pdf,image/png,image/jpeg'
+        : accept}
       onchange={selectFiles}
-      label={operation === 'add-image' || operation === 'overlay'
-        ? 'Choose the base file, then the second local file'
-        : 'Drop a PDF here or choose a local file'}
+      label={operation === 'add-image'
+        ? 'First: choose a PDF file, then: choose a PNG/JPEG image (two files required)'
+        : operation === 'overlay'
+          ? 'Choose the base file, then the second local file'
+          : operation === 'add-text'
+            ? 'Drop a PDF file or image (PNG/JPEG) here, or choose a local file'
+            : 'Drop a PDF here or choose a local file'}
     />
   {/if}
   {#if operation !== 'signature-background' && operation !== 'password-generator'}
@@ -411,6 +417,13 @@
         label={t('phase.sign.upload', 'Upload a PNG or JPEG signature')}
       />
       <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
+    {:else if operation === 'add-text'}
+      <label
+        >{t('phase.addText.label', 'Text to add to PDF')}<input
+          bind:value={text}
+          placeholder="Enter text to place on page"
+        /></label
+      >
     {:else if operation !== 'password-generator'}
       <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
     {/if}

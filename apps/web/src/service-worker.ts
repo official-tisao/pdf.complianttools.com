@@ -56,6 +56,7 @@ const PRERENDERED_ROUTES = [
   '/split',
   '/ocr-pdf',
   '/connect-ai',
+  '/add-text',
 ];
 
 sw.addEventListener('install', (event) => {

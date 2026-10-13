@@ -17,7 +17,7 @@ export async function imageToPdf(
   format: 'jpg' | 'png' | 'bmp' | 'gif' | 'tiff' | 'webp' | 'heic' | 'svg',
   options: ConversionOptions = {},
 ): Promise<Uint8Array> {
-  const document = await PDFDocument.create();
+  const document = await PDFDocument.create({ updateMetadata: false });
   const background = options.backgroundColor ?? { r: 1, g: 1, b: 1 };
   if (format === 'jpg') {
     const image = await document.embedJpg(bytes);
@@ -74,7 +74,7 @@ export async function svgToPdf(bytes: Uint8Array): Promise<Uint8Array> {
     /viewBox\s*=\s*["']\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)\s*["']/iu.exec(source);
   const width = Number.parseFloat(/width\s*=\s*["']([\d.]+)/iu.exec(source)?.[1] ?? '') || 595;
   const height = Number.parseFloat(/height\s*=\s*["']([\d.]+)/iu.exec(source)?.[1] ?? '') || 842;
-  const document = await PDFDocument.create();
+  const document = await PDFDocument.create({ updateMetadata: false });
   const page = document.addPage([width, height]);
   const shapes =
     source.match(

@@ -135,7 +135,7 @@ export async function textPagesToPdf(
   pages: readonly (readonly string[])[],
   options: ConversionOptions = {},
 ): Promise<Uint8Array> {
-  const document = await PDFDocument.create();
+  const document = await PDFDocument.create({ updateMetadata: false });
   const font = await document.embedFont(StandardFonts.Helvetica);
   const pageSize: [number, number] =
     options.pageSize === 'letter' || options.pageSize === undefined

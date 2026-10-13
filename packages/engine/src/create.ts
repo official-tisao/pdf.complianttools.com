@@ -69,7 +69,7 @@ export function createTemplatedPdf(options: CreatePdfOptions = {}): Uint8Array {
 }
 
 export async function createTextPdf(title: string, lines: readonly string[]): Promise<Uint8Array> {
-  const document = await PDFDocument.create();
+  const document = await PDFDocument.create({ updateMetadata: false });
   const page = document.addPage(PAGE_SIZES.letter);
   const font = await document.embedFont(StandardFonts.Helvetica);
   page.drawText(title, { x: 48, y: 744, size: 18, font, color: rgb(0.1, 0.1, 0.1) });

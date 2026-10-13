@@ -2,6 +2,10 @@
   import AiDocumentTool from '$lib/AiDocumentTool.svelte';
 </script>
 
+<svelte:head>
+  <title>Chat with PDF — AI (local first, BYOK)</title>
+</svelte:head>
+
 <AiDocumentTool
   kind="chat"
   title="Chat with a PDF"
