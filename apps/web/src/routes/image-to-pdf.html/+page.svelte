@@ -2,7 +2,7 @@
   import ConversionTool from '$lib/ConversionTool.svelte';
 </script>
 
-<main class="image-to-pdf-page" >
+<main class="image-to-pdf-page">
   <ConversionTool
     title="Image to PDF"
     description="Combine supported images into PDF pages locally. PNG alpha is composited over a chosen background."
