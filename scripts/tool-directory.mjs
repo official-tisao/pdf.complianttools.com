@@ -76,6 +76,7 @@ const BIDIRECTIONAL_SLUGS = new Set([
   'csv-pdf',
   'html-pdf',
   'image-to-pdf',
+  'image-to-pdf.html',
   'design-file-to-pdf',
   'other-formats-to-pdf',
   'pdf-to-markdown',
