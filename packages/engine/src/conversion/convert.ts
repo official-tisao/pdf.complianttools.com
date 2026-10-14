@@ -26,7 +26,14 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 function isBinaryFile(bytes: Uint8Array): boolean {
-  if (bytes.length >= 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) return true;
+  if (
+    bytes.length >= 4 &&
+    bytes[0] === 0x25 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x44 &&
+    bytes[3] === 0x46
+  )
+    return true;
   const nonText = bytes.filter((b) => (b < 0x09 || (b > 0x0d && b < 0x20)) && b !== 0x7f).length;
   return nonText > bytes.length * 0.3;
 }
@@ -115,13 +122,26 @@ async function convertToPdfRequest(
   const bytes = input.bytes;
   const fileName = input.fileName ?? '';
   const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
-  const allowedExt = { markdown: ['md', 'markdown'], txt: ['txt'], html: ['html', 'htm'], csv: ['csv'] };
+  const allowedExt = {
+    markdown: ['md', 'markdown'],
+    txt: ['txt'],
+    html: ['html', 'htm'],
+    csv: ['csv'],
+  };
   const formatExts = allowedExt[input.format as 'markdown' | 'txt' | 'html' | 'csv'] || [];
   if (formatExts.length > 0 && !formatExts.includes(ext)) {
-    throw new PdfEngineError({ kind: 'corrupt-structure', repairable: false, remedy: `Expected .${formatExts.join(' or .')}, got .${ext || 'none'}` });
+    throw new PdfEngineError({
+      kind: 'corrupt-structure',
+      repairable: false,
+      remedy: `Expected .${formatExts.join(' or .')}, got .${ext || 'none'}`,
+    });
   }
   if (isBinaryFile(bytes)) {
-    throw new PdfEngineError({ kind: 'corrupt-structure', repairable: false, remedy: 'File appears to be binary rather than text/markdown.' });
+    throw new PdfEngineError({
+      kind: 'corrupt-structure',
+      repairable: false,
+      remedy: 'File appears to be binary rather than text/markdown.',
+    });
   }
   let pdf: Uint8Array;
   const warnings: string[] = [];

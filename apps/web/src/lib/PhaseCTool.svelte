@@ -126,7 +126,7 @@
 
   async function run() {
     // For dual-file operations use dedicated state; else fall back to files[]
-    const file = (operation === 'overlay' || operation === 'add-image') ? baseFile : files[0];
+    const file = operation === 'overlay' || operation === 'add-image' ? baseFile : files[0];
     if (!file && operation !== 'password-generator') {
       error = t('phase.error.noFile', 'Choose a local file first. Nothing is uploaded.');
       return;
@@ -365,23 +365,19 @@
   {:else if operation === 'overlay'}
     <div style="display: grid; gap: 16px;">
       <FileDrop
-        accept={accept}
+        {accept}
         onchange={selectBaseFile}
         label="Base PDF — choose the underlying document"
       />
       <FileDrop
-        accept={accept}
+        {accept}
         onchange={selectSecondFile}
         label="Overlay PDF — choose the file to stamp over the base"
       />
     </div>
   {:else if operation === 'add-image'}
     <div style="display: grid; gap: 16px;">
-      <FileDrop
-        accept={accept}
-        onchange={selectBaseFile}
-        label="PDF file — the document to edit"
-      />
+      <FileDrop {accept} onchange={selectBaseFile} label="PDF file — the document to edit" />
       <FileDrop
         accept=".png,.jpeg,image/png,image/jpeg"
         onchange={selectSecondFile}
@@ -398,14 +394,22 @@
     />
   {/if}
   {#if operation !== 'signature-background' && operation !== 'password-generator'}
-    <PdfPreview file={(operation === 'overlay' || operation === 'add-image') ? (baseFile || files[0]) : files[0]} {locale} onerror={(message) => (error = message)} />
+    <PdfPreview
+      file={operation === 'overlay' || operation === 'add-image' ? baseFile || files[0] : files[0]}
+      {locale}
+      onerror={(message) => (error = message)}
+    />
   {/if}
   {#if (operation === 'overlay' || operation === 'add-image') && (secondFile || files[1])}
-    <p class="status" role="status">{t('shell.secondFile', 'Second file loaded')} {(secondFile || files[1])?.name}.</p>
+    <p class="status" role="status">
+      {t('shell.secondFile', 'Second file loaded')}
+      {(secondFile || files[1])?.name}.
+    </p>
   {/if}
   <div class="panel">
     {#if operation === 'editor'}
-      <label>{t('phase.replace.find', 'Existing text to replace')}<input
+      <label
+        >{t('phase.replace.find', 'Existing text to replace')}<input
           bind:value={find}
           placeholder={t('phase.replace.findPlaceholder', 'Simple literal text run')}
         /></label
