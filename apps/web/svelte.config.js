@@ -11,6 +11,7 @@ const config = {
     adapter: adapter({ fallback: '200.html' }),
     prerender: {
       handleHttpError: 'warn',
+      handleUnseenRoutes: 'warn',
     },
     // Registered for real builds only. Enabling this while the dev server runs
     // makes it stop emitting the client module, so the app never hydrates and

@@ -41,6 +41,29 @@
     translate(locale, key, fallback, ...values);
 
   let files = $state<File[]>([]);
+
+  /**
+   * Derive the engine format ID from a file's MIME type or extension.
+   * Maps browser-provided MIME types to engine format identifiers.
+   */
+  function detectFormatFromFile(
+    file: File,
+  ): 'jpg' | 'png' | 'bmp' | 'gif' | 'tiff' | 'webp' | 'heic' | 'svg' | null {
+    const mime = file.type;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    // JPEG has two common MIME types and two extensions
+    if (mime === 'image/jpeg' || ext === 'jpg' || ext === 'jpeg') return 'jpg';
+    if (mime === 'image/png' || ext === 'png') return 'png';
+    if (mime === 'image/bmp' || ext === 'bmp') return 'bmp';
+    if (mime === 'image/gif' || ext === 'gif') return 'gif';
+    if (mime === 'image/webp' || ext === 'webp') return 'webp';
+    if (mime === 'image/svg+xml' || ext === 'svg') return 'svg';
+    // TIFF is case-sensitive for extension check
+    if (mime === 'image/tiff' || ext === 'tif' || ext === 'tiff') return 'tiff';
+    // HEIC/HEIF
+    if (ext === 'heic' || ext === 'heif') return 'heic';
+    return null;
+  }
   let busy = $state(false);
   let message = $state('');
   let error = $state('');
@@ -64,7 +87,10 @@
     try {
       const { convertFile } = await import('@pdf-complianttools/engine');
       const bytes = new Uint8Array(await file.arrayBuffer());
-      const result = await convertFile(direction, format as never, bytes, { fileName: file.name });
+      // Derive format from the file's actual type rather than the hardcoded prop,
+      // so JPEG uploads to the generic image-to-pdf path work correctly.
+      const detectedFormat = detectFormatFromFile(file) ?? (format as never);
+      const result = await convertFile(direction, detectedFormat, bytes, { fileName: file.name });
       const url = URL.createObjectURL(
         new Blob([result.bytes.buffer as ArrayBuffer], { type: result.mimeType }),
       );

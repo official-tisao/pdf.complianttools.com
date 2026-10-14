@@ -9,18 +9,27 @@ const extensions = new Set(['.js', '.mjs', '.ts', '.svelte', '.json', '.css', '.
 export async function findTrademarkViolations(root = process.cwd(), denylist = []) {
   const violations = [];
   for (const sourceRoot of roots) {
-    for await (const path of glob(`${sourceRoot}/**/*`, {
+    for await (const entry of glob(`${sourceRoot}/**/*`, {
       cwd: root,
-      exclude: (name) => name.includes('node_modules'),
+      withFileTypes: true,
+      exclude: (item) => {
+        if (typeof item === 'string') return item.includes('node_modules');
+        return item.name.includes('node_modules');
+      },
     })) {
-      if (
-        path.endsWith('trademark-denylist.txt') ||
-        !extensions.has(path.slice(path.lastIndexOf('.')))
-      )
-        continue;
-      const text = await readFile(resolve(root, path), 'utf8');
+      // Skip directories - we only want files
+      if (typeof entry !== 'string' && !entry.isFile()) continue;
+
+      const ext = entry.name.slice(entry.name.lastIndexOf('.'));
+      if (!extensions.has(ext)) continue;
+      if (entry.name.endsWith('trademark-denylist.txt')) continue;
+
+      const fileDir = typeof entry === 'string' ? '' : entry.path || entry.parentPath || '';
+      const filePath = typeof entry === 'string' ? entry : `${fileDir}/${entry.name}`;
+      const text = await readFile(resolve(root, filePath), 'utf8');
       for (const term of denylist)
-        if (text.toLowerCase().includes(term.toLowerCase())) violations.push(`${path}: ${term}`);
+        if (text.toLowerCase().includes(term.toLowerCase()))
+          violations.push(`${filePath}: ${term}`);
     }
   }
   return violations;
