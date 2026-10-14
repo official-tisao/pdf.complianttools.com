@@ -63,8 +63,6 @@
 
   // Pre-fetch the PDF-writing chunk so the latency gate measures rendering,
   // not module download + parse of pdf-lib (~170 KB gzip).
-  void import('@pdf-complianttools/engine/invoice');
-
   const money = (value: number) => value.toFixed(2);
 
   function current(): InvoiceData {
