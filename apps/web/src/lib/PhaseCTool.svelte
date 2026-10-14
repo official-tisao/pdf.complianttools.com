@@ -51,10 +51,10 @@
   const t = (key: string, fallback: string, ...values: Array<string | number | undefined>) =>
     translate(locale, key, fallback, ...values);
 
-  let files = $derived([baseFile, secondFile].filter(Boolean) as File[]);
   // Separate inputs for dual-file operations (overlay, add-image)
   let baseFile = $state<File>();
   let secondFile = $state<File>();
+  let files = $derived([baseFile, secondFile].filter(Boolean) as File[]);
   let busy = $state(false);
   let status = $state('');
   let error = $state('');
