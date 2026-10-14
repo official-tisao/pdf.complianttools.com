@@ -1,6 +1,6 @@
 {
   "generated": "by scripts/generate-route-manifest.mjs — do not hand-edit",
-  "routeCount": 127,
+  "routeCount": 128,
   "deadControls": [
     "/bookmarks",
     "/pdf-to-pdfa",
@@ -317,6 +317,13 @@
     },
     {
       "path": "/image-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/image-to-pdf.html",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,
