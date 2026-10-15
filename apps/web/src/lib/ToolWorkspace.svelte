@@ -92,7 +92,7 @@
   });
 
   async function selectFiles(list: FileList | null) {
-    files = list ? Array.from(list) : [];
+    files = list ? [...files, ...Array.from(list)] : files;
     status = files.length
       ? t(
           files.length === 1 ? 'shell.files.ready' : 'shell.files.readyPlural',
@@ -176,7 +176,9 @@
             )}</span
           ><Button disabled={files.length === 0 || !onrun} onclick={runTool}>{action}</Button>
         </div>
-        <PdfPreview file={files[0]} {locale} onerror={(message) => (status = message)} />
+        {#each files as file (file.name || file)}
+          <PdfPreview {file} {locale} onerror={(message) => (status = message)} />
+        {/each}
       </div>
       {#if options.length > 0}<OptionPanel fields={options} onchange={changeOption} />{/if}
     </div>
