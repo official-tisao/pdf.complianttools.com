@@ -51,10 +51,7 @@
   const t = (key: string, fallback: string, ...values: Array<string | number | undefined>) =>
     translate(locale, key, fallback, ...values);
 
-  // Separate inputs for dual-file operations (overlay, add-image)
-  let baseFile = $state<File>();
-  let secondFile = $state<File>();
-  let files = $derived([baseFile, secondFile].filter(Boolean) as File[]);
+  let files = $state<File[]>([]);
   let busy = $state(false);
   let status = $state('');
   let error = $state('');
@@ -79,13 +76,7 @@
   let text = $state('');
   let note = $state('');
   let recipients = $state('recipient@example.test');
-  let highlightColor = $state('#ffff00');
-  let noteColor = $state('#ff9900');
-  let boldText = $state(false);
-  let highlightActive = $state(true);
-  let noteActive = $state(false);
   let threshold = $state(32);
-  let annotationKind = $state<'highlight' | 'note'>('highlight');
   let page = $state(1);
   // Derived: these come from $props(), and a caller can change them after mount.
   const structuredData = $derived(
@@ -93,26 +84,10 @@
   );
 
   function selectFiles(list: FileList | null) {
-    const listArr = list ? Array.from(list) : [];
-    // For dual-file ops, use the first item only for the derived files[]
-    // (dual inputs set baseFile/secondFile directly)
-    baseFile = listArr[0];
-    secondFile = listArr[1];
-    status = listArr.length
-      ? `${listArr.length} file${listArr.length === 1 ? '' : 's'} selected locally.`
+    files = list ? Array.from(list) : [];
+    status = files.length
+      ? `${files.length} file${files.length === 1 ? '' : 's'} selected locally.`
       : '';
-    error = '';
-    downloadHref = undefined;
-  }
-
-  function selectBaseFile(list: FileList | null) {
-    baseFile = list?.[0];
-    error = '';
-    downloadHref = undefined;
-  }
-
-  function selectSecondFile(list: FileList | null) {
-    secondFile = list?.[0];
     error = '';
     downloadHref = undefined;
   }
@@ -131,18 +106,9 @@
   }
 
   async function run() {
-    // For dual-file operations use dedicated state; else fall back to files[]
-    const file = operation === 'overlay' || operation === 'add-image' ? baseFile : files[0];
+    const file = files[0];
     if (!file && operation !== 'password-generator') {
       error = t('phase.error.noFile', 'Choose a local file first. Nothing is uploaded.');
-      return;
-    }
-    if (operation === 'overlay' && !secondFile) {
-      error = t('phase.error.overlay', 'Choose a base PDF and an overlay PDF.');
-      return;
-    }
-    if (operation === 'add-image' && !secondFile) {
-      error = t('phase.error.image', 'Choose a PDF and a PNG/JPEG image.');
       return;
     }
     busy = true;
@@ -174,10 +140,9 @@
       } else if (operation === 'annotate') {
         const output = await engine.addAnnotation(bytes!, {
           page,
-          kind: (annotationKind === 'note' ? 'sticky-note' : 'highlight') as AnnotationKind,
+          kind: 'highlight' satisfies AnnotationKind,
           rect: { x: 72, y: 680, width: 180, height: 24 },
           contents: note || 'Local annotation',
-          color: highlightColor,
         });
         save(output, 'annotated.pdf', 'application/pdf');
         status = t('phase.status.annotate', 'Standard PDF annotation exported locally.');
@@ -189,7 +154,7 @@
         );
         status = t('phase.status.addText', 'Text box exported locally.');
       } else if (operation === 'add-image') {
-        const image = secondFile || files[1];
+        const image = files[1];
         if (!image) throw new Error(t('phase.error.image', 'Choose a PDF and a PNG/JPEG image.'));
         save(
           await engine.addImageToPdf(bytes!, new Uint8Array(await image.arrayBuffer()), {
@@ -231,7 +196,7 @@
         );
         status = t('phase.status.watermark', 'Watermark exported locally.');
       } else if (operation === 'overlay') {
-        const overlay = secondFile || files[1];
+        const overlay = files[1];
         if (!overlay)
           throw new Error(t('phase.error.overlay', 'Choose a base PDF and an overlay PDF.'));
         save(
@@ -369,91 +334,18 @@
       onchange={selectFiles}
       label="Drop an 8-bit RGBA PNG signature photo"
     />
-  {:else if operation === 'overlay'}
-    <div style="display: grid; gap: 16px;">
-      <FileDrop
-        {accept}
-        onchange={selectBaseFile}
-        label="Base PDF — choose the underlying document"
-      />
-      <FileDrop
-        {accept}
-        onchange={selectSecondFile}
-        label="Overlay PDF — choose the file to stamp over the base"
-      />
-    </div>
-  {:else if operation === 'add-image'}
-    <div style="display: grid; gap: 16px;">
-      <FileDrop {accept} onchange={selectBaseFile} label="PDF file — the document to edit" />
-      <FileDrop
-        accept=".png,.jpeg,image/png,image/jpeg"
-        onchange={selectSecondFile}
-        label="Image file — PNG or JPEG to place on the PDF"
-      />
-    </div>
   {:else}
     <FileDrop
-      accept={operation === 'add-text'
-        ? '.pdf,.png,.jpeg,application/pdf,image/png,image/jpeg'
-        : accept}
+      {accept}
       onchange={selectFiles}
-      label="Drop a PDF here or choose a local file"
+      label={operation === 'add-image' || operation === 'overlay'
+        ? 'Choose the base file, then the second local file'
+        : 'Drop a PDF here or choose a local file'}
     />
   {/if}
   {#if operation !== 'signature-background' && operation !== 'password-generator'}
-    <PdfPreview
-      file={operation === 'overlay' || operation === 'add-image' ? baseFile || files[0] : files[0]}
-      {locale}
-      onerror={(message) => (error = message)}
-    />
+    <PdfPreview file={files[0]} {locale} onerror={(message) => (error = message)} />
   {/if}
-  {#if (operation === 'overlay' || operation === 'add-image') && (secondFile || files[1])}
-    <p class="status" role="status">
-      {t('shell.secondFile', 'Second file loaded')}
-      {(secondFile || files[1])?.name}.
-    </p>
-  {/if}
-  {#if operation === 'annotate' && files[0]}
-    <div class="annotation-toolbar" role="toolbar" aria-label="Annotation controls">
-      <div class="toolbar-group">
-        <button
-          class="toolbar-btn {highlightActive ? 'active' : ''}"
-          onclick={() => { highlightActive = true; noteActive = false; annotationKind = 'highlight'; }}
-          aria-pressed={highlightActive}
-        >Highlight</button>
-        <button
-          class="toolbar-btn {noteActive ? 'active' : ''}"
-          onclick={() => { noteActive = true; highlightActive = false; annotationKind = 'note'; }}
-          aria-pressed={noteActive}
-        >Note</button>
-      </div>
-
-      <div class="toolbar-group">
-        <label class="toolbar-label">Highlight color
-          <input type="color" bind:value={highlightColor} aria-label="Highlight color" />
-        </label>
-        <label class="toolbar-label">Note color
-          <input type="color" bind:value={noteColor} aria-label="Note color" />
-        </label>
-      </div>
-
-      <div class="toolbar-group">
-        <button
-          class="toolbar-btn {boldText ? 'active' : ''}"
-          onclick={() => (boldText = !boldText)}
-          aria-pressed={boldText}
-          title="Bold text formatting"
-        >Bold text</button>
-      </div>
-
-      <div class="toolbar-group">
-        <label class="toolbar-label">Annotation text
-          <input bind:value={note} placeholder="Annotation contents" />
-        </label>
-      </div>
-    </div>
-  {/if}
-
   <div class="panel">
     {#if operation === 'editor'}
       <label
@@ -519,13 +411,6 @@
         label={t('phase.sign.upload', 'Upload a PNG or JPEG signature')}
       />
       <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
-    {:else if operation === 'add-text'}
-      <label
-        >{t('phase.addText.label', 'Text to add to PDF')}<input
-          bind:value={text}
-          placeholder="Enter text to place on page"
-        /></label
-      >
     {:else if operation !== 'password-generator'}
       <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
     {/if}
@@ -617,55 +502,6 @@
   .download {
     color: inherit;
     font-weight: 600;
-  }
-  .annotation-toolbar {
-    background: var(--color-platinum);
-    border-radius: var(--radius-panel);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 24px;
-    padding: 16px;
-  }
-  .toolbar-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .toolbar-btn {
-    background: var(--color-white);
-    border: 1px solid var(--color-hairline);
-    border-radius: 8px;
-    padding: 8px 14px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .toolbar-btn.active {
-    background: var(--color-ink);
-    color: var(--color-white);
-    border-color: var(--color-ink);
-  }
-  .toolbar-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 600;
-    font-size: 0.875rem;
-  }
-  .toolbar-label input[type="color"] {
-    border: none;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    cursor: pointer;
-  }
-  .toolbar-label input[type="text"],
-  .toolbar-label input:not([type]) {
-    border: 1px solid var(--color-hairline);
-    border-radius: 8px;
-    padding: 8px 10px;
-    font: inherit;
   }
   @media (max-width: 767px) {
     .tool-page {

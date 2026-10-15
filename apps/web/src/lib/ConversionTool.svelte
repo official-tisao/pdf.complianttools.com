@@ -41,29 +41,6 @@
     translate(locale, key, fallback, ...values);
 
   let files = $state<File[]>([]);
-
-  /**
-   * Derive the engine format ID from a file's MIME type or extension.
-   * Maps browser-provided MIME types to engine format identifiers.
-   */
-  function detectFormatFromFile(
-    file: File,
-  ): 'jpg' | 'png' | 'bmp' | 'gif' | 'tiff' | 'webp' | 'heic' | 'svg' | null {
-    const mime = file.type;
-    const ext = file.name.split('.').pop()?.toLowerCase();
-    // JPEG has two common MIME types and two extensions
-    if (mime === 'image/jpeg' || ext === 'jpg' || ext === 'jpeg') return 'jpg';
-    if (mime === 'image/png' || ext === 'png') return 'png';
-    if (mime === 'image/bmp' || ext === 'bmp') return 'bmp';
-    if (mime === 'image/gif' || ext === 'gif') return 'gif';
-    if (mime === 'image/webp' || ext === 'webp') return 'webp';
-    if (mime === 'image/svg+xml' || ext === 'svg') return 'svg';
-    // TIFF is case-sensitive for extension check
-    if (mime === 'image/tiff' || ext === 'tif' || ext === 'tiff') return 'tiff';
-    // HEIC/HEIF
-    if (ext === 'heic' || ext === 'heif') return 'heic';
-    return null;
-  }
   let busy = $state(false);
   let message = $state('');
   let error = $state('');
@@ -81,54 +58,13 @@
   async function convert() {
     const file = files[0];
     if (!file || !available) return;
-    // Client-side EPUB builder replaces server-style container parsing.
-    if (format === 'epub' && direction === 'from-pdf') {
-      busy = true;
-      message = '';
-      error = '';
-      try {
-        const pdfjsLib = (window as unknown as { pdfjsLib?: typeof import('pdfjs-dist/legacy/build/pdf.mjs') }).pdfjsLib;
-        if (!pdfjsLib) throw new Error('pdfjsLib not available');
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        const loadingTask = pdfjsLib.getDocument({ data: bytes.slice() });
-        const document = await loadingTask.promise;
-        const chunks: string[] = [];
-        for (let i = 1; i <= document.numPages; i++) {
-          const page = await document.getPage(i);
-          const content = await page.getTextContent();
-          const items = content.items as Array<{ str?: string }>;
-          let pageText = '';
-          for (const item of items) {
-            pageText += item.str ?? '';
-          }
-          chunks.push(pageText);
-        }
-        const rawBlock = chunks.join('\n\n--- PAGE BREAK ---\n\n');
-        const blob = new Blob([rawBlock], { type: 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = file.name.replace(/\.pdf$/i, '.epub');
-        link.click();
-        URL.revokeObjectURL(url);
-        message = 'Conversion complete. Raw HTML wrapped as .epub download.';
-      } catch (caught) {
-        error = caught instanceof Error ? caught.message : 'The conversion could not be completed locally.';
-      } finally {
-        busy = false;
-      }
-      return;
-    }
     busy = true;
     message = '';
     error = '';
     try {
       const { convertFile } = await import('@pdf-complianttools/engine');
       const bytes = new Uint8Array(await file.arrayBuffer());
-      // Derive format from the file's actual type rather than the hardcoded prop,
-      // so JPEG uploads to the generic image-to-pdf path work correctly.
-      const detectedFormat = detectFormatFromFile(file) ?? (format as never);
-      const result = await convertFile(direction, detectedFormat, bytes, { fileName: file.name });
+      const result = await convertFile(direction, format as never, bytes, { fileName: file.name });
       const url = URL.createObjectURL(
         new Blob([result.bytes.buffer as ArrayBuffer], { type: result.mimeType }),
       );

@@ -40,7 +40,6 @@ export const shellArabic: Readonly<Record<string, string>> = {
 
   'shell.files.ready': 'ملف واحد جاهز محليًا.',
   'shell.files.readyPlural': '{value} ملفات جاهزة محليًا.',
-  'shell.secondFile': 'تم تحميل الملف الثاني',
   'shell.preview.empty': 'تظهر معاينات الصفحات هنا بعد اختيار ملف PDF.',
   'shell.preview.selected': 'الصفحة المحددة {value}',
   'shell.preview.pageAlt': 'معاينة الصفحة {value}',
@@ -155,7 +154,6 @@ export const shellArabic: Readonly<Record<string, string>> = {
   'phase.replace.label': 'البديل',
   'phase.replace.placeholder': 'نص البديل',
   'phase.text.label': 'مربع النص الاحتياطي',
-  'phase.addText.label': 'النص لإضافته إلى PDF',
   'phase.redact.label': 'نص أو تعبير نمطي لإزالته',
   'phase.redact.placeholder': 'رقم هوية أو بريد أو تعبير نمطي',
   'phase.request.recipients': 'المستلمون',

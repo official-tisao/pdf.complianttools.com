@@ -10,14 +10,12 @@
     FolderWatcher,
     Recipe,
     ScanFrame,
-    StepOptions,
     WatchedFileResult,
   } from '@pdf-complianttools/engine';
   // recipe.ts is zod-only, so importing it eagerly costs nothing and keeps the
   // recipe description in the prerendered HTML.
   import {
     describeRecipe,
-    operationSchemas,
     parseRecipe,
     parseSerializedRecipe,
     serializeRecipe,
@@ -83,12 +81,9 @@
   // Camera-captured pages, owned by ScanCapture. Kept separate from `files` so
   // re-picking the file input cannot discard a live capture.
   let capturedFrames = $state<ScanFrame[]>([]);
-  let selectedStepOp = $state('metadata');
-  let activeConfig = $state<Record<string, string>>({});
-  let dragIndex = $state<number | null>(null);
   let recipe = $state<Recipe>({
     version: 'r1',
-    steps: [],
+    steps: [{ op: 'compress', options: { preset: 'balanced' } }],
   });
   let batchResults = $state<BatchItemResult[]>([]);
   // The input bytes alongside the results, so retry-failed-only can re-run just the failures
@@ -387,57 +382,6 @@
         // is a fine starting point and saying so would be noise.
       });
   });
-  // Parameter configuration for the selected step
-  const stepConfigs: Record<string, { label: string; fields: { key: string; type: string; default?: string }[] }> = {
-    metadata: { label: 'Document Metadata', fields: [
-      { key: 'title', type: 'text', default: '' },
-      { key: 'author', type: 'text', default: '' },
-      { key: 'subject', type: 'text', default: '' },
-      { key: 'keywords', type: 'textarea', default: '' },
-      { key: 'strip', type: 'checkbox', default: 'false' },
-    ]},
-    compress: { label: 'Compression Settings', fields: [
-      { key: 'preset', type: 'select', default: 'balanced' },
-      { key: 'imageQuality', type: 'number', default: '75' },
-      { key: 'subsetFonts', type: 'checkbox', default: 'true' },
-    ]},
-    bates: { label: 'Bates Numbering', fields: [
-      { key: 'prefix', type: 'text', default: '' },
-      { key: 'start', type: 'number', default: '1' },
-      { key: 'padding', type: 'number', default: '6' },
-      { key: 'position', type: 'select', default: 'bottom-right' },
-    ]},
-  };
-
-  function getFields(op: string) {
-    return stepConfigs[op]?.fields ?? [{ key: 'note', type: 'text', default: '' }];
-  }
-
-  function addConfiguredStep() {
-    const cfg = stepConfigs[selectedStepOp];
-    const opts: Record<string, unknown> = {};
-    for (const f of cfg?.fields ?? []) {
-      const val = activeConfig[f.key];
-      if (f.type === 'checkbox') opts[f.key] = val === 'true';
-      else if (f.type === 'number') opts[f.key] = val ? Number(val) : (f.default ? Number(f.default) : 0);
-      else opts[f.key] = val ?? f.default ?? '';
-    }
-    recipe = { ...recipe, steps: [...recipe.steps, { op: selectedStepOp as any, options: opts }] };
-    activeConfig = {};
-    status = `Added ${cfg?.label ?? selectedStepOp}`;
-  }
-
-  function moveStep(from: number, to: number) {
-    const steps = [...recipe.steps];
-    const [item] = steps.splice(from, 1);
-    steps.splice(to, 0, item);
-    recipe = { ...recipe, steps };
-  }
-
-  function removeStep(index: number) {
-    recipe = { ...recipe, steps: recipe.steps.filter((_, at) => at !== index) };
-  }
-
   async function startWatch() {
     try {
       // Deep subpath + dynamic import: only /watch needs the watcher, the folder picker, and the
@@ -609,88 +553,39 @@
     {/if}
   {:else if kind === 'recipe'}
     <div class="recipe-editor" data-hydrated={hydrated ? 'true' : 'false'}>
-      <!-- Activity selection dropdown -->
-      <label class="step-select-label">
-        {t('feature.recipe.step', 'Step')}
-        <select bind:value={selectedStepOp} onchange={() => { activeConfig = {}; }}>
-          <option value="metadata">{t('feature.recipe.metadata', 'Metadata')}</option>
-          <option value="compress">{t('feature.recipe.compress', 'Compress')}</option>
-          <option value="bates">{t('feature.recipe.bates', 'Bates numbering')}</option>
-          <option value="merge">{t('feature.recipe.merge', 'Merge')}</option>
-          <option value="rotate">{t('feature.recipe.rotate', 'Rotate')}</option>
-        </select>
-      </label>
-
-      <!-- Parameter configuration panel -->
-      <div class="config-panel" role="region" aria-label="Parameter configuration">
-        <h3 class="config-heading">{stepConfigs[selectedStepOp]?.label ?? selectedStepOp}</h3>
-        {#each getFields(selectedStepOp) as field}
-          <label class="param-label">
-            {field.key}
-            {#if field.type === 'select'}
-              <select bind:value={activeConfig[field.key]}>
-                {#if field.key === 'preset'}
-                  <option value="extreme">Extreme</option>
-                  <option value="balanced" selected>Balanced</option>
-                  <option value="high-quality">High quality</option>
-                  <option value="custom">Custom</option>
-                {:else if field.key === 'position'}
-                  <option value="top-left">Top left</option>
-                  <option value="top-center">Top center</option>
-                  <option value="top-right">Top right</option>
-                  <option value="bottom-left">Bottom left</option>
-                  <option value="bottom-center">Bottom center</option>
-                  <option value="bottom-right" selected>Bottom right</option>
-                {:else}
-                  <option value="">—</option>
-                {/if}
-              </select>
-            {:else if field.type === 'checkbox'}
-              <input type="checkbox" checked={!!activeConfig[field.key]} onchange={(e) => activeConfig[field.key] = (e.currentTarget as HTMLInputElement).checked ? 'true' : 'false'} />
-            {:else if field.type === 'textarea'}
-              <textarea bind:value={activeConfig[field.key]} rows="2" placeholder={field.default ?? ''}></textarea>
-            {:else}
-              <input type="text" bind:value={activeConfig[field.key]} placeholder={field.default ?? ''} />
-            {/if}
-          </label>
-        {/each}
-        <button onclick={addConfiguredStep} class="add-btn">Add to workflow</button>
-      </div>
-
-      <!-- Timeline block -->
-      <div class="timeline-block" aria-label="Active workflow steps">
-        {#if recipe.steps.length === 0}
-          <p class="timeline-empty" data-testid="no-steps">No operations selected</p>
-        {:else}
-          <ol class="recipe-timeline">
-            {#each recipe.steps as step, index (index)}
-              <li class="timeline-item" data-step={step.op} draggable="true"
-                  ondragstart={() => { dragIndex = index; }}
-                  ondragover={(e) => { e.preventDefault(); }}
-                  ondrop={() => { if (dragIndex !== null && dragIndex !== index) { moveStep(dragIndex, index); dragIndex = null; } }}>
-                <span class="step-num">{index + 1}</span>
-                <div class="step-info">
-                  <strong>{describeRecipe({ version: 'r1', steps: [step] })}</strong>
-                  <div class="step-options">
-                    {#each Object.entries(step.options || {}) as [k, v]}
-                      <span class="opt-tag">{k}={v}</span>
-                    {/each}
-                  </div>
-                </div>
-                <div class="step-actions">
-                  <button onclick={() => moveStep(index, Math.max(0, index - 1))} aria-label="Move up">↑</button>
-                  <button onclick={() => moveStep(index, Math.min(recipe.steps.length - 1, index + 1))} aria-label="Move down">↓</button>
-                  <button onclick={() => removeStep(index)} aria-label={`Remove step ${index + 1}`}>✕</button>
-                </div>
-              </li>
-            {/each}
-          </ol>
-        {/if}
-      </div>
-
+      {#if recipe.steps.length}
+        <ol class="recipe-steps">
+          {#each recipe.steps as step, index (index)}
+            <li>
+              {describeRecipe({ version: 'r1', steps: [step] })}
+              <button
+                aria-label={`Remove step ${index + 1}`}
+                onclick={() => {
+                  recipe = { ...recipe, steps: recipe.steps.filter((_, at) => at !== index) };
+                }}>{t('feature.recipe.remove', 'Remove')}</button
+              >
+            </li>
+          {/each}
+        </ol>
+      {/if}
+      <label
+        >{t('feature.recipe.step', 'Step')}
+        <select
+          onchange={(event) => {
+            const op = (event.currentTarget as HTMLSelectElement).value as
+              'compress' | 'bates' | 'metadata';
+            recipe = { ...recipe, steps: [...recipe.steps, { op, options: {} }] };
+          }}
+          ><option value="compress">{t('feature.recipe.compress', 'Compress')}</option><option
+            value="bates">{t('feature.recipe.bates', 'Bates numbering')}</option
+          ><option value="metadata">{t('feature.recipe.metadata', 'Metadata')}</option></select
+        ></label
+      >
       <p class="recipe-description">{describeRecipe(recipe)}</p>
       <div class="recipe-actions">
-        <button onclick={shareRecipe}>{t('feature.recipe.action', 'Copy document-free recipe link')}</button>
+        <button onclick={shareRecipe}
+          >{t('feature.recipe.action', 'Copy document-free recipe link')}</button
+        >
         <button onclick={saveRecipe}>{t('feature.recipe.save', 'Save to this browser')}</button>
         <button onclick={exportRecipe}>{t('feature.recipe.export', 'Export JSON')}</button>
       </div>
@@ -838,52 +733,11 @@
     display: flex;
     flex-wrap: wrap;
   }
-  .recipe-steps,
-  .timeline-empty,
-  .recipe-timeline {
+  .watch-results,
+  .recipe-steps {
     margin: 16px 0;
     padding-left: 20px;
   }
-  .timeline-empty {
-    color: var(--color-muted);
-    font-style: italic;
-  }
-  .recipe-timeline {
-    list-style: none;
-    padding-left: 0;
-  }
-  .timeline-item {
-    background: var(--color-surface, #f8f9fa);
-    border: 1px solid var(--color-hairline);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    margin: 8px 0;
-    transition: box-shadow 0.15s;
-  }
-  .timeline-item:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  }
-  .step-num {
-    background: var(--color-ink);
-    color: white;
-    border-radius: 50%;
-    width: 28px; height: 28px;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
-  }
-  .step-info { flex: 1; min-width: 0; }
-  .step-info strong { display: block; margin-bottom: 4px; }
-  .step-options { display: flex; flex-wrap: wrap; gap: 6px; }
-  .opt-tag { font-size: 0.75rem; background: var(--color-hairline); padding: 2px 6px; border-radius: 4px; color: var(--color-muted); }
-  .step-actions button { padding: 6px 10px; font-size: 0.8rem; margin: 0 4px 0 0; }
-  .config-panel { border: 1px solid var(--color-hairline); border-radius: 12px; padding: 16px; margin: 16px 0; background: var(--color-surface, #fdfdfd); }
-  .config-heading { font-size: 1rem; margin: 0 0 12px; }
-  .param-label { display: grid; gap: 6px; margin: 10px 0; font-size: 0.9rem; }
-  .add-btn { margin-top: 12px; }
-  .step-select-label { margin: 24px 0 8px; }
   .watch-results li,
   .recipe-steps li {
     line-height: 1.6;
