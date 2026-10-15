@@ -42,6 +42,7 @@ export default [
         // PageGrid measures its rendered column count so the keyboard handlers
         // agree with the stylesheet's responsive breakpoints.
         HTMLDivElement: 'readonly',
+        window: 'readonly',
         getComputedStyle: 'readonly',
       },
     },
