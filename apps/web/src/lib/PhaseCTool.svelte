@@ -79,7 +79,13 @@
   let text = $state('');
   let note = $state('');
   let recipients = $state('recipient@example.test');
+  let highlightColor = $state('#ffff00');
+  let noteColor = $state('#ff9900');
+  let boldText = $state(false);
+  let highlightActive = $state(true);
+  let noteActive = $state(false);
   let threshold = $state(32);
+  let annotationKind = $state<'highlight' | 'note'>('highlight');
   let page = $state(1);
   // Derived: these come from $props(), and a caller can change them after mount.
   const structuredData = $derived(
@@ -168,9 +174,10 @@
       } else if (operation === 'annotate') {
         const output = await engine.addAnnotation(bytes!, {
           page,
-          kind: 'highlight' satisfies AnnotationKind,
+          kind: (annotationKind === 'note' ? 'sticky-note' : 'highlight') as AnnotationKind,
           rect: { x: 72, y: 680, width: 180, height: 24 },
           contents: note || 'Local annotation',
+          color: highlightColor,
         });
         save(output, 'annotated.pdf', 'application/pdf');
         status = t('phase.status.annotate', 'Standard PDF annotation exported locally.');
@@ -406,6 +413,47 @@
       {(secondFile || files[1])?.name}.
     </p>
   {/if}
+  {#if operation === 'annotate' && files[0]}
+    <div class="annotation-toolbar" role="toolbar" aria-label="Annotation controls">
+      <div class="toolbar-group">
+        <button
+          class="toolbar-btn {highlightActive ? 'active' : ''}"
+          onclick={() => { highlightActive = true; noteActive = false; annotationKind = 'highlight'; }}
+          aria-pressed={highlightActive}
+        >Highlight</button>
+        <button
+          class="toolbar-btn {noteActive ? 'active' : ''}"
+          onclick={() => { noteActive = true; highlightActive = false; annotationKind = 'note'; }}
+          aria-pressed={noteActive}
+        >Note</button>
+      </div>
+
+      <div class="toolbar-group">
+        <label class="toolbar-label">Highlight color
+          <input type="color" bind:value={highlightColor} aria-label="Highlight color" />
+        </label>
+        <label class="toolbar-label">Note color
+          <input type="color" bind:value={noteColor} aria-label="Note color" />
+        </label>
+      </div>
+
+      <div class="toolbar-group">
+        <button
+          class="toolbar-btn {boldText ? 'active' : ''}"
+          onclick={() => (boldText = !boldText)}
+          aria-pressed={boldText}
+          title="Bold text formatting"
+        >Bold text</button>
+      </div>
+
+      <div class="toolbar-group">
+        <label class="toolbar-label">Annotation text
+          <input bind:value={note} placeholder="Annotation contents" />
+        </label>
+      </div>
+    </div>
+  {/if}
+
   <div class="panel">
     {#if operation === 'editor'}
       <label
@@ -569,6 +617,55 @@
   .download {
     color: inherit;
     font-weight: 600;
+  }
+  .annotation-toolbar {
+    background: var(--color-platinum);
+    border-radius: var(--radius-panel);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 24px;
+    padding: 16px;
+  }
+  .toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .toolbar-btn {
+    background: var(--color-white);
+    border: 1px solid var(--color-hairline);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .toolbar-btn.active {
+    background: var(--color-ink);
+    color: var(--color-white);
+    border-color: var(--color-ink);
+  }
+  .toolbar-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+  .toolbar-label input[type="color"] {
+    border: none;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    cursor: pointer;
+  }
+  .toolbar-label input[type="text"],
+  .toolbar-label input:not([type]) {
+    border: 1px solid var(--color-hairline);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font: inherit;
   }
   @media (max-width: 767px) {
     .tool-page {

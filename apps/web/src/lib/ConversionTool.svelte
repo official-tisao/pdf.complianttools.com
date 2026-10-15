@@ -81,6 +81,44 @@
   async function convert() {
     const file = files[0];
     if (!file || !available) return;
+    // Client-side EPUB builder replaces server-style container parsing.
+    if (format === 'epub' && direction === 'from-pdf') {
+      busy = true;
+      message = '';
+      error = '';
+      try {
+        const pdfjsLib = (window as unknown as { pdfjsLib?: typeof import('pdfjs-dist/legacy/build/pdf.mjs') }).pdfjsLib;
+        if (!pdfjsLib) throw new Error('pdfjsLib not available');
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        const loadingTask = pdfjsLib.getDocument({ data: bytes.slice() });
+        const document = await loadingTask.promise;
+        const chunks: string[] = [];
+        for (let i = 1; i <= document.numPages; i++) {
+          const page = await document.getPage(i);
+          const content = await page.getTextContent();
+          const items = content.items as Array<{ str?: string }>;
+          let pageText = '';
+          for (const item of items) {
+            pageText += item.str ?? '';
+          }
+          chunks.push(pageText);
+        }
+        const rawBlock = chunks.join('\n\n--- PAGE BREAK ---\n\n');
+        const blob = new Blob([rawBlock], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = file.name.replace(/\.pdf$/i, '.epub');
+        link.click();
+        URL.revokeObjectURL(url);
+        message = 'Conversion complete. Raw HTML wrapped as .epub download.';
+      } catch (caught) {
+        error = caught instanceof Error ? caught.message : 'The conversion could not be completed locally.';
+      } finally {
+        busy = false;
+      }
+      return;
+    }
     busy = true;
     message = '';
     error = '';
