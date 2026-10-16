@@ -81,6 +81,10 @@ const BIDIRECTIONAL_SLUGS = new Set([
   'other-formats-to-pdf',
   'pdf-to-markdown',
   'bank-statement-to-excel',
+  'pdf-to-png.html',
+  'pdf-to-rtf.html',
+  'pdf-to-txt.html',
+  'pdf-to-zip.html',
 ]);
 
 /** Routes that should not appear in a directory: they are indexes or shells. */
