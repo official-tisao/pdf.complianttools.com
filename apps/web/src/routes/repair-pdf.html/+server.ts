@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
 
 export function GET() {
-	throw redirect(301, '/repair-pdf');
+  throw redirect(301, '/repair-pdf');
 }
