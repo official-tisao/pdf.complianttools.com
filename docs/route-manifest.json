@@ -1,6 +1,6 @@
 {
   "generated": "by scripts/generate-route-manifest.mjs — do not hand-edit",
-  "routeCount": 128,
+  "routeCount": 132,
   "deadControls": [
     "/bookmarks",
     "/pdf-to-pdfa",
@@ -638,6 +638,13 @@
       "op": null
     },
     {
+      "path": "/pdf-to-png.html",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/pdf-to-pptx",
       "shell": "ConversionTool",
       "localized": false,
@@ -652,7 +659,21 @@
       "op": null
     },
     {
+      "path": "/pdf-to-rtf.html",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/pdf-to-txt",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-txt.html",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,
@@ -667,6 +688,13 @@
     },
     {
       "path": "/pdf-to-zip",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-zip.html",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,
