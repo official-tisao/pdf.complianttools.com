@@ -1,5 +1,5 @@
 <script lang="ts">
-  /* global HTMLSelectElement, location, navigator */
+  /* global HTMLSelectElement, location, navigator, fetch, console */
   // Types are erased at build time, so the type-only import costs nothing. The
   // runtime imports use deep subpaths: the engine barrel re-exports every
   // module, so importing it eagerly would pull pdfjs, mammoth, exceljs and
@@ -75,7 +75,9 @@
     'watch',
   ]);
   let text = $state('https://pdf.complianttools.com');
-  let endpoint = $state('');
+  let endpoint = $state('http://127.0.0.1:9876');
+  let runtimeError = $state('');
+  let loadingWebpage = $state(false);
   let template = $state<'blank' | 'grid' | 'lined' | 'dot'>('blank');
   let files = $state<File[]>([]);
   // Camera-captured pages, owned by ScanCapture. Kept separate from `files` so
@@ -179,18 +181,37 @@
   }
   async function webpage() {
     try {
-      const { captureWebpageToPdf } = await import('@pdf-complianttools/engine');
-      const result = await captureWebpageToPdf(text, endpoint);
-      download(result.bytes, 'webpage.pdf');
-      status = t('feature.status.relay', 'Relay capture completed.');
+      runtimeError = '';
+      status = t('feature.status.capturing', 'Capturing webpage layout...');
+      loadingWebpage = true;
+
+      const response = await fetch(`${endpoint.replace(/\/$/, '')}/render`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: text }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server returned status ${response.status}: ${errorText}`);
+      }
+
+      const pdfBlob = await response.blob();
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = 'webpage.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+      status = t('feature.status.success', 'Webpage captured successfully.');
     } catch (caught) {
-      // PdfEngineError sets message to its remedy, so this surfaces the Relay's
-      // own guidance — a blocked URL, a missing browser binary — rather than a
-      // bare failure.
-      status =
-        caught instanceof Error
-          ? caught.message
-          : t('feature.status.failed', 'The operation could not be completed.');
+      console.error('Core failure:', caught);
+      runtimeError = caught instanceof Error ? caught.message : String(caught);
+      status = t('feature.status.error', 'Capture failed: {message}', runtimeError);
+    } finally {
+      loadingWebpage = false;
     }
   }
   async function batch() {
@@ -483,20 +504,16 @@
       >{t('feature.pack.action', 'Build document pack')}</button
     >
   {:else if kind === 'webpage'}
-    <label>{t('feature.webpage.label', 'Public webpage URL')} <input bind:value={text} /></label
-    ><label
-      >{t('feature.webpage.endpoint', 'Your Relay endpoint')}
-      <input bind:value={endpoint} placeholder="http://127.0.0.1:8787" /></label
+    <label>{t('feature.webpage.label', 'Public webpage URL')} <input bind:value={text} /></label>
+    <label>{t('feature.webpage.endpoint', 'Your Relay endpoint')} <input bind:value={endpoint} placeholder="http://127.0.0.1:8787" /></label>
+    <button disabled={loadingWebpage} onclick={webpage}
+      >{loadingWebpage ? t('feature.webpage.loading', 'Capturing webpage layout... Please wait.') : t('feature.webpage.action', 'Capture with Relay')}</button
     >
-    <p class="note">
-      {t(
-        'feature.webpage.note',
-        'Webpage capture is explicit Relay mode. Local PDF tools do not need this endpoint.',
-      )}
-    </p>
-    <button disabled={!endpoint.trim()} onclick={webpage}
-      >{t('feature.webpage.action', 'Capture with Relay')}</button
-    >
+    {#if runtimeError}
+      <div style="color: red; margin-top: 12px; font-weight: bold;">
+        {t('feature.error.runtime.prefix', 'Actual System Error:')} {t('feature.error.runtime', '{message}', runtimeError)}
+      </div>
+    {/if}
   {:else if kind === 'batch'}
     <p class="field-label">{t('feature.batch.label', 'PDFs to process')}</p>
     <FileDrop
@@ -707,6 +724,18 @@
     color: var(--color-muted);
     line-height: 1.6;
   }
+  .example-badges {
+    display: flex;
+    gap: 8px;
+    margin: 8px 0 12px;
+  }
+  .example-badges button {
+    background: transparent;
+    border: 1px solid var(--color-hairline);
+    border-radius: 999px;
+    color: var(--color-ink);
+    padding: 6px 14px;
+  }
   .batch-rows {
     list-style: none;
     margin: 20px 0;
@@ -750,6 +779,11 @@
   .watch-results .bad {
     color: var(--color-muted);
     font-weight: 600;
+  }
+  .runtime-error {
+    color: var(--color-muted);
+    font-weight: 600;
+    margin: 8px 8px 8px 0;
   }
   @media (max-width: 767px) {
     .feature-page {
