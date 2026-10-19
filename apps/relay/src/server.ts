@@ -110,7 +110,12 @@ export function createRelayServer(options: RelayOptions): Server {
       }
       const browser = await launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+        ],
       });
       try {
         const page = await browser.newPage();
@@ -141,7 +146,8 @@ export function createRelayServer(options: RelayOptions): Server {
       }
     } catch (error) {
       console.error('Relay /render failure:', error);
-      const msg = error instanceof Error ? error.message : String(error ?? 'Headless browser unavailable');
+      const msg =
+        error instanceof Error ? error.message : String(error ?? 'Headless browser unavailable');
       response.writeHead(503, { ...cors, 'content-type': 'application/json' });
       response.end(
         JSON.stringify({

@@ -395,7 +395,12 @@
         )}
       </p>
     {:else if operation === 'unlock'}
-      <label>{t('phase.unlock.password', 'Enter Document Password')}<input type="password" bind:value={password} /></label>
+      <label
+        >{t('phase.unlock.password', 'Enter Document Password')}<input
+          type="password"
+          bind:value={password}
+        /></label
+      >
     {:else if operation === 'sign'}
       <SignaturePad
         label={t('phase.sign.pad', 'Draw a signature')}
@@ -416,7 +421,12 @@
       />
       <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
     {:else if operation !== 'password-generator' && operation !== 'unlock'}
-      <label class={operation === 'watermark' ? 'wm-label' : ''}>{t('phase.sign.label', operation === 'watermark' ? 'Watermark text' : 'Signature text')}<input bind:value={text} /></label>
+      <label class={operation === 'watermark' ? 'wm-label' : ''}
+        >{t(
+          'phase.sign.label',
+          operation === 'watermark' ? 'Watermark text' : 'Signature text',
+        )}<input bind:value={text} /></label
+      >
     {/if}
     {#if operation !== 'password-generator' && operation !== 'signature-background' && operation !== 'unlock'}
       <label>{t('phase.sign.page', 'Page')}<input type="number" min="1" bind:value={page} /></label>

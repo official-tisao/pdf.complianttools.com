@@ -16,8 +16,6 @@
       referenceImageUrl = '';
     }
   }
-
-
 </script>
 
 <div class="verify-visual-route">
@@ -50,7 +48,10 @@
   <div class="visual-scan-feedback" role="status" aria-live="polite">
     {#key referenceImageFile}
       {#if referenceImageFile}
-        <p>Scanning page layers for visual signature stamp matches... Match found and verified visually on Page 1.</p>
+        <p>
+          Scanning page layers for visual signature stamp matches... Match found and verified
+          visually on Page 1.
+        </p>
       {:else}
         <p>Please upload a reference signature image to initiate the visual scan.</p>
       {/if}
@@ -76,7 +77,7 @@
     font-weight: 600;
     margin-bottom: 8px;
   }
-  input[type="file"] {
+  input[type='file'] {
     display: block;
     margin-bottom: 12px;
   }
