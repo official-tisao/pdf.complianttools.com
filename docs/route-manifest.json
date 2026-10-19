@@ -15,13 +15,6 @@
       "op": null
     },
     {
-      "path": "/[locale/]/unlock-pdf.html",
-      "shell": "bespoke",
-      "localized": false,
-      "opBinding": null,
-      "op": null
-    },
-    {
       "path": "/add-image",
       "shell": "PhaseCTool",
       "localized": false,
@@ -842,6 +835,13 @@
     },
     {
       "path": "/svg-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/svg-to-pdf.html",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,

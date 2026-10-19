@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Route from '../../unlock-pdf/+page.svelte';
+  import Route from '../../unlock-pdf.html/+page.svelte';
 </script>
 
 <!--

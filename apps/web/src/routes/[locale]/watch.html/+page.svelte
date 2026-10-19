@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Route from '../../watch/+page.svelte';
+  import Route from '../../watch.html/+page.svelte';
 </script>
 
 <!--
