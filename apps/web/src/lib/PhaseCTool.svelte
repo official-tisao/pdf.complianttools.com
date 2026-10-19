@@ -420,7 +420,7 @@
         label={t('phase.sign.upload', 'Upload a PNG or JPEG signature')}
       />
       <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
-    {:else if operation !== 'password-generator' && operation !== 'unlock'}
+    {:else if operation !== 'password-generator'}
       <label class={operation === 'watermark' ? 'wm-label' : ''}
         >{t(
           'phase.sign.label',

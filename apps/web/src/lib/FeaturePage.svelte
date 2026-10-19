@@ -707,18 +707,6 @@
     color: var(--color-muted);
     line-height: 1.6;
   }
-  .example-badges {
-    display: flex;
-    gap: 8px;
-    margin: 8px 0 12px;
-  }
-  .example-badges button {
-    background: transparent;
-    border: 1px solid var(--color-hairline);
-    border-radius: 999px;
-    color: var(--color-ink);
-    padding: 6px 14px;
-  }
   .batch-rows {
     list-style: none;
     margin: 20px 0;
@@ -762,11 +750,6 @@
   .watch-results .bad {
     color: var(--color-muted);
     font-weight: 600;
-  }
-  .runtime-error {
-    color: var(--color-muted);
-    font-weight: 600;
-    margin: 8px 8px 8px 0;
   }
   @media (max-width: 767px) {
     .feature-page {
