@@ -144,8 +144,9 @@ export async function textPagesToPdf(
         ? [595.28, 841.89]
         : [612, 1008];
   const margin = options.margin ?? 48;
-  const lineHeight = 16;
-  const maxLines = Math.floor((pageSize[1] - margin * 2) / lineHeight);
+  const lineHeight = 14;
+  const usableHeight = pageSize[1] - margin * 2;
+  const maxLines = Math.floor(usableHeight / lineHeight);
   for (const sourcePage of pages.length > 0 ? pages : [[]]) {
     let page = document.addPage(pageSize as [number, number]);
     let lineNumber = 0;

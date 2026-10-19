@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      try {
+        if (localStorage.getItem('pdf-theme') === 'dark')
+          document.documentElement.dataset.theme = 'dark';
+      } catch {
+        // Storage can be unavailable in hardened browser contexts.
+      }
+    </script>
+    <!--12qhfyh--><meta name="theme-color" content="#f0eeea"/> <link rel="canonical" href="https://pdf.complianttools.com/svg-to-pdf"/> <!--[--><link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/svg-to-pdf"/><link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/svg-to-pdf"/><!--]--><!---->
+		<style data-sveltekit>:root {
+  --color-canvas: #f0eeea;
+  --color-ink: #1c1a17;
+  --color-white: #ffffff;
+  --color-secondary-ink: #464442;
+  --color-platinum: #ebe6de;
+  --color-dark-surface: #25221e;
+  --color-muted: #5c5a56;
+  --color-hairline: #1c1a171a;
+  --color-focus: #1c1a17;
+  --radius-panel: 8px;
+  --radius-pill: 999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --font-sans: Geist, ui-sans-serif, system-ui, sans-serif;
+}
+
+:root[data-theme='dark'] {
+  --color-canvas: #1c1a17;
+  --color-ink: #f4f0e8;
+  --color-white: #2d2924;
+  --color-secondary-ink: #d2cbc0;
+  --color-platinum: #3b352e;
+  --color-dark-surface: #171513;
+  --color-muted: #b7aea2;
+  --color-hairline: #f4f0e82e;
+  --color-focus: #f8d28e;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    margin: 0;
+  }
+
+  .site-header.svelte-12qhfyh,
+  footer.svelte-12qhfyh {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin: auto;
+    max-width: 1280px;
+    padding: 16px 40px;
+  }
+
+  .brand.svelte-12qhfyh,
+  nav.svelte-12qhfyh a:where(.svelte-12qhfyh) {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .brand.svelte-12qhfyh {
+    font-weight: 600;
+  }
+
+  nav.svelte-12qhfyh {
+    display: flex;
+    gap: 28px;
+  }
+
+  .mode.svelte-12qhfyh,
+  footer.svelte-12qhfyh {
+    color: var(--color-muted);
+    font-size: 0.875rem;
+  }
+
+  footer.svelte-12qhfyh {
+    border-top: 1px solid var(--color-hairline);
+    margin-top: 80px;
+  }
+
+  @media (max-width: 767px) {
+    .site-header.svelte-12qhfyh,
+    footer.svelte-12qhfyh {
+      padding-inline: 24px;
+    }
+
+    nav.svelte-12qhfyh {
+      display: none;
+    }
+  }
+
+  @media (max-width: 479px) {
+    .site-header.svelte-12qhfyh,
+    footer.svelte-12qhfyh {
+      padding-inline: 16px;
+    }
+  }
+ .svelte-12qhfyh{}
+
+  .tool-directory.svelte-13vkb1g {
+    display: grid;
+    gap: 32px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    margin: 0 auto;
+    max-width: 1280px;
+    padding: 48px 40px;
+  }
+  .tool-directory.svelte-13vkb1g > h2:where(.svelte-13vkb1g) {
+    font-size: 1.25rem;
+    grid-column: 1 / -1;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  h2.svelte-13vkb1g {
+    color: var(--color-muted);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    margin: 0 0 12px;
+    text-transform: uppercase;
+  }
+  ul.svelte-13vkb1g {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  a.svelte-13vkb1g {
+    color: inherit;
+    font-size: 0.9375rem;
+    text-decoration: none;
+  }
+  a.svelte-13vkb1g:hover,
+  a.svelte-13vkb1g:focus-visible {
+    text-decoration: underline;
+  }
+  @media (max-width: 767px) {
+    .tool-directory.svelte-13vkb1g {
+      padding-inline: 24px;
+    }
+  }
+ .svelte-13vkb1g{}</style>
+  </head>
+  <body data-sveltekit-preload-data="hover">
+    <div style="display: contents"><!--[--><!--[0--><!--[--><header class="site-header svelte-12qhfyh"><a class="brand svelte-12qhfyh" href="/">pdf.complianttools.com</a> <nav aria-label="Primary navigation" class="svelte-12qhfyh"><a href="/merge" class="svelte-12qhfyh">Merge</a> <a href="/convert" class="svelte-12qhfyh">Convert</a> <a href="/create-pdf" class="svelte-12qhfyh">Create</a> <a href="/invoice-creator" class="svelte-12qhfyh">Invoices</a> <a href="/e-invoice" class="svelte-12qhfyh">E-invoice</a> <a href="/pdf-to-markdown" class="svelte-12qhfyh">PDF to Markdown</a> <a href="/recipe" class="svelte-12qhfyh">Recipes</a> <a href="/batch" class="svelte-12qhfyh">Batch</a> <a href="/ai/chat-with-pdf" class="svelte-12qhfyh">AI tools</a> <a href="/connect-ai" class="svelte-12qhfyh">Connect AI</a> <a href="/#tools" class="svelte-12qhfyh">Tools</a></nav> <span class="mode svelte-12qhfyh" aria-label="Processing mode">Local-first</span></header> <main class="svelte-12qhfyh"><!--[-1--><!--[--><h1>500</h1> <p>Internal Error</p><!--]--><!--]--><!----></main> <footer class="svelte-12qhfyh"><span class="svelte-12qhfyh">Nothing uploaded for local tools.</span> <span aria-live="polite" class="svelte-12qhfyh">/svg-to-pdf</span></footer> <nav class="tool-directory svelte-13vkb1g" aria-labelledby="directory-heading"><h2 id="directory-heading" class="svelte-13vkb1g">Every tool</h2> <section class="directory-group svelte-13vkb1g"><h2 class="svelte-13vkb1g">Organize pages</h2> <ul class="svelte-13vkb1g"><li class="svelte-13vkb1g"><a href="/bates-numbering" class="svelte-13vkb1g">Bates numbering</a></li> <li class="svelte-13vkb1g"><a href="/crop-pdf" class="svelte-13vkb1g">Crop pages</a></li> <li class="svelte-13vkb1g"><a href="/extract-pages" class="svelte-13vkb1g">Extract pages</a></li> <li class="svelte-13vkb1g"><a href="/halve-pages" class="svelte-13vkb1g">Halve pages</a></li> <li class="svelte-13vkb1g"><a href="/insert-pages" class="svelte-13vkb1g">Insert pages</a></li> <li class="svelte-13vkb1g"><a href="/merge" class="svelte-13vkb1g">Merge PDFs</a></li> <li class="svelte-13vkb1g"><a href="/organize" class="svelte-13vkb1g">Organize pages</a></li> <li class="svelte-13vkb1g"><a href="/pages-per-sheet" class="svelte-13vkb1g">Pages per sheet</a></li> <li class="svelte-13vkb1g"><a href="/remove-pages" class="svelte-13vkb1g">Remove pages</a></li> <li class="svelte-13vkb1g"><a href="/resize-pdf-pages" class="svelte-13vkb1g">Change page size</a></li> <li class="svelte-13vkb1g"><a href="/rotate-pdf" class="svelte-13vkb1g">Rotate pages</a></li> <li class="svelte-13vkb1g"><a href="/split" class="svelte-13vkb1g">Split PDF</a></li></ul></section> <section class="directory-group svelte-13vkb1g"><h2 class="svelte-13vkb1g">Convert to and from PDF</h2> <ul class="svelte-13vkb1g"><li class="svelte-13vkb1g"><a href="/bmp-to-pdf" class="svelte-13vkb1g">BMP image to PDF</a></li> <li class="svelte-13vkb1g"><a href="/cbz-to-pdf" class="svelte-13vkb1g">Comic book archive to PDF</a></li> <li class="svelte-13vkb1g"><a href="/csv-to-pdf" class="svelte-13vkb1g">Comma-separated values to PDF</a></li> <li class="svelte-13vkb1g"><a href="/docx-to-pdf" class="svelte-13vkb1g">Word (DOCX) to PDF</a></li> <li class="svelte-13vkb1g"><a href="/epub-to-pdf" class="svelte-13vkb1g">EPUB to PDF</a></li> <li class="svelte-13vkb1g"><a href="/gif-to-pdf" class="svelte-13vkb1g">GIF image to PDF</a></li> <li class="svelte-13vkb1g"><a href="/heic-to-pdf" class="svelte-13vkb1g">HEIC/HEIF image to PDF</a></li> <li class="svelte-13vkb1g"><a href="/html-to-pdf" class="svelte-13vkb1g">Pasted HTML to PDF</a></li> <li class="svelte-13vkb1g"><a href="/jpg-to-pdf" class="svelte-13vkb1g">JPEG image to PDF</a></li> <li class="svelte-13vkb1g"><a href="/markdown-to-pdf" class="svelte-13vkb1g">Markdown to PDF</a></li> <li class="svelte-13vkb1g"><a href="/odg-to-pdf" class="svelte-13vkb1g">OpenDocument Graphics to PDF</a></li> <li class="svelte-13vkb1g"><a href="/odp-to-pdf" class="svelte-13vkb1g">OpenDocument Presentation to PDF</a></li> <li class="svelte-13vkb1g"><a href="/ods-to-pdf" class="svelte-13vkb1g">OpenDocument Spreadsheet to PDF</a></li> <li class="svelte-13vkb1g"><a href="/odt-to-pdf" class="svelte-13vkb1g">OpenDocument Text to PDF</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-cbz" class="svelte-13vkb1g">PDF to Comic book archive</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-csv" class="svelte-13vkb1g">PDF to Comma-separated values</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-docx" class="svelte-13vkb1g">PDF to Word (DOCX)</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-epub" class="svelte-13vkb1g">PDF to EPUB</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-html" class="svelte-13vkb1g">PDF to Pasted HTML</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-jpg" class="svelte-13vkb1g">PDF to JPEG image</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-markdown" class="svelte-13vkb1g">PDF to Markdown</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-odg" class="svelte-13vkb1g">PDF to OpenDocument Graphics</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-odp" class="svelte-13vkb1g">PDF to OpenDocument Presentation</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-ods" class="svelte-13vkb1g">PDF to OpenDocument Spreadsheet</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-odt" class="svelte-13vkb1g">PDF to OpenDocument Text</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-pdf-epub" class="svelte-13vkb1g">PDF to EPUB extracted from PDF</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-pdf-html" class="svelte-13vkb1g">PDF to HTML extracted from PDF</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-pdf-image" class="svelte-13vkb1g">PDF to Rendered PDF pages</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-pdf-markdown" class="svelte-13vkb1g">PDF to Markdown extracted from PDF</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-pdf-odp" class="svelte-13vkb1g">PDF to ODP extracted from PDF</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-pdf-ods" class="svelte-13vkb1g">PDF to ODS extracted from PDF</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-pdf-odt" class="svelte-13vkb1g">PDF to ODT extracted from PDF</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-pdf-rtf" class="svelte-13vkb1g">PDF to RTF extracted from PDF</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-pdf-txt" class="svelte-13vkb1g">PDF to Text extracted from PDF</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-png" class="svelte-13vkb1g">PDF to PNG image</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-pptx" class="svelte-13vkb1g">PDF to PowerPoint (PPTX)</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-rtf" class="svelte-13vkb1g">PDF to Rich Text Format</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-txt" class="svelte-13vkb1g">PDF to Plain text</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-xlsx" class="svelte-13vkb1g">PDF to Excel (XLSX)</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-zip" class="svelte-13vkb1g">PDF to ZIP of pages or images</a></li> <li class="svelte-13vkb1g"><a href="/png-to-pdf" class="svelte-13vkb1g">PNG image to PDF</a></li> <li class="svelte-13vkb1g"><a href="/pptx-to-pdf" class="svelte-13vkb1g">PowerPoint (PPTX) to PDF</a></li> <li class="svelte-13vkb1g"><a href="/psd-to-pdf" class="svelte-13vkb1g">Photoshop (PSD) to PDF</a></li> <li class="svelte-13vkb1g"><a href="/rtf-to-pdf" class="svelte-13vkb1g">Rich Text Format to PDF</a></li> <li class="svelte-13vkb1g"><a href="/svg-to-pdf" class="svelte-13vkb1g">SVG image to PDF</a></li> <li class="svelte-13vkb1g"><a href="/txt-to-pdf" class="svelte-13vkb1g">Plain text to PDF</a></li> <li class="svelte-13vkb1g"><a href="/webp-to-pdf" class="svelte-13vkb1g">WebP image to PDF</a></li> <li class="svelte-13vkb1g"><a href="/xlsx-to-pdf" class="svelte-13vkb1g">Excel (XLSX) to PDF</a></li> <li class="svelte-13vkb1g"><a href="/xml-einvoice-to-pdf" class="svelte-13vkb1g">XML e-invoice to PDF</a></li> <li class="svelte-13vkb1g"><a href="/zip-to-pdf" class="svelte-13vkb1g">ZIP of pages or images to PDF</a></li></ul></section> <section class="directory-group svelte-13vkb1g"><h2 class="svelte-13vkb1g">Other formats</h2> <ul class="svelte-13vkb1g"><li class="svelte-13vkb1g"><a href="/bank-statement-to-excel" class="svelte-13vkb1g">Bank statement → Excel</a></li> <li class="svelte-13vkb1g"><a href="/csv-pdf" class="svelte-13vkb1g">CSV ⇄ PDF</a></li> <li class="svelte-13vkb1g"><a href="/design-file-to-pdf" class="svelte-13vkb1g">Design files → PDF</a></li> <li class="svelte-13vkb1g"><a href="/epub-pdf" class="svelte-13vkb1g">EPUB ⇄ PDF</a></li> <li class="svelte-13vkb1g"><a href="/excel-pdf" class="svelte-13vkb1g">Excel ⇄ PDF</a></li> <li class="svelte-13vkb1g"><a href="/html-pdf" class="svelte-13vkb1g">HTML ⇄ PDF</a></li> <li class="svelte-13vkb1g"><a href="/image-to-pdf" class="svelte-13vkb1g">Images → PDF</a></li> <li class="svelte-13vkb1g"><a href="/image-to-pdf.html" class="svelte-13vkb1g">image-to-pdf.html</a></li> <li class="svelte-13vkb1g"><a href="/odf-pdf" class="svelte-13vkb1g">OpenDocument ⇄ PDF</a></li> <li class="svelte-13vkb1g"><a href="/other-formats-to-pdf" class="svelte-13vkb1g">Legacy formats → PDF</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-png.html" class="svelte-13vkb1g">pdf-to-png.html</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-rtf.html" class="svelte-13vkb1g">pdf-to-rtf.html</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-txt.html" class="svelte-13vkb1g">pdf-to-txt.html</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-zip.html" class="svelte-13vkb1g">pdf-to-zip.html</a></li> <li class="svelte-13vkb1g"><a href="/ppt-pdf" class="svelte-13vkb1g">PowerPoint ⇄ PDF</a></li> <li class="svelte-13vkb1g"><a href="/text-pdf" class="svelte-13vkb1g">Text, RTF and Markdown ⇄ PDF</a></li> <li class="svelte-13vkb1g"><a href="/word-pdf" class="svelte-13vkb1g">Word ⇄ PDF</a></li></ul></section> <section class="directory-group svelte-13vkb1g"><h2 class="svelte-13vkb1g">Optimize and repair</h2> <ul class="svelte-13vkb1g"><li class="svelte-13vkb1g"><a href="/compress-pdf" class="svelte-13vkb1g">Compress PDF</a></li> <li class="svelte-13vkb1g"><a href="/flatten-pdf" class="svelte-13vkb1g">Flatten PDF</a></li> <li class="svelte-13vkb1g"><a href="/optimize-for-web" class="svelte-13vkb1g">Optimize for web</a></li> <li class="svelte-13vkb1g"><a href="/repair-pdf" class="svelte-13vkb1g">Repair PDF</a></li></ul></section> <section class="directory-group svelte-13vkb1g"><h2 class="svelte-13vkb1g">Export</h2> <ul class="svelte-13vkb1g"><li class="svelte-13vkb1g"><a href="/bookmarks" class="svelte-13vkb1g">Bookmarks</a></li> <li class="svelte-13vkb1g"><a href="/extract-images" class="svelte-13vkb1g">Extract embedded images</a></li> <li class="svelte-13vkb1g"><a href="/ocr-pdf" class="svelte-13vkb1g">OCR a PDF</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-image" class="svelte-13vkb1g">PDF → images</a></li> <li class="svelte-13vkb1g"><a href="/pdf-to-pdfa" class="svelte-13vkb1g">PDF/A conformance</a></li> <li class="svelte-13vkb1g"><a href="/rasterize-pdf" class="svelte-13vkb1g">Rasterize PDF</a></li></ul></section> <section class="directory-group svelte-13vkb1g"><h2 class="svelte-13vkb1g">Edit and inspect</h2> <ul class="svelte-13vkb1g"><li class="svelte-13vkb1g"><a href="/add-image" class="svelte-13vkb1g">Add an image</a></li> <li class="svelte-13vkb1g"><a href="/add-text" class="svelte-13vkb1g">Add text</a></li> <li class="svelte-13vkb1g"><a href="/annotate" class="svelte-13vkb1g">Annotate</a></li> <li class="svelte-13vkb1g"><a href="/compare-pdf" class="svelte-13vkb1g">Compare PDFs</a></li> <li class="svelte-13vkb1g"><a href="/create-form" class="svelte-13vkb1g">Create a form</a></li> <li class="svelte-13vkb1g"><a href="/editor" class="svelte-13vkb1g">PDF editor</a></li> <li class="svelte-13vkb1g"><a href="/fill-form" class="svelte-13vkb1g">Fill a form</a></li> <li class="svelte-13vkb1g"><a href="/headers-footers" class="svelte-13vkb1g">Headers and footers</a></li> <li class="svelte-13vkb1g"><a href="/page-numbers" class="svelte-13vkb1g">Page numbers</a></li> <li class="svelte-13vkb1g"><a href="/pdf-inspector" class="svelte-13vkb1g">Inspect structure</a></li> <li class="svelte-13vkb1g"><a href="/pdf-metadata" class="svelte-13vkb1g">Edit metadata</a></li> <li class="svelte-13vkb1g"><a href="/pdf-overlay" class="svelte-13vkb1g">Overlay a PDF</a></li> <li class="svelte-13vkb1g"><a href="/view-pdf" class="svelte-13vkb1g">View a PDF</a></li> <li class="svelte-13vkb1g"><a href="/watermark-pdf" class="svelte-13vkb1g">Watermark</a></li></ul></section> <section class="directory-group svelte-13vkb1g"><h2 class="svelte-13vkb1g">Sign, protect, redact</h2> <ul class="svelte-13vkb1g"><li class="svelte-13vkb1g"><a href="/password-generator" class="svelte-13vkb1g">Password generator</a></li> <li class="svelte-13vkb1g"><a href="/pdf-accessibility" class="svelte-13vkb1g">Accessibility tagging</a></li> <li class="svelte-13vkb1g"><a href="/protect-pdf" class="svelte-13vkb1g">Protect a PDF</a></li> <li class="svelte-13vkb1g"><a href="/redact-pdf" class="svelte-13vkb1g">Redact a PDF</a></li> <li class="svelte-13vkb1g"><a href="/remove-signature-background" class="svelte-13vkb1g">Remove a signature background</a></li> <li class="svelte-13vkb1g"><a href="/request-signature" class="svelte-13vkb1g">Request signatures</a></li> <li class="svelte-13vkb1g"><a href="/sign-pdf" class="svelte-13vkb1g">Sign a PDF</a></li> <li class="svelte-13vkb1g"><a href="/unlock-pdf" class="svelte-13vkb1g">Unlock a PDF</a></li> <li class="svelte-13vkb1g"><a href="/verify-signature" class="svelte-13vkb1g">Verify a signature</a></li></ul></section> <section class="directory-group svelte-13vkb1g"><h2 class="svelte-13vkb1g">Create</h2> <ul class="svelte-13vkb1g"><li class="svelte-13vkb1g"><a href="/create-pdf" class="svelte-13vkb1g">Create a PDF</a></li> <li class="svelte-13vkb1g"><a href="/document-pack-builder" class="svelte-13vkb1g">Document pack</a></li> <li class="svelte-13vkb1g"><a href="/e-invoice" class="svelte-13vkb1g">Electronic invoice</a></li> <li class="svelte-13vkb1g"><a href="/invoice-creator" class="svelte-13vkb1g">Invoice creator</a></li> <li class="svelte-13vkb1g"><a href="/qr-code" class="svelte-13vkb1g">QR code</a></li> <li class="svelte-13vkb1g"><a href="/scan-to-pdf" class="svelte-13vkb1g">Scan to PDF</a></li></ul></section> <section class="directory-group svelte-13vkb1g"><h2 class="svelte-13vkb1g">Workflows</h2> <ul class="svelte-13vkb1g"><li class="svelte-13vkb1g"><a href="/batch" class="svelte-13vkb1g">Batch runner</a></li> <li class="svelte-13vkb1g"><a href="/recipe" class="svelte-13vkb1g">Recipe builder</a></li> <li class="svelte-13vkb1g"><a href="/watch" class="svelte-13vkb1g">Folder watcher</a></li> <li class="svelte-13vkb1g"><a href="/webpage-to-pdf" class="svelte-13vkb1g">Webpage → PDF</a></li></ul></section> <section class="directory-group svelte-13vkb1g"><h2 class="svelte-13vkb1g">AI (optional, BYOK)</h2> <ul class="svelte-13vkb1g"><li class="svelte-13vkb1g"><a href="/ai" class="svelte-13vkb1g">ai</a></li> <li class="svelte-13vkb1g"><a href="/ai-to-pdf" class="svelte-13vkb1g">Illustrator (AI) to PDF</a></li> <li class="svelte-13vkb1g"><a href="/ai/chat-with-pdf" class="svelte-13vkb1g">Chat with a PDF</a></li> <li class="svelte-13vkb1g"><a href="/ai/escalations" class="svelte-13vkb1g">AI escalation routes</a></li> <li class="svelte-13vkb1g"><a href="/ai/generate-pdf" class="svelte-13vkb1g">Generate a PDF</a></li> <li class="svelte-13vkb1g"><a href="/ai/summarize" class="svelte-13vkb1g">Summarize a PDF</a></li> <li class="svelte-13vkb1g"><a href="/ai/translate" class="svelte-13vkb1g">Translate a PDF</a></li></ul></section></nav><!----><!--]--><!--]--> <!--[-1--><!--]--><!--]-->
+			
+			<script>
+				{
+					__sveltekit_dev = {
+						base: new URL(".", location).pathname.slice(0, -1),
+						env: {}
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("/@fs/C:/Users/ayomide/codebase/pdf.complianttools.com/node_modules/.pnpm/@sveltejs+kit@2.70.3_@opentelemetry+api@1.9.1_@sveltejs+vite-plugin-svelte@7.3.0_svelte@5.57._bsfn3bjqriazfhqsdngiidj23u/node_modules/@sveltejs/kit/src/runtime/client/entry.js"),
+						import("/@fs/C:/Users/ayomide/codebase/pdf.complianttools.com/apps/web/.svelte-kit/generated/client/app.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 1],
+							data: [null],
+							form: null,
+							error: {message:"Internal Error"},
+							status: 500
+						});
+					});
+
+					if ('serviceWorker' in navigator) {
+						const script_url = './service-worker.js';
+						const policy = globalThis?.window?.trustedTypes?.createPolicy(
+							'sveltekit-trusted-url',
+							{ createScriptURL(url) { return url; } }
+						);
+						const sanitised = policy?.createScriptURL(script_url) ?? script_url;
+						addEventListener('load', function () {
+							navigator.serviceWorker.register(sanitised, { type: 'module' });
+						});
+					}
+				}
+			</script>
+		</div>
+  </body>
+</html>

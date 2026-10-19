@@ -16,6 +16,8 @@ export default [
       'playwright-report/**',
       'saas-template/**',
       'fixtures/**',
+      '.wrangler/**',
+      '.wrangler/tmp/**',
     ],
   },
   eslint.configs.recommended,

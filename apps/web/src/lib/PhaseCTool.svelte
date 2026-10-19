@@ -78,6 +78,7 @@
   let recipients = $state('recipient@example.test');
   let threshold = $state(32);
   let page = $state(1);
+  let password = $state('');
   // Derived: these come from $props(), and a caller can change them after mount.
   const structuredData = $derived(
     softwareApplicationLd({ name: title, description, path: route.url.pathname }),
@@ -98,6 +99,7 @@
   }
 
   function save(bytes: Uint8Array, name: string, type: string) {
+    if (typeof globalThis.URL === 'undefined' || typeof globalThis.Blob === 'undefined') return;
     const url = globalThis.URL.createObjectURL(
       new globalThis.Blob([bytes.buffer as ArrayBuffer], { type }),
     );
@@ -392,6 +394,8 @@
           'This is a read-only evidence report. Unsupported cryptographic or authoring claims remain visible as remedies.',
         )}
       </p>
+    {:else if operation === 'unlock'}
+      <label>{t('phase.unlock.password', 'Enter Document Password')}<input type="password" bind:value={password} /></label>
     {:else if operation === 'sign'}
       <SignaturePad
         label={t('phase.sign.pad', 'Draw a signature')}
@@ -411,10 +415,10 @@
         label={t('phase.sign.upload', 'Upload a PNG or JPEG signature')}
       />
       <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
-    {:else if operation !== 'password-generator'}
-      <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
+    {:else if operation !== 'password-generator' && operation !== 'unlock'}
+      <label class={operation === 'watermark' ? 'wm-label' : ''}>{t('phase.sign.label', operation === 'watermark' ? 'Watermark text' : 'Signature text')}<input bind:value={text} /></label>
     {/if}
-    {#if operation !== 'password-generator' && operation !== 'signature-background'}
+    {#if operation !== 'password-generator' && operation !== 'signature-background' && operation !== 'unlock'}
       <label>{t('phase.sign.page', 'Page')}<input type="number" min="1" bind:value={page} /></label>
     {/if}
     {#if operation === 'signature-background'}
@@ -483,6 +487,9 @@
     display: grid;
     gap: 8px;
     font-weight: 600;
+  }
+  .wm-label {
+    font-size: 1.2rem;
   }
   input,
   textarea {
