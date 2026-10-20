@@ -276,7 +276,11 @@
       if (event.kind === 'result') output = event.bytes;
     }
     if (output) {
-      resultUrl = URL.createObjectURL(new Blob([output], { type: 'application/pdf' }));
+      // Copy into an owned ArrayBuffer so the Blob constructor remains valid
+      // under TypeScript's stricter ArrayBufferLike definitions.
+      const blobBuffer = new ArrayBuffer(output.byteLength);
+      new Uint8Array(blobBuffer).set(output);
+      resultUrl = URL.createObjectURL(new Blob([blobBuffer], { type: 'application/pdf' }));
       status = 'Recipe executed. Download the processed PDF below.';
     }
   }

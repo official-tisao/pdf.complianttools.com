@@ -17,8 +17,8 @@
     "source": "Generated in-repository by scripts/generate-sitemap.mjs from the route manifest",
     "license": "CC0-1.0",
     "licenseUrl": "https://creativecommons.org/public-domain/cc0/",
-    "sha256": "8c818e50f41815dbf9a050b2db0a53508c7a8f4bad328273c2e623aa634d16a6",
-    "checked": "2026-10-01"
+    "sha256": "1f9670dfe6002f5ccd4926e391446f5a15b03de94975a9bb9f9ae1eba9e04d2f",
+    "checked": "2026-10-20"
   },
   "apps/web/static/offline.html": {
     "source": "Created in-repository: the service worker's fallback for a page never cached",

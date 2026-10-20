@@ -606,6 +606,12 @@
     font-weight: 400;
     grid-template-columns: auto 1fr;
   }
+  .checkbox-label input[type='checkbox'] {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    margin: 0;
+  }
   .security-panel h3 {
     margin: 0 0 8px 0;
     font-size: 1.1rem;
