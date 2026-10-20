@@ -93,6 +93,13 @@ const BIDIRECTIONAL_SLUGS = new Set([
   'watermark-pdf.html',
   'xml-einvoice-to-pdf.html',
   'zip-to-pdf.html',
+  'ppt-pdf.html',
+  'pptx-to-pdf.html',
+  'text-pdf.html',
+  'split.html',
+  'protect-pdf.html',
+  'rotate-pdf.html',
+  'sign-pdf.html',
 ]);
 
 /** Routes that should not appear in a directory: they are indexes or shells. */

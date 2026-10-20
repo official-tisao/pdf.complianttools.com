@@ -78,6 +78,7 @@
   let endpoint = $state('');
   let template = $state<'blank' | 'grid' | 'lined' | 'dot'>('blank');
   let files = $state<File[]>([]);
+  let resultUrl: string = $state('');
   // Camera-captured pages, owned by ScanCapture. Kept separate from `files` so
   // re-picking the file input cannot discard a live capture.
   let capturedFrames = $state<ScanFrame[]>([]);
@@ -259,6 +260,29 @@
       'feature.status.batchDownload',
       'Downloaded a ZIP of the completed files and a manifest of the rest.',
     );
+  }
+  async function executeRecipe() {
+    if (!files.length) return;
+    const bytes = new Uint8Array(await files[0].arrayBuffer());
+    // 1. Read active sequential recipe steps from recipe state
+    // 2. Link to engine: parseRecipe / compile / run sequential loop
+    const { parseRecipe, compile, run, inspectWithPdfJs } =
+      await import('@pdf-complianttools/engine');
+    const parsed = parseRecipe(recipe);
+    const meta = await inspectWithPdfJs(bytes);
+    const plan = compile(parsed, meta);
+    let output: Uint8Array | undefined;
+    for await (const event of run(plan, [bytes])) {
+      if (event.kind === 'result') output = event.bytes;
+    }
+    if (output) {
+      // Copy into an owned ArrayBuffer so the Blob constructor remains valid
+      // under TypeScript's stricter ArrayBufferLike definitions.
+      const blobBuffer = new ArrayBuffer(output.byteLength);
+      new Uint8Array(blobBuffer).set(output);
+      resultUrl = URL.createObjectURL(new Blob([blobBuffer], { type: 'application/pdf' }));
+      status = 'Recipe executed. Download the processed PDF below.';
+    }
   }
   async function exportRecipe() {
     // Exported through the same schema as everything else, so a file a user keeps cannot carry
@@ -589,6 +613,21 @@
         <button onclick={saveRecipe}>{t('feature.recipe.save', 'Save to this browser')}</button>
         <button onclick={exportRecipe}>{t('feature.recipe.export', 'Export JSON')}</button>
       </div>
+      <div class="recipe-drop">
+        <FileDrop
+          accept="application/pdf,.pdf"
+          onchange={selectFiles}
+          label={t('feature.recipe.drop', 'Drop PDF to run recipe')}
+        />
+        <button onclick={executeRecipe} disabled={!files.length}>
+          {t('feature.recipe.execute', 'Execute Recipe')}
+        </button>
+      </div>
+      {#if resultUrl}
+        <div class="recipe-download">
+          <a href={resultUrl} download="recipe-output.pdf">Download processed PDF</a>
+        </div>
+      {/if}
     </div>
   {:else if kind === 'watch'}
     <button onclick={startWatch}

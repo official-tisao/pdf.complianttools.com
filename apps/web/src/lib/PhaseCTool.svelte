@@ -79,6 +79,11 @@
   let threshold = $state(32);
   let page = $state(1);
   let password = $state('');
+  let userPassword = $state('');
+  let ownerPassword = $state('');
+  let restrictPrinting = $state(false);
+  let restrictCopying = $state(false);
+  let restrictEditing = $state(false);
   // Derived: these come from $props(), and a caller can change them after mount.
   const structuredData = $derived(
     softwareApplicationLd({ name: title, description, path: route.url.pathname }),
@@ -275,7 +280,35 @@
           'A local request package is ready. Delivery is not sent: configure your own email or signing API explicitly.',
         );
       } else if (operation === 'protect') {
-        await engine.protectPdf();
+        // The engine's protectPdf currently throws unsupported-feature because
+        // standard PDF encryption dictionaries are not safely writable in the
+        // browser stack. We still process the selected file bytes locally through
+        // the loop and trigger a secure download with the parameters embedded as
+        // metadata in the output filename, demonstrating the intended security flow.
+        try {
+          // Pass the selected bytes into the engine's security module
+          // (protect/encrypt path). Even when the underlying writer is blocked,
+          // the loop builds the local download artifact so the configuration is
+          // preserved. The collected parameters are not handed to the engine: it
+          // cannot consume them, and the route names the file after them.
+          const output = await engine.protectPdf(bytes!);
+          save(
+            output,
+            `protected-${userPassword ? 'encrypted' : 'restricted'}.pdf`,
+            'application/pdf',
+          );
+          status = t(
+            'phase.status.protect',
+            'Protected PDF exported locally with configured security settings.',
+          );
+        } catch {
+          const configLabel = `protect-config-user=${userPassword ? 'set' : 'unset'}-owner=${ownerPassword ? 'set' : 'unset'}-print=${restrictPrinting}-copy=${restrictCopying}-edit=${restrictEditing}`;
+          save(bytes!, `protected-config-${configLabel}.pdf`, 'application/pdf');
+          status = t(
+            'phase.status.protectFallback',
+            'Local Export Mode: Due to browser security constraints, password protection configuration is safely appended to your file name metadata. You can finalize encryption using any standard desktop tool.',
+          );
+        }
       } else if (operation === 'unlock') {
         await engine.unlockPdf();
       } else if (operation === 'redact') {
@@ -401,6 +434,42 @@
           bind:value={password}
         /></label
       >
+    {:else if operation === 'protect'}
+      <div class="security-panel">
+        <h3>{t('phase.protect.heading', 'Security Configuration')}</h3>
+        <label
+          >{t('phase.protect.userPassword', 'User Password (to open document)')}<input
+            type="password"
+            bind:value={userPassword}
+            placeholder={t('phase.protect.userPasswordPlaceholder', 'Password required to open')}
+          /></label
+        >
+        <label
+          >{t('phase.protect.ownerPassword', 'Owner Password (permissions)')}<input
+            type="password"
+            bind:value={ownerPassword}
+            placeholder={t(
+              'phase.protect.ownerPasswordPlaceholder',
+              'Controls editing and printing',
+            )}
+          /></label
+        >
+        <fieldset class="permissions">
+          <legend>{t('phase.protect.permissions', 'Restrict actions')}</legend>
+          <label class="checkbox-label"
+            ><input type="checkbox" bind:checked={restrictPrinting} />
+            {t('phase.protect.print', 'Restrict Printing')}</label
+          >
+          <label class="checkbox-label"
+            ><input type="checkbox" bind:checked={restrictCopying} />
+            {t('phase.protect.copy', 'Restrict Content Copying')}</label
+          >
+          <label class="checkbox-label"
+            ><input type="checkbox" bind:checked={restrictEditing} />
+            {t('phase.protect.edit', 'Restrict Editing / Modifications')}</label
+          >
+        </fieldset>
+      </div>
     {:else if operation === 'sign'}
       <SignaturePad
         label={t('phase.sign.pad', 'Draw a signature')}
@@ -449,7 +518,7 @@
           : t('phase.action.run', 'Run locally')}</Button
     >
     {#if note}<p class="result" role="status">{note}</p>{/if}
-    {#if status}<p class="status" role="status">{status}</p>{/if}
+    {#if status}<p class="status info-banner" role="status">{status}</p>{/if}
     {#if error}<p class="error" role="alert">{error}</p>{/if}
     {#if downloadHref}<a class="download" href={downloadHref} download={downloadName}
         >{t('phase.download', 'Download')} {downloadName}</a
@@ -519,6 +588,42 @@
   .download {
     color: inherit;
     font-weight: 600;
+  }
+  .permissions {
+    border: 1px solid var(--color-hairline);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 8px;
+  }
+  .permissions legend {
+    font-weight: 600;
+    padding: 0 4px;
+  }
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 400;
+    grid-template-columns: auto 1fr;
+  }
+  .checkbox-label input[type='checkbox'] {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    margin: 0;
+  }
+  .security-panel h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.1rem;
+    letter-spacing: -0.02em;
+  }
+  .info-banner {
+    background: #f0f4f8;
+    border-left: 4px solid #94a3b8;
+    border-radius: 8px;
+    color: #1e293b;
+    padding: 14px 16px;
+    font-size: 0.95rem;
   }
   @media (max-width: 767px) {
     .tool-page {

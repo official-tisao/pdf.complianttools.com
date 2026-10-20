@@ -25,6 +25,37 @@ import { imageToPdf, renderPdfPageToPng } from './images.js';
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+/**
+ * The formats whose input is decoded as text and can therefore be rejected
+ * as binary before any parser sees it.
+ *
+ * The set is deliberately small and explicit. It is not "every format that is
+ * not an image": DOCX, XLSX, PPTX, ODF, EPUB and CBZ are all ZIP containers of
+ * binary data, and a *valid* one of them routinely exceeds the 30% non-text
+ * threshold — a one-slide PPTX, a 71-byte PNG, a small DOCX. Rejecting those
+ * with "File appears to be binary rather than text/markdown" is a false
+ * positive on exactly the inputs those routes exist to accept.
+ *
+ * RTF and XML e-invoice are text too, but they are read with their own
+ * markup parsers and a malformed one produces a typed failure of its own, so
+ * they are not in this set. Each format outside it validates its own
+ * structure: the archive readers fail on a bad ZIP, `svgToPdf` checks for an
+ * `<svg>` root, and the image readers check the file signature.
+ */
+const TEXT_INPUT_FORMATS: ReadonlySet<FormatId> = new Set<FormatId>([
+  'markdown',
+  'txt',
+  'html',
+  'csv',
+]);
+
+/**
+ * True when the bytes do not look like text at all.
+ *
+ * This guards the *text* formats only — see `TEXT_INPUT_FORMATS`. It is not a
+ * general "is this a binary file" test: applied to the binary formats it
+ * rejected inputs the handlers parse perfectly well.
+ */
 function isBinaryFile(bytes: Uint8Array): boolean {
   if (
     bytes.length >= 4 &&
@@ -123,7 +154,7 @@ async function convertToPdfRequest(
   const fileName = input.fileName ?? '';
   const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
   const allowedExt = {
-    markdown: ['md', 'markdown'],
+    markdown: ['md', 'markdown', 'txt'],
     txt: ['txt'],
     html: ['html', 'htm'],
     csv: ['csv'],
@@ -136,7 +167,11 @@ async function convertToPdfRequest(
       remedy: `Expected .${formatExts.join(' or .')}, got .${ext || 'none'}`,
     });
   }
-  if (isBinaryFile(bytes)) {
+  // Only the plain-text formats can be rejected as binary. Every other format
+  // is binary by nature — DOCX, XLSX, PPTX, ODF, EPUB, archives, images — and
+  // each is parsed by a reader that validates its own structure, which a byte
+  // histogram cannot do.
+  if (TEXT_INPUT_FORMATS.has(input.format) && isBinaryFile(bytes)) {
     throw new PdfEngineError({
       kind: 'corrupt-structure',
       repairable: false,

@@ -1,6 +1,6 @@
 {
   "generated": "by scripts/generate-route-manifest.mjs — do not hand-edit",
-  "routeCount": 140,
+  "routeCount": 147,
   "deadControls": [
     "/bookmarks",
     "/pdf-to-pdfa",
@@ -715,6 +715,13 @@
       "op": null
     },
     {
+      "path": "/ppt-pdf.html",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/pptx-to-pdf",
       "shell": "ConversionTool",
       "localized": false,
@@ -722,7 +729,21 @@
       "op": null
     },
     {
+      "path": "/pptx-to-pdf.html",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/protect-pdf",
+      "shell": "PhaseCTool",
+      "localized": false,
+      "opBinding": null,
+      "op": "protect"
+    },
+    {
+      "path": "/protect-pdf.html",
       "shell": "PhaseCTool",
       "localized": false,
       "opBinding": null,
@@ -806,6 +827,13 @@
       "op": "rotate"
     },
     {
+      "path": "/rotate-pdf.html",
+      "shell": "ToolWorkspace",
+      "localized": false,
+      "opBinding": "wired",
+      "op": "rotate"
+    },
+    {
       "path": "/rtf-to-pdf",
       "shell": "ConversionTool",
       "localized": false,
@@ -827,11 +855,25 @@
       "op": "sign"
     },
     {
+      "path": "/sign-pdf.html",
+      "shell": "PhaseCTool",
+      "localized": false,
+      "opBinding": null,
+      "op": "sign"
+    },
+    {
       "path": "/split",
       "shell": "ToolWorkspace",
       "localized": false,
       "opBinding": "wired",
       "op": "split"
+    },
+    {
+      "path": "/split.html",
+      "shell": "bespoke",
+      "localized": false,
+      "opBinding": null,
+      "op": null
     },
     {
       "path": "/svg-to-pdf",
@@ -849,6 +891,13 @@
     },
     {
       "path": "/text-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/text-pdf.html",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,

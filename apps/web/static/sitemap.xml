@@ -21,6 +21,12 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/add-text"/>
   </url>
   <url>
+    <loc>https://pdf.complianttools.com/ai</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/ai"/>
+  </url>
+  <url>
     <loc>https://pdf.complianttools.com/ai-to-pdf</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -297,6 +303,13 @@
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/image-to-pdf"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/image-to-pdf"/>
+  </url>
+  <url>
+    <loc>https://pdf.complianttools.com/image-to-pdf.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/image-to-pdf.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/image-to-pdf.html"/>
   </url>
   <url>
     <loc>https://pdf.complianttools.com/insert-pages</loc>
@@ -602,6 +615,13 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/pdf-to-png"/>
   </url>
   <url>
+    <loc>https://pdf.complianttools.com/pdf-to-png.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/pdf-to-png.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/pdf-to-png.html"/>
+  </url>
+  <url>
     <loc>https://pdf.complianttools.com/pdf-to-pptx</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -616,11 +636,25 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/pdf-to-rtf"/>
   </url>
   <url>
+    <loc>https://pdf.complianttools.com/pdf-to-rtf.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/pdf-to-rtf.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/pdf-to-rtf.html"/>
+  </url>
+  <url>
     <loc>https://pdf.complianttools.com/pdf-to-txt</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/pdf-to-txt"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/pdf-to-txt"/>
+  </url>
+  <url>
+    <loc>https://pdf.complianttools.com/pdf-to-txt.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/pdf-to-txt.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/pdf-to-txt.html"/>
   </url>
   <url>
     <loc>https://pdf.complianttools.com/pdf-to-xlsx</loc>
@@ -637,6 +671,13 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/pdf-to-zip"/>
   </url>
   <url>
+    <loc>https://pdf.complianttools.com/pdf-to-zip.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/pdf-to-zip.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/pdf-to-zip.html"/>
+  </url>
+  <url>
     <loc>https://pdf.complianttools.com/png-to-pdf</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -651,6 +692,13 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/ppt-pdf"/>
   </url>
   <url>
+    <loc>https://pdf.complianttools.com/ppt-pdf.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/ppt-pdf.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/ppt-pdf.html"/>
+  </url>
+  <url>
     <loc>https://pdf.complianttools.com/pptx-to-pdf</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -658,11 +706,25 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/pptx-to-pdf"/>
   </url>
   <url>
+    <loc>https://pdf.complianttools.com/pptx-to-pdf.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/pptx-to-pdf.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/pptx-to-pdf.html"/>
+  </url>
+  <url>
     <loc>https://pdf.complianttools.com/protect-pdf</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/protect-pdf"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/protect-pdf"/>
+  </url>
+  <url>
+    <loc>https://pdf.complianttools.com/protect-pdf.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/protect-pdf.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/protect-pdf.html"/>
   </url>
   <url>
     <loc>https://pdf.complianttools.com/psd-to-pdf</loc>
@@ -742,6 +804,13 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/rotate-pdf"/>
   </url>
   <url>
+    <loc>https://pdf.complianttools.com/rotate-pdf.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/rotate-pdf.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/rotate-pdf.html"/>
+  </url>
+  <url>
     <loc>https://pdf.complianttools.com/rtf-to-pdf</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -763,11 +832,25 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/sign-pdf"/>
   </url>
   <url>
+    <loc>https://pdf.complianttools.com/sign-pdf.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/sign-pdf.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/sign-pdf.html"/>
+  </url>
+  <url>
     <loc>https://pdf.complianttools.com/split</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/split"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/split"/>
+  </url>
+  <url>
+    <loc>https://pdf.complianttools.com/split.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/split.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/split.html"/>
   </url>
   <url>
     <loc>https://pdf.complianttools.com/svg-to-pdf</loc>
@@ -777,11 +860,25 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/svg-to-pdf"/>
   </url>
   <url>
+    <loc>https://pdf.complianttools.com/svg-to-pdf.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/svg-to-pdf.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/svg-to-pdf.html"/>
+  </url>
+  <url>
     <loc>https://pdf.complianttools.com/text-pdf</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/text-pdf"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/text-pdf"/>
+  </url>
+  <url>
+    <loc>https://pdf.complianttools.com/text-pdf.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/text-pdf.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/text-pdf.html"/>
   </url>
   <url>
     <loc>https://pdf.complianttools.com/txt-to-pdf</loc>
@@ -791,6 +888,13 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/txt-to-pdf"/>
   </url>
   <url>
+    <loc>https://pdf.complianttools.com/txt-to-pdf.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/txt-to-pdf.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/txt-to-pdf.html"/>
+  </url>
+  <url>
     <loc>https://pdf.complianttools.com/unlock-pdf</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -798,11 +902,25 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/unlock-pdf"/>
   </url>
   <url>
+    <loc>https://pdf.complianttools.com/unlock-pdf.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/unlock-pdf.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/unlock-pdf.html"/>
+  </url>
+  <url>
     <loc>https://pdf.complianttools.com/verify-signature</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/verify-signature"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/verify-signature"/>
+  </url>
+  <url>
+    <loc>https://pdf.complianttools.com/verify-signature.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/verify-signature.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/verify-signature.html"/>
   </url>
   <url>
     <loc>https://pdf.complianttools.com/view-pdf</loc>
@@ -818,11 +936,25 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/watch"/>
   </url>
   <url>
+    <loc>https://pdf.complianttools.com/watch.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/watch.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/watch.html"/>
+  </url>
+  <url>
     <loc>https://pdf.complianttools.com/watermark-pdf</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/watermark-pdf"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/watermark-pdf"/>
+  </url>
+  <url>
+    <loc>https://pdf.complianttools.com/watermark-pdf.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/watermark-pdf.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/watermark-pdf.html"/>
   </url>
   <url>
     <loc>https://pdf.complianttools.com/webp-to-pdf</loc>
@@ -860,10 +992,24 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/xml-einvoice-to-pdf"/>
   </url>
   <url>
+    <loc>https://pdf.complianttools.com/xml-einvoice-to-pdf.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/xml-einvoice-to-pdf.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/xml-einvoice-to-pdf.html"/>
+  </url>
+  <url>
     <loc>https://pdf.complianttools.com/zip-to-pdf</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/zip-to-pdf"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/zip-to-pdf"/>
+  </url>
+  <url>
+    <loc>https://pdf.complianttools.com/zip-to-pdf.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/zip-to-pdf.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/zip-to-pdf.html"/>
   </url>
 </urlset>
