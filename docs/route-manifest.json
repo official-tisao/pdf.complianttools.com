@@ -1,6 +1,6 @@
 {
   "generated": "by scripts/generate-route-manifest.mjs — do not hand-edit",
-  "routeCount": 132,
+  "routeCount": 140,
   "deadControls": [
     "/bookmarks",
     "/pdf-to-pdfa",
@@ -841,6 +841,13 @@
       "op": null
     },
     {
+      "path": "/svg-to-pdf.html",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/text-pdf",
       "shell": "ConversionTool",
       "localized": false,
@@ -855,6 +862,13 @@
       "op": null
     },
     {
+      "path": "/txt-to-pdf.html",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/unlock-pdf",
       "shell": "PhaseCTool",
       "localized": false,
@@ -862,7 +876,21 @@
       "op": "unlock"
     },
     {
+      "path": "/unlock-pdf.html",
+      "shell": "PhaseCTool",
+      "localized": false,
+      "opBinding": null,
+      "op": "unlock"
+    },
+    {
       "path": "/verify-signature",
+      "shell": "PhaseCTool",
+      "localized": false,
+      "opBinding": null,
+      "op": "verify-signature"
+    },
+    {
+      "path": "/verify-signature.html",
       "shell": "PhaseCTool",
       "localized": false,
       "opBinding": null,
@@ -883,7 +911,21 @@
       "op": null
     },
     {
+      "path": "/watch.html",
+      "shell": "FeaturePage",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/watermark-pdf",
+      "shell": "PhaseCTool",
+      "localized": false,
+      "opBinding": null,
+      "op": "watermark"
+    },
+    {
+      "path": "/watermark-pdf.html",
       "shell": "PhaseCTool",
       "localized": false,
       "opBinding": null,
@@ -925,7 +967,21 @@
       "op": null
     },
     {
+      "path": "/xml-einvoice-to-pdf.html",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/zip-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/zip-to-pdf.html",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,

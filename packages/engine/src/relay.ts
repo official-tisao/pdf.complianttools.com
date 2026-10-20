@@ -32,7 +32,7 @@ export async function captureWebpageToPdf(
   try {
     const response = await fetcher(`${endpoint.replace(/\/$/u, '')}/render`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: parsed.toString() }),
     });
     if (!response.ok) {

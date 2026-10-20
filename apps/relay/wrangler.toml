@@ -1,0 +1,16 @@
+name = "relay"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Local dev bind — listen on all interfaces per prior fix
+[dev]
+port = 8888
+ip = "0.0.0.0"
+
+[vars]
+# Environment variables bound at runtime
+RELAY_ALLOWED_ORIGINS = "*"
+
+# Route (optional) - match pattern as needed
+# routes = [{ pattern = "relay.pdf.complianttools.com", zone_id = "..." }]

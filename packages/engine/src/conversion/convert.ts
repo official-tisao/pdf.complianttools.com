@@ -596,21 +596,20 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
   const ExcelJS = await import('exceljs');
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(bytes.slice().buffer);
-  const pages: string[][] = [];
-  for (const worksheet of workbook.worksheets) {
-    pages.push([`Sheet: ${worksheet.name}`]);
+  const lines: string[] = [];
+  workbook.eachSheet((worksheet) => {
+    lines.push(`Sheet: ${worksheet.name}`);
     for (let rowNumber = 1; rowNumber <= worksheet.rowCount; rowNumber += 1) {
       const row = worksheet.getRow(rowNumber);
-      const values = row.values as unknown as readonly unknown[];
-      pages.push([
-        values
-          .slice(1)
-          .map((value: unknown) => String(value ?? ''))
-          .join('   '),
-      ]);
+      const cellStrings: string[] = [];
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        const cellValue = cell.text ? cell.text.trim().replace(/[\r\n]+/g, ' ') : '';
+        cellStrings.push(cellValue);
+      });
+      lines.push(cellStrings.join('   '));
     }
-  }
-  return textPagesToPdf(pages, options);
+  });
+  return textPagesToPdf([lines], options);
 }
 
 async function pptxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise<Uint8Array> {

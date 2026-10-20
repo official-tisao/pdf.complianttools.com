@@ -108,7 +108,15 @@ export function createRelayServer(options: RelayOptions): Server {
         );
         return;
       }
-      const browser = await launch({ headless: true });
+      const browser = await launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+        ],
+      });
       try {
         const page = await browser.newPage();
         await page.route('**/*', async (route) => {
@@ -120,7 +128,7 @@ export function createRelayServer(options: RelayOptions): Server {
             await route.abort('blockedbyclient');
           }
         });
-        await page.goto(url.toString(), { waitUntil: 'networkidle', timeout: 30_000 });
+        await page.goto(url.toString(), { waitUntil: 'domcontentloaded', timeout: 10000 });
         const bytes = await page.pdf({
           format: 'A4',
           printBackground: true,
@@ -129,6 +137,7 @@ export function createRelayServer(options: RelayOptions): Server {
         response.writeHead(200, {
           ...cors,
           'content-type': 'application/pdf',
+          'content-length': String(bytes.length),
           'cache-control': 'no-store',
         });
         response.end(bytes);
@@ -136,11 +145,14 @@ export function createRelayServer(options: RelayOptions): Server {
         await browser.close();
       }
     } catch (error) {
+      console.error('Relay /render failure:', error);
+      const msg =
+        error instanceof Error ? error.message : String(error ?? 'Headless browser unavailable');
       response.writeHead(503, { ...cors, 'content-type': 'application/json' });
       response.end(
         JSON.stringify({
           error: 'relay-failed',
-          cause: error instanceof Error ? error.message : 'Headless browser unavailable',
+          cause: msg,
           remedy: 'Install the pinned Playwright browser for this self-hosted Relay and retry.',
         }),
       );

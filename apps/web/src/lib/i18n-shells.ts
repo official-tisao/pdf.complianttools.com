@@ -168,6 +168,7 @@ export const shellArabic: Readonly<Record<string, string>> = {
   'phase.sign.padHelp': 'ارسم بمؤشر، أو استخدم حقل النص أدناه عبر لوحة المفاتيح.',
   'phase.sign.upload': 'تحميل توقيع بصيغة PNG أو JPEG',
   'phase.signatureBackground.threshold': 'عتبة الخلفية',
+  'phase.unlock.password': 'أدخل كلمة مرور المستند',
   // PhaseCTool engine-result messages, one per operation.
   'phase.error.noFile': 'اختر ملفًا محليًا أولًا. لا يُرفع أي شيء.',
   'phase.error.image': 'اختر ملف PDF وصورة بصيغة PNG أو JPEG.',
