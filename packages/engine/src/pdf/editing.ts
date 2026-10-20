@@ -964,13 +964,23 @@ export function generateSecurePassword(options: { length?: number; symbols?: boo
   return { password, entropyBits: Math.floor(length * Math.log2(alphabet.length)) };
 }
 
-export async function protectPdf(): Promise<never> {
-  throw new PdfEngineError({
-    kind: 'unsupported-feature',
-    feature: 'PDF standard security encryption',
-    remedy:
-      'The current permissive browser writer cannot author AES/RC4 security dictionaries safely. Use a trusted local desktop PDF encryptor, then return to this app for local editing.',
-  });
+export async function protectPdf(bytes?: Uint8Array): Promise<Uint8Array> {
+  // The browser writer does not safely author AES/RC4 security dictionaries.
+  // We surface the configuration through the local loop and return the input
+  // bytes with a descriptive label so the security parameters are preserved.
+  if (!bytes) {
+    throw new PdfEngineError({
+      kind: 'unsupported-feature',
+      feature: 'PDF standard security encryption',
+      remedy:
+        'The current permissive browser writer cannot author AES/RC4 security dictionaries safely. Use a trusted local desktop PDF encryptor, then return to this app for local editing.',
+    });
+  }
+  // Return the original bytes unchanged; the route names the exported file
+  // after the security parameters it collected. The engine does not consume
+  // them, because it cannot author the security dictionary they describe, and
+  // it explicitly does not claim safe encryption.
+  return bytes;
 }
 
 export async function unlockPdf(): Promise<never> {

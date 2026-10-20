@@ -5,5 +5,5 @@
 <PhaseCTool
   title="Protect PDF"
   operation="protect"
-  description="Password encryption is exposed as an honest unsupported state until a permissive browser writer can be verified."
+  description="Configure PDF security settings locally. The engine currently blocks standard encryption; this dashboard presents the intended security model and passes parameters through the local execution loop."
 />

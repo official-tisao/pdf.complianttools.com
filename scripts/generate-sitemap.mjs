@@ -47,6 +47,23 @@ export function urlEntry(path, { alternates = [], lastmod, changefreq, priority 
 }
 
 /**
+ * The build file that serves a route path.
+ *
+ * The `.html` suffix is appended only when the path does not already end in
+ * one. A route named `/pptx-to-pdf.html` serves the file `pptx-to-pdf.html`,
+ * not `pptx-to-pdf.html.html` — the earlier unconditional append made every
+ * such route look absent from the build, so the sitemap silently dropped all
+ * of them and the sitemap contract test failed on a route that had shipped.
+ *
+ * The root route is `index.html`.
+ */
+export function buildFileFor(path) {
+  if (path === '/') return 'index.html';
+  const relative = path.replace(/^\//u, '');
+  return relative.endsWith('.html') ? relative : `${relative}.html`;
+}
+
+/**
  * The locale-prefixed paths for a canonical path.
  *
  * Only locales that actually serve this path are advertised. The landing page
@@ -80,7 +97,7 @@ async function main() {
   // a sitemap listing a 404 is worse than no sitemap.
   const buildRoot = resolve(root, 'apps/web/build');
   const serves = async (path) => {
-    const relative = path === '/' ? 'index.html' : `${path.replace(/^\//u, '')}.html`;
+    const relative = buildFileFor(path);
     return existsSync(resolve(buildRoot, relative));
   };
 

@@ -3,6 +3,8 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
+import { buildFileFor } from '../../scripts/generate-sitemap.mjs';
+
 /**
  * The sitemap must list only URLs that exist, and advertise the pseudo-locale
  * nowhere.
@@ -33,7 +35,7 @@ test('every URL in the sitemap exists in the build', async (t) => {
     new RegExp(`${SITE_ORIGIN.replaceAll('.', '\\.')}([^"<]*)`, 'gu'),
   )) {
     const path = match[1];
-    const relative = path === '/' ? 'index.html' : `${path.replace(/^\//u, '')}.html`;
+    const relative = buildFileFor(path);
     assert.ok(
       existsSync(new URL(relative, buildRoot)),
       `sitemap advertises ${path}, which is not in the build`,
