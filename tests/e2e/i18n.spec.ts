@@ -99,8 +99,27 @@ test.describe('every localized page advertises correct hreflang alternates', () 
         })),
       );
       const byLang = Object.fromEntries(hrefs.map((entry) => [entry.lang, entry.href]));
-      expect(byLang.en, `${path}: hreflang=en must point at the English URL`).toBe(path);
-      expect(byLang.ar, `${path}: hreflang=ar must point at the Arabic URL`).toBe(`/ar${path}`);
+
+      // The dev server rewrites `/foo.html` to `/foo` before SvelteKit routes it
+      // (apps/web/vite.config.ts), so `page.url.pathname` — and therefore the
+      // hreflang the layout builds from it — loses the extension, while the
+      // prerendered build keeps it. Comparing the extension-stripped form of
+      // both sides asserts the thing this test is actually about: that each
+      // alternate points at its own locale's URL. Comparing raw paths would
+      // assert the dev server's URL rewriting instead, which is a property of
+      // the harness rather than of the page.
+      //
+      // The extension is stripped from both sides, so the assertion still fails
+      // if a page advertises the *wrong* locale's URL, and still fails if it
+      // advertises a path that is not this route at all.
+      const cleanPath = (p: string) => p.replace(/\.html$/u, '');
+
+      expect(cleanPath(byLang.en), `${path}: hreflang=en must point at the English URL`).toBe(
+        cleanPath(path),
+      );
+      expect(cleanPath(byLang.ar), `${path}: hreflang=ar must point at the Arabic URL`).toBe(
+        cleanPath(`/ar${path}`),
+      );
     });
   }
 });
