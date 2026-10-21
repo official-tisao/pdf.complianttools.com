@@ -1,6 +1,6 @@
 {
   "generated": "by scripts/generate-route-manifest.mjs — do not hand-edit",
-  "routeCount": 147,
+  "routeCount": 149,
   "deadControls": [
     "/bookmarks",
     "/pdf-to-pdfa",
@@ -554,7 +554,21 @@
       "op": null
     },
     {
+      "path": "/pdf-to-ods.html",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/pdf-to-odt",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-odt.html",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,

@@ -531,11 +531,25 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/pdf-to-ods"/>
   </url>
   <url>
+    <loc>https://pdf.complianttools.com/pdf-to-ods.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/pdf-to-ods.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/pdf-to-ods.html"/>
+  </url>
+  <url>
     <loc>https://pdf.complianttools.com/pdf-to-odt</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/pdf-to-odt"/>
     <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/pdf-to-odt"/>
+  </url>
+  <url>
+    <loc>https://pdf.complianttools.com/pdf-to-odt.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://pdf.complianttools.com/pdf-to-odt.html"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://pdf.complianttools.com/ar/pdf-to-odt.html"/>
   </url>
   <url>
     <loc>https://pdf.complianttools.com/pdf-to-pdf-epub</loc>

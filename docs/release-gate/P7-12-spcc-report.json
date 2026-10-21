@@ -63,8 +63,8 @@
       "judgedBy": "scripts/measure-lighthouse.mjs"
     }
   ],
-  "pagesChecked": 456,
-  "pagesPassing": 456,
+  "pagesChecked": 457,
+  "pagesPassing": 457,
   "pagesFailing": 0,
   "outOfScope": [
     {
@@ -80,6 +80,10 @@
     {
       "path": "/ai/generate-pdf",
       "reason": "generates a PDF from a prompt; there is no document to pick"
+    },
+    {
+      "path": "/ai",
+      "reason": "AI landing/index page; links subroutes, takes no document"
     },
     {
       "path": "/ar/batch",

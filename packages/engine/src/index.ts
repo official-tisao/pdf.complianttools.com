@@ -12,6 +12,7 @@ export * from './conversion/registry.js';
 export * from './conversion/convert.js';
 export * from './conversion/pdf-text.js';
 export * from './conversion/images.js';
+export * from './conversion/pptx.js';
 export * from './pdf/operations.js';
 export * from './pdf/graph.js';
 export * from './batch.js';

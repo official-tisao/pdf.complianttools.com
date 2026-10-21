@@ -469,8 +469,20 @@ zero copyleft dependency introduced.
 #### P3-04 · PPTX/PPT ↔ PDF (T22)
 
 - [x] `pptxgenjs` for write; **our own** OOXML slide-XML reader for PPTX read
+- [x] PPTX read renders the deck: one PDF page per slide at the deck's own slide size, with shape
+      geometry, fills, theme colours, and text positions preserved; text is shrunk and then clipped
+      to its box, so a slide never spills onto a second page
+- [x] PPTX read follows the OOXML inheritance chain: a slide's background resolves through the
+      theme's background fill styles, a shape may point at the theme's fill and line styles, and a
+      placeholder inherits its geometry, text style, and body properties from the layout and then
+      the master. Paragraph line spacing and table cell padding, column spans, and row heights are
+      read too, so a table row grows to fit its text rather than losing a data row
+- [x] PPTX read places geometry 1:1: a shape's box lands at the point the deck declares, a
+      rotation is turned by the angle the deck asked for, a mirrored shape is mirrored, a line
+      shape runs along the right diagonal, text turns with the shape it lives in, and text inside
+      a scaled group is scaled and wrapped to fit the space the group occupies
 - **Spec:** README §7.3 · **Done when:** STCC; slide order and text content verified on a 10-slide
-  fixture
+  fixture; one slide is exactly one PDF page at the deck's declared size
 
 #### P3-05 · Text/RTF/Markdown ↔ PDF (T23)
 

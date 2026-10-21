@@ -83,7 +83,7 @@ export const FORMAT_REGISTRY: readonly FormatCapability[] = [
     ['.pptx'],
     ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
     ['to-pdf', 'from-pdf'],
-    'OOXML slide text is read locally and slides are written with pptxgenjs.',
+    'PPTX slides are rendered locally to one PDF page per slide, at the slide size the deck declares; slides are written with pptxgenjs.',
     'pptxgenjs',
     1_000_000,
   ),

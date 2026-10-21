@@ -81,6 +81,8 @@ const BIDIRECTIONAL_SLUGS = new Set([
   'other-formats-to-pdf',
   'pdf-to-markdown',
   'bank-statement-to-excel',
+  'pdf-to-odt.html',
+  'pdf-to-ods.html',
   'pdf-to-png.html',
   'pdf-to-rtf.html',
   'pdf-to-txt.html',

@@ -21,6 +21,7 @@ import {
   textPagesToPdf,
 } from './pdf-text.js';
 import { imageToPdf, renderPdfPageToPng } from './images.js';
+import { pptxToPdf } from './pptx.js';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -197,9 +198,12 @@ async function convertToPdfRequest(
     case 'xlsx':
       pdf = await xlsxToPdf(bytes, options);
       break;
-    case 'pptx':
-      pdf = await pptxToPdf(bytes, options);
+    case 'pptx': {
+      const rendered = await pptxToPdf(bytes, options);
+      pdf = rendered.bytes;
+      warnings.push(...rendered.warnings);
       break;
+    }
     case 'rtf':
       pdf = await textToPdf(stripRtf(decoder.decode(bytes)), options);
       break;
@@ -645,28 +649,6 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
     }
   });
   return textPagesToPdf([lines], options);
-}
-
-async function pptxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise<Uint8Array> {
-  const slides = await readPptxSlides(bytes);
-  return textPagesToPdf(
-    slides.map((slide, index) => [`Slide ${index + 1}`, ...slide]),
-    options,
-  );
-}
-
-export async function readPptxSlides(bytes: Uint8Array): Promise<readonly (readonly string[])[]> {
-  const files = unzipSync(bytes);
-  const names = Object.keys(files)
-    .filter((name) => /^ppt\/slides\/slide\d+\.xml$/u.test(name))
-    .sort(
-      (a, b) =>
-        Number.parseInt(a.match(/\d+/u)?.[0] ?? '0') - Number.parseInt(b.match(/\d+/u)?.[0] ?? '0'),
-    );
-  return names.map((name) => {
-    const xml = decoder.decode(files[name]);
-    return [...xml.matchAll(/<a:t>([^<]*)<\/a:t>/gu)].map((match) => unescapeXml(match[1] ?? ''));
-  });
 }
 
 async function textToDocx(text: string): Promise<Uint8Array> {
