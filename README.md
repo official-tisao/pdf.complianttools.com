@@ -280,7 +280,7 @@ no key, offline-capable · `◐` = local primary path with an optional, explicit
 | T10 | Crop / Trim PDF          | `/crop-pdf`         | Local | Visual handles + numeric margins; per-page or uniform                                                                                                                                                                 |
 | T11 | Change Page Size         | `/resize-pdf-pages` | Local | Standard sizes + custom; scale-to-fit or crop-to-fit                                                                                                                                                                  |
 | T12 | Bookmark Editor          | `/bookmarks`        | Local | Add/edit/remove outline entries, nesting, page targets                                                                                                                                                                |
-| T13 | Bates Numbering          | `/bates-numbering`  | Local | Prefix/suffix, zero-padding, starting number, position                                                                                                                                                                |
+| T13 | Bates Numbering          | `/bates-numbering`  | Local | Prefix/suffix, zero-padding, starting number, position, numbering type, alignment                                                                                                                                     |
 
 ### 4.2 Optimize & repair
 

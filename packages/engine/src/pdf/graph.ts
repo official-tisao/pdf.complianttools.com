@@ -1,7 +1,12 @@
 import { PDFDocument, StandardFonts, degrees } from 'pdf-lib';
 import { PdfEngineError } from '../errors.js';
 import type { MergeOptions, SplitOptions, Step } from '../types.js';
-import { resolvePageNumbers } from './operations.js';
+import {
+  batesAnchorX,
+  formatBatesLabel,
+  resolveBatesAlignment,
+  resolvePageNumbers,
+} from './operations.js';
 import {
   addAnnotation,
   addHeadersFooters,
@@ -272,18 +277,17 @@ export class MutationGraph {
     start?: number;
     padding?: number;
     position?: string;
+    numberingType?: string;
+    alignment?: string;
   }): Promise<void> {
     const font = await this.#document.embedFont(StandardFonts.Helvetica);
+    const position = options.position ?? 'bottom-right';
+    const alignment = resolveBatesAlignment(options.alignment, position);
     for (const [index, page] of this.#document.getPages().entries()) {
-      const label = `${options.prefix ?? ''}${String((options.start ?? 1) + index).padStart(options.padding ?? 6, '0')}${options.suffix ?? ''}`;
+      const label = formatBatesLabel((options.start ?? 1) + index, options);
       const width = page.getWidth();
       const height = page.getHeight();
-      const position = options.position ?? 'bottom-right';
-      const x = position.endsWith('left')
-        ? 24
-        : position.endsWith('center')
-          ? width / 2 - 20
-          : width - 80;
+      const x = batesAnchorX(alignment, width);
       const y = position.startsWith('top') ? height - 24 : 18;
       page.drawText(label, { x, y, size: 10, font });
     }

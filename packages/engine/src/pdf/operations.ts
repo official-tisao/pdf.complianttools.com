@@ -286,6 +286,134 @@ export async function halvePages(
   return output.save();
 }
 
+/** The formats a Bates stamp can be written in. */
+export type BatesNumberingType =
+  'numeric' | 'roman-lowercase' | 'roman-uppercase' | 'alphabetical-lowercase';
+
+/** The horizontal anchor of the stamp. */
+export type BatesAlignment = 'left' | 'center' | 'right';
+
+const ROMAN_PAIRS: readonly [number, string][] = [
+  [1000, 'M'],
+  [900, 'CM'],
+  [500, 'D'],
+  [400, 'CD'],
+  [100, 'C'],
+  [90, 'XC'],
+  [50, 'L'],
+  [40, 'XL'],
+  [10, 'X'],
+  [9, 'IX'],
+  [5, 'V'],
+  [4, 'IV'],
+  [1, 'I'],
+];
+
+/** A number as roman numerals. */
+function toRoman(value: number): string {
+  let result = '';
+  let remaining = Math.max(1, value);
+  for (const [unit, token] of ROMAN_PAIRS)
+    while (remaining >= unit) {
+      result += token;
+      remaining -= unit;
+    }
+  return result;
+}
+
+/**
+ * A number as lowercase letters: a, b, … z, aa, ab, and so on.
+ *
+ * Bijective base-26, the sequence spreadsheet columns use: there is no "zero"
+ * column, so the 27th letter is `aa` rather than `ba`.
+ */
+function toAlphabetical(value: number): string {
+  let remaining = Math.max(1, value);
+  let result = '';
+  while (remaining > 0) {
+    const index = (remaining - 1) % 26;
+    result = String.fromCharCode(97 + index) + result;
+    remaining = Math.floor((remaining - 1) / 26);
+  }
+  return result;
+}
+
+/**
+ * The format a stamp is written in.
+ *
+ * An unrecognised format falls back to `numeric` rather than throwing: a
+ * recipe link written against an older build must still stamp a document.
+ */
+export function resolveBatesNumberingType(type: string | undefined): BatesNumberingType {
+  switch (type) {
+    case 'roman-lowercase':
+    case 'roman-uppercase':
+    case 'alphabetical-lowercase':
+      return type;
+    default:
+      return 'numeric';
+  }
+}
+
+/**
+ * The horizontal anchor of the stamp.
+ *
+ * `alignment` wins when it is set. Otherwise the horizontal half of
+ * `position` is used, so a recipe written before alignment existed keeps
+ * stamping where it always did.
+ */
+export function resolveBatesAlignment(
+  alignment: string | undefined,
+  position: string,
+): BatesAlignment {
+  if (alignment === 'left' || alignment === 'center' || alignment === 'right') return alignment;
+  if (position.endsWith('left')) return 'left';
+  if (position.endsWith('center')) return 'center';
+  return 'right';
+}
+
+/** The three anchors, as offsets from the page edges. */
+export function batesAnchorX(alignment: BatesAlignment, width: number): number {
+  if (alignment === 'left') return 24;
+  if (alignment === 'center') return width / 2 - 20;
+  return width - 80;
+}
+
+/**
+ * The stamp text for one page: prefix, number, suffix.
+ *
+ * Zero-padding applies to the numeric form only — `0000IV` is not a number in
+ * any of the other formats.
+ */
+export function formatBatesLabel(
+  value: number,
+  options: {
+    prefix?: string;
+    suffix?: string;
+    padding?: number;
+    numberingType?: string;
+  },
+): string {
+  const type = resolveBatesNumberingType(options.numberingType);
+  let number: string;
+  switch (type) {
+    case 'roman-lowercase':
+      number = toRoman(value).toLowerCase();
+      break;
+    case 'roman-uppercase':
+      number = toRoman(value);
+      break;
+    case 'alphabetical-lowercase':
+      number = toAlphabetical(value);
+      break;
+    default:
+      number = String(value);
+      break;
+  }
+  const padded = type === 'numeric' ? number.padStart(options.padding ?? 6, '0') : number;
+  return `${options.prefix ?? ''}${padded}${options.suffix ?? ''}`;
+}
+
 export async function addBatesNumbering(
   bytes: Uint8Array,
   options: {
@@ -294,20 +422,19 @@ export async function addBatesNumbering(
     start?: number;
     padding?: number;
     position?: string;
+    numberingType?: string;
+    alignment?: string;
   },
 ): Promise<Uint8Array> {
   const document = await load(bytes, 'add Bates numbers');
   const font = await document.embedFont(StandardFonts.Helvetica);
+  const position = options.position ?? 'bottom-right';
+  const alignment = resolveBatesAlignment(options.alignment, position);
   for (const [index, page] of document.getPages().entries()) {
-    const label = `${options.prefix ?? ''}${String((options.start ?? 1) + index).padStart(options.padding ?? 6, '0')}${options.suffix ?? ''}`;
+    const label = formatBatesLabel((options.start ?? 1) + index, options);
     const width = page.getWidth();
     const height = page.getHeight();
-    const position = options.position ?? 'bottom-right';
-    const x = position.endsWith('left')
-      ? 24
-      : position.endsWith('center')
-        ? width / 2 - 20
-        : width - 80;
+    const x = batesAnchorX(alignment, width);
     const y = position.startsWith('top') ? height - 24 : 18;
     page.drawText(label, { x, y, size: 10, font });
   }

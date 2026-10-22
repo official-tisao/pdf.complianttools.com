@@ -20,6 +20,7 @@
     unavailableKey = '',
     actionKey = '',
     eyebrowKey = '',
+    singleFile = false,
   }: {
     title: string;
     eyebrow?: string;
@@ -61,6 +62,22 @@
     actionKey?: string;
     /** Catalogue key for the small eyebrow above the title. */
     eyebrowKey?: string;
+    /**
+     * Restricts the workspace to exactly one file.
+     *
+     * Some operations process a single document — Bates numbering stamps one
+     * PDF, and its engine op takes one buffer, not a list. Offering a
+     * multi-file picker on such a route invites a user to select three
+     * documents and then quietly process only the first, which is worse than
+     * saying so. When this is set, the file input rejects a multiple
+     * selection, a new selection *replaces* the previous one rather than
+     * appending to it, and a multi-file drop is refused outright with an
+     * explanation instead of being silently truncated.
+     *
+     * Off by default: the routes that genuinely merge or pack files keep
+     * their multi-file behaviour.
+     */
+    singleFile?: boolean;
   } = $props();
 
   // An explicit `locale` prop wins; otherwise the `[locale]` layout's context
@@ -80,6 +97,14 @@
   let values = $state<Record<string, string | number | boolean>>({});
   let seeded = false;
   let status = $state('');
+  /**
+   * The rejection message, kept apart from `status`.
+   *
+   * `status` is a polite live region for progress; a refusal is not progress,
+   * and announcing it politely would let a screen-reader user miss it. The
+   * error is rendered in an assertive region instead, so it interrupts.
+   */
+  let error = $state('');
   const structuredData = $derived(
     softwareApplicationLd({ name: title, description, path: page.url.pathname }),
   );
@@ -91,15 +116,47 @@
     }
   });
 
+  /**
+   * The "ready locally" wording for a given number of loaded files.
+   *
+   * A single-file route shows the singular form the moment one document is
+   * active and nothing at all when none is: "0 files ready locally." reads
+   * like a claim about a set the route does not have. The multi-file routes
+   * keep their existing plural wording unchanged.
+   */
+  function readyText(count: number): string {
+    if (singleFile) {
+      return count === 1 ? t('shell.files.ready', '1 file ready locally.') : '';
+    }
+    return t(
+      count === 1 ? 'shell.files.ready' : 'shell.files.readyPlural',
+      count === 1 ? '1 file ready locally.' : `${count} files ready locally.`,
+      count,
+    );
+  }
+  /** The same wording, bound to the current file count. */
+  const readyLabel = $derived(readyText(files.length));
+
   async function selectFiles(list: FileList | null) {
-    files = list ? [...files, ...Array.from(list)] : files;
-    status = files.length
-      ? t(
-          files.length === 1 ? 'shell.files.ready' : 'shell.files.readyPlural',
-          files.length === 1 ? '1 file ready locally.' : `${files.length} files ready locally.`,
-          files.length,
-        )
-      : '';
+    if (!list) return;
+    const chosen = Array.from(list);
+    if (chosen.length === 0) return;
+
+    // A single-file route refuses a multi-file selection rather than taking
+    // the first document and ignoring the rest. Truncating silently is the
+    // behaviour this replaces: the user picked three files, the page showed
+    // one, and the two they thought were stamped were never read.
+    if (singleFile && chosen.length > 1) {
+      rejectMultiple();
+      return;
+    }
+
+    // A single-file route replaces its selection instead of appending to it:
+    // choosing a second file discards the first rather than leaving the
+    // workspace holding both.
+    files = singleFile ? chosen.slice(0, 1) : [...files, ...chosen];
+    error = '';
+    status = readyText(files.length);
     const first = files[0];
     if (!first) {
       return;
@@ -108,8 +165,25 @@
   function changeOption(key: string, value: string | number | boolean) {
     values = { ...values, [key]: value };
   }
+  /**
+   * Refuses a drop of more than one file.
+   *
+   * The drop handler in `FileDrop` cannot report *how many* files arrived
+   * through `onchange`, because a drop bypasses the file input entirely and
+   * hands over its own `FileList`. `FileDrop` therefore rejects a multi-file
+   * drop itself and calls this, so the user is told why nothing happened
+   * rather than watching the drop silently do nothing.
+   *
+   * The refusal changes nothing else: the files already loaded stay loaded,
+   * because the refused drop is not a request to unload them.
+   */
+  function rejectMultiple() {
+    error = t('shell.files.singleOnly', 'Only one PDF file can be processed at a time.');
+    status = '';
+  }
   async function runTool() {
     if (!onrun || files.length === 0) return;
+    error = '';
     status = t('shell.status.working', 'Working locally…');
     try {
       const result = await onrun(files, values);
@@ -164,17 +238,18 @@
   {#if reason}
     <p class="unavailable" role="status">{reason}</p>
   {:else}
-    <FileDrop accept=".pdf,application/pdf" onchange={selectFiles} />
+    <FileDrop
+      accept=".pdf,application/pdf"
+      multiple={!singleFile}
+      onchange={selectFiles}
+      onreject={singleFile ? rejectMultiple : undefined}
+    />
     <div class="workspace">
       <div class="preview">
         <div class="toolbar">
-          <span
-            >{t(
-              files.length === 1 ? 'shell.files.ready' : 'shell.files.readyPlural',
-              files.length === 1 ? '1 file ready locally.' : `${files.length} files ready locally.`,
-              files.length,
-            )}</span
-          ><Button disabled={files.length === 0 || !onrun} onclick={runTool}>{action}</Button>
+          <span>{readyLabel}</span><Button disabled={files.length === 0 || !onrun} onclick={runTool}
+            >{action}</Button
+          >
         </div>
         {#each files as file (file.name || file)}
           <PdfPreview {file} {locale} onerror={(message) => (status = message)} />
@@ -183,6 +258,7 @@
       {#if options.length > 0}<OptionPanel fields={options} onchange={changeOption} />{/if}
     </div>
     <p class="status" role="status" aria-live="polite">{status}</p>
+    {#if error}<p class="error" role="alert">{error}</p>{/if}
   {/if}
 </section>
 
@@ -239,6 +315,10 @@
   .toolbar span,
   .status {
     color: var(--color-muted);
+  }
+  .error {
+    color: #9a2d24;
+    overflow-wrap: anywhere;
   }
   @media (max-width: 767px) {
     .tool-page {

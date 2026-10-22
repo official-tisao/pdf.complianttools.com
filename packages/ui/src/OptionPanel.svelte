@@ -8,6 +8,17 @@
     max?: number;
     step?: number;
     options?: readonly string[];
+    /**
+     * The text a select shows for each option, keyed by the option's value.
+     *
+     * A select's option text is copy the user reads, while the option's value
+     * is the parameter the engine receives. The two are only the same string
+     * when the parameter happens to read well on its own — `roman-uppercase`
+     * does not. The map keeps the value stable and lets the label say what the
+     * option means; an option with no entry falls back to its own value, so a
+     * field can label only the options whose value must not be shown verbatim.
+     */
+    optionLabels?: Readonly<Record<string, string>>;
     advanced?: boolean;
   };
 
@@ -41,8 +52,9 @@
           onchange={(event) => update(field, event)}
           aria-label={field.label}
         >
-          {#each field.options ?? [] as option (option)}<option value={option}>{option}</option
-            >{/each}
+          {#each field.options ?? [] as option (option)}
+            <option value={option}>{field.optionLabels?.[option] ?? option}</option>
+          {/each}
         </select>
       {:else if field.type === 'checkbox'}
         <input
