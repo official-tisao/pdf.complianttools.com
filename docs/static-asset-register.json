@@ -17,7 +17,7 @@
     "source": "Generated in-repository by scripts/generate-sitemap.mjs from the route manifest",
     "license": "CC0-1.0",
     "licenseUrl": "https://creativecommons.org/public-domain/cc0/",
-    "sha256": "1f9670dfe6002f5ccd4926e391446f5a15b03de94975a9bb9f9ae1eba9e04d2f",
+    "sha256": "353d84a5d2929121a934d80c3dbe75187e025709a50da3fc3852f56a9c75a1b6",
     "checked": "2026-10-20"
   },
   "apps/web/static/offline.html": {

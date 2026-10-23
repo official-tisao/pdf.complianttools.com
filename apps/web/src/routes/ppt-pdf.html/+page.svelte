@@ -4,7 +4,7 @@
 
 <ConversionTool
   title="PowerPoint to PDF"
-  description="Convert PPTX slides to a PDF locally while preserving slide order and extracted text."
+  description="Convert PPTX slides to a PDF locally, keeping the slide size, shapes, colours, and text positions, and following the deck's master, layout, and theme. One slide becomes one page, laid out to match the original."
   format="pptx"
   accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"
 />
