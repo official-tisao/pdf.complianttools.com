@@ -399,7 +399,7 @@ and workflow workstreams do not wait for this subsection's tool completion.
 
 #### P2-04 · Bates numbering (T13)
 
-- [x] Prefix/suffix, zero-padding, starting number, position — **ours**, no external dependency
+- [x] Prefix/suffix, zero-padding, starting number, position, numbering type, alignment — **ours**, no external dependency
 - **Spec:** README §6 · **Done when:** STCC; a 500-page batch numbers correctly and sequentially
 
 #### P2-05 · Web-optimize, repair, rasterize, flatten (T15–T18)

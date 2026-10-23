@@ -130,6 +130,27 @@ export const toolOptions: Record<string, OptionField[]> = {
     { key: 'suffix', label: 'Suffix', type: 'text', value: '' },
     { key: 'start', label: 'Starting number', type: 'number', value: 1, min: 0 },
     { key: 'padding', label: 'Zero padding', type: 'number', value: 6, min: 1, max: 12, step: 1 },
+    {
+      key: 'numberingType',
+      label: 'Numbering Type',
+      type: 'select',
+      value: 'numeric',
+      options: ['numeric', 'roman-lowercase', 'roman-uppercase', 'alphabetical-lowercase'],
+      optionLabels: {
+        numeric: 'Numeric (1, 2, 3...)',
+        'roman-lowercase': 'Roman Lowercase (i, ii, iii...)',
+        'roman-uppercase': 'Roman Uppercase (I, II, III...)',
+        'alphabetical-lowercase': 'Alphabetical Lowercase (a, b, c...)',
+      },
+    },
+    {
+      key: 'alignment',
+      label: 'Alignment',
+      type: 'select',
+      value: 'right',
+      options: ['left', 'center', 'right'],
+      optionLabels: { left: 'Left', center: 'Center', right: 'Right' },
+    },
   ],
   // `optimize-web` intentionally has no options. `optimizeForWeb` ignored its
   // `progressive` flag and fell through to `compressPdf` with the balanced

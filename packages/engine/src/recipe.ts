@@ -112,6 +112,10 @@ export const operationSchemas = {
     position: z
       .enum(['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'])
       .default('bottom-right'),
+    numberingType: z
+      .enum(['numeric', 'roman-lowercase', 'roman-uppercase', 'alphabetical-lowercase'])
+      .default('numeric'),
+    alignment: z.enum(['left', 'center', 'right']).optional(),
   }),
   compress: z.object({
     preset: z.enum(['extreme', 'balanced', 'high-quality', 'custom']).default('balanced'),
