@@ -3,7 +3,12 @@
  * Provides safe readers for OLE2, TIFF, PUB/HWP/INDD with graceful ODT/DOCX fallback.
  */
 
-export interface OLE2Entry { sid: number; type: number; name: string; data: Uint8Array; }
+export interface OLE2Entry {
+  sid: number;
+  type: number;
+  name: string;
+  data: Uint8Array;
+}
 
 /** Pure-JS CFB (OLE2) reader — parses compound file streams in memory. */
 export function readOLE2Compound(bytes: Uint8Array): OLE2Entry[] {
@@ -21,11 +26,18 @@ export function readOLE2Compound(bytes: Uint8Array): OLE2Entry[] {
     const textChunks: string[] = [];
     let j = 0;
     while (j < data.length - 1) {
-      if (data[j] === 0 && data[j + 1] === 0) { j += 2; continue; }
+      if (data[j] === 0 && data[j + 1] === 0) {
+        j += 2;
+        continue;
+      }
       const start = j;
       while (j < data.length && !(data[j] === 0 && (j === 0 || data[j - 1] !== 0))) j++;
       if (j - start > 3) {
-        try { textChunks.push(new TextDecoder('latin1').decode(data.subarray(start, j)).trim()); } catch { /* ignore */ }
+        try {
+          textChunks.push(new TextDecoder('latin1').decode(data.subarray(start, j)).trim());
+        } catch {
+          /* ignore */
+        }
       }
       j++;
     }
@@ -35,7 +47,13 @@ export function readOLE2Compound(bytes: Uint8Array): OLE2Entry[] {
 }
 
 /** TIFF multi-page decoder — lightweight tag scanner in browser memory. */
-export interface TiffPageInfo { page: number; w: number; h: number; stripByteOffsets: number[]; stripByteCounts: number[]; }
+export interface TiffPageInfo {
+  page: number;
+  w: number;
+  h: number;
+  stripByteOffsets: number[];
+  stripByteCounts: number[];
+}
 
 export function scanTiffPages(bytes: Uint8Array): TiffPageInfo[] {
   const pages: TiffPageInfo[] = [];
@@ -50,11 +68,14 @@ export function scanTiffPages(bytes: Uint8Array): TiffPageInfo[] {
   };
   let ifd = readU32(4);
   while (ifd && ifd < bytes.length && pages.length < 20) {
-    const count = readU16(ifd); let w = 0, h = 0;
+    const count = readU16(ifd);
+    let w = 0,
+      h = 0;
     for (let i = 0; i < count; i++) {
       const tag = readU16(ifd + 2 + i * 12);
       const val = readU32(ifd + 2 + i * 12 + 8);
-      if (tag === 256) w = val; else if (tag === 257) h = val;
+      if (tag === 256) w = val;
+      else if (tag === 257) h = val;
     }
     if (w && h) {
       const stripOffsets: number[] = [];
@@ -65,9 +86,16 @@ export function scanTiffPages(bytes: Uint8Array): TiffPageInfo[] {
         if (tag === 273) stripOffsets.push(readU32(ifd + 2 + i * 12 + 8));
         if (tag === 279) stripCounts.push(readU32(ifd + 2 + i * 12 + 8));
       }
-      pages.push({ page: pages.length, w, h, stripByteOffsets: stripOffsets, stripByteCounts: stripCounts });
+      pages.push({
+        page: pages.length,
+        w,
+        h,
+        stripByteOffsets: stripOffsets,
+        stripByteCounts: stripCounts,
+      });
     }
-    const next = readU32(ifd + 2 + count * 12); ifd = next || 0;
+    const next = readU32(ifd + 2 + count * 12);
+    ifd = next || 0;
   }
   return pages;
 }
@@ -83,7 +111,10 @@ export interface ProprietaryResult {
   openXmlParts: string[];
 }
 
-export function proprietaryIngest(bytes: Uint8Array, fmt: 'pub' | 'hwp' | 'indd'): ProprietaryResult {
+export function proprietaryIngest(
+  bytes: Uint8Array,
+  fmt: 'pub' | 'hwp' | 'indd',
+): ProprietaryResult {
   const skip = fmt === 'pub' ? 32 : fmt === 'hwp' ? 512 : 256;
   const body = bytes.subarray(skip);
   const mappedSchema = fmt === 'pub' ? 'odt' : 'docx';
@@ -91,11 +122,18 @@ export function proprietaryIngest(bytes: Uint8Array, fmt: 'pub' | 'hwp' | 'indd'
   const textChunks: string[] = [];
   let i = 0;
   while (i < body.length - 1) {
-    if (body[i] === 0 && body[i + 1] === 0) { i += 2; continue; }
+    if (body[i] === 0 && body[i + 1] === 0) {
+      i += 2;
+      continue;
+    }
     const start = i;
     while (i < body.length && !(body[i] === 0 && (i === 0 || body[i - 1] !== 0))) i++;
     if (i - start > 2) {
-      try { textChunks.push(new TextDecoder('latin1').decode(body.subarray(start, i)).trim()); } catch { /* ignore */ }
+      try {
+        textChunks.push(new TextDecoder('latin1').decode(body.subarray(start, i)).trim());
+      } catch {
+        /* ignore */
+      }
     }
     i++;
   }
@@ -103,13 +141,29 @@ export function proprietaryIngest(bytes: Uint8Array, fmt: 'pub' | 'hwp' | 'indd'
   // Generate minimal compliant OpenXML containers (Word or Excel style)
   const openXmlParts: string[] = [];
   if (mappedSchema === 'docx') {
-    openXmlParts.push(`<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>${escapeXml(extractedText.substring(0, 2000))}</w:t></w:r></w:p></w:body></w:document>`);
+    openXmlParts.push(
+      `<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>${escapeXml(extractedText.substring(0, 2000))}</w:t></w:r></w:p></w:body></w:document>`,
+    );
   } else {
-    openXmlParts.push(`<?xml version="1.0"?><office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"><office:body><text:p>${escapeXml(extractedText.substring(0, 2000))}</text:p></office:body></office:document-content>`);
+    openXmlParts.push(
+      `<?xml version="1.0"?><office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"><office:body><text:p>${escapeXml(extractedText.substring(0, 2000))}</text:p></office:body></office:document-content>`,
+    );
   }
-  return { fmt, skipped: skip, mappedSchema, bodyLength: body.length, safeLocalOnly: true, extractedText, openXmlParts };
+  return {
+    fmt,
+    skipped: skip,
+    mappedSchema,
+    bodyLength: body.length,
+    safeLocalOnly: true,
+    extractedText,
+    openXmlParts,
+  };
 }
 
 function escapeXml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }

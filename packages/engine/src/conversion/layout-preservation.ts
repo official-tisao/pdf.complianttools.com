@@ -5,7 +5,16 @@
  */
 
 import { getDocument } from 'pdfjs-dist';
-export interface TextItem { str: string; transform: number[]; width?: number; height?: number; fontName?: string; fontSize?: number; color?: number[]; textAlign?: string; }
+export interface TextItem {
+  str: string;
+  transform: number[];
+  width?: number;
+  height?: number;
+  fontName?: string;
+  fontSize?: number;
+  color?: number[];
+  textAlign?: string;
+}
 export type TextMarkedContent = unknown;
 import { zipSync } from 'fflate';
 
@@ -15,13 +24,17 @@ import { zipSync } from 'fflate';
 
 export interface LayoutCell {
   text: string;
-  x: number; y: number; w: number; h: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
   fontName: string;
   fontSize: number;
   rgb: [number, number, number]; // 0-1
   fillRgb?: [number, number, number];
   align: 'left' | 'center' | 'right';
-  bold: boolean; italic: boolean;
+  bold: boolean;
+  italic: boolean;
 }
 
 export interface ComponentBlock {
@@ -49,7 +62,8 @@ export async function extractLayoutGrid(pdfBuffer: ArrayBuffer): Promise<Compone
         const y = viewport.height - tx[5];
         return {
           text: it.str,
-          x, y,
+          x,
+          y,
           w: it.width ?? 0,
           h: it.height ?? 0,
           fontName: (it.fontName as string) ?? 'Unknown',
@@ -85,14 +99,22 @@ function groupBodyComponents(cells: LayoutCell[]): ComponentBlock[] {
       current = [c];
     }
   }
-  if (current.length) blocks.push({ kind: 'body-paragraph', bbox: bboxOf(current), cells: current });
+  if (current.length)
+    blocks.push({ kind: 'body-paragraph', bbox: bboxOf(current), cells: current });
   return blocks;
 }
 
 function bboxOf(cells: LayoutCell[]) {
-  const xs = cells.map((c) => c.x), ys = cells.map((c) => c.y);
-  const x = Math.min(...xs), y = Math.min(...ys);
-  return { x, y, w: Math.max(...cells.map((c) => c.x + c.w)) - x, h: Math.max(...cells.map((c) => c.y + c.h)) - y };
+  const xs = cells.map((c) => c.x),
+    ys = cells.map((c) => c.y);
+  const x = Math.min(...xs),
+    y = Math.min(...ys);
+  return {
+    x,
+    y,
+    w: Math.max(...cells.map((c) => c.x + c.w)) - x,
+    h: Math.max(...cells.map((c) => c.y + c.h)) - y,
+  };
 }
 
 // ------------------------------------------------------------------
@@ -100,7 +122,9 @@ function bboxOf(cells: LayoutCell[]) {
 // ------------------------------------------------------------------
 
 export interface OLE2Stream {
-  name: string; type: number; data: Uint8Array;
+  name: string;
+  type: number;
+  data: Uint8Array;
 }
 
 export function decodeOLE2(bytes: Uint8Array): OLE2Stream[] {
@@ -112,32 +136,50 @@ export function decodeOLE2(bytes: Uint8Array): OLE2Stream[] {
 }
 
 export interface TiffPage {
-  index: number; width: number; height: number; bits: number;
+  index: number;
+  width: number;
+  height: number;
+  bits: number;
   data: Uint8Array;
 }
 
 export function decodeTiff(bytes: Uint8Array, maxPages = 10): TiffPage[] {
   const pages: TiffPage[] = [];
   const order = bytes[0] === 0x49 ? 'little' : 'big';
-  const magic = order === 'little' ? new DataView(bytes.buffer, bytes.byteOffset, 2).getUint16(0, true) : new DataView(bytes.buffer, bytes.byteOffset, 2).getUint16(0, false);
+  const magic =
+    order === 'little'
+      ? new DataView(bytes.buffer, bytes.byteOffset, 2).getUint16(0, true)
+      : new DataView(bytes.buffer, bytes.byteOffset, 2).getUint16(0, false);
   if (magic !== 42) return pages;
-  let ifdOffset = order === 'little' ? new DataView(bytes.buffer, bytes.byteOffset + 4, 4).getUint32(0, true) : new DataView(bytes.buffer, bytes.byteOffset + 4, 4).getUint32(0, false);
+  let ifdOffset =
+    order === 'little'
+      ? new DataView(bytes.buffer, bytes.byteOffset + 4, 4).getUint32(0, true)
+      : new DataView(bytes.buffer, bytes.byteOffset + 4, 4).getUint32(0, false);
   for (let p = 0; p < maxPages; p++) {
     if (ifdOffset === 0 || ifdOffset > bytes.length) break;
-    const dv = new DataView(bytes.buffer, bytes.byteOffset + ifdOffset, bytes.byteLength - ifdOffset);
+    const dv = new DataView(
+      bytes.buffer,
+      bytes.byteOffset + ifdOffset,
+      bytes.byteLength - ifdOffset,
+    );
     const count = order === 'little' ? dv.getUint16(0, true) : dv.getUint16(0, false);
-    let w = 0, h = 0, b = 0;
+    let w = 0,
+      h = 0,
+      b = 0;
     for (let i = 0; i < count; i++) {
       const entryOff = 2 + i * 12;
       const tag = order === 'little' ? dv.getUint16(entryOff, true) : dv.getUint16(entryOff, false);
-      const val = order === 'little' ? dv.getUint32(entryOff + 8, true) : dv.getUint32(entryOff + 8, false);
+      const val =
+        order === 'little' ? dv.getUint32(entryOff + 8, true) : dv.getUint32(entryOff + 8, false);
       if (tag === 256) w = val;
       if (tag === 257) h = val;
       if (tag === 258) b = val;
     }
-    if (w && h) pages.push({ index: p, width: w, height: h, bits: b, data: bytes.subarray(ifdOffset) });
+    if (w && h)
+      pages.push({ index: p, width: w, height: h, bits: b, data: bytes.subarray(ifdOffset) });
     const nextOffset = 2 + count * 12;
-    const nextIFD = order === 'little' ? dv.getUint32(nextOffset, true) : dv.getUint32(nextOffset, false);
+    const nextIFD =
+      order === 'little' ? dv.getUint32(nextOffset, true) : dv.getUint32(nextOffset, false);
     ifdOffset = nextIFD === 0 ? 0 : nextIFD;
     if (ifdOffset === 0) break;
   }
@@ -151,13 +193,19 @@ export interface ProprietaryFallback {
   notes: string;
 }
 
-export function parseProprietary(bytes: Uint8Array, hint: 'pub' | 'hwp' | 'indd'): ProprietaryFallback {
+export function parseProprietary(
+  bytes: Uint8Array,
+  hint: 'pub' | 'hwp' | 'indd',
+): ProprietaryFallback {
   const skip = hint === 'pub' ? 32 : hint === 'hwp' ? 512 : 256;
   return {
     format: hint,
     skippedBytes: skip,
     mappedSchema: hint === 'pub' ? 'odt' : 'docx',
-    notes: 'Proprietary header skipped; body mapped via heuristic stream to ' + (hint === 'pub' ? 'ODT' : 'DOCX') + ' locally.',
+    notes:
+      'Proprietary header skipped; body mapped via heuristic stream to ' +
+      (hint === 'pub' ? 'ODT' : 'DOCX') +
+      ' locally.',
   };
 }
 
@@ -179,23 +227,29 @@ export function generateOOXMLComponents(components: ComponentBlock[]): OOXMLChun
     })
     .join('');
 
-  const headerTable = headerRows ? `<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid><w:gridCol w:w="5000"/></w:tblGrid>${headerRows}</w:tbl>` : '';
+  const headerTable = headerRows
+    ? `<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid><w:gridCol w:w="5000"/></w:tblGrid>${headerRows}</w:tbl>`
+    : '';
 
   // Body paragraphs -> w:p with w:pPr (alignment) and properly nested w:r with w:rPr
   const bodyParas = components
     .filter((c) => c.kind === 'body-paragraph')
     .map((c) => {
-      const runs = c.cells.map((cl) => {
-        const rPrTags = [
-          `<w:color w:val="${rgbToHex(cl.rgb)}"/>`,
-          `<w:sz w:val="${Math.round(cl.fontSize * 2)}"/>`,
-          cl.bold ? '<w:b/>' : '',
-          cl.italic ? '<w:i/>' : '',
-        ].filter(Boolean).join('');
-        return `<w:r><w:rPr>${rPrTags}</w:rPr><w:t>${escapeXml(cl.text)}</w:t></w:r>`;
-      }).join('');
+      const runs = c.cells
+        .map((cl) => {
+          const rPrTags = [
+            `<w:color w:val="${rgbToHex(cl.rgb)}"/>`,
+            `<w:sz w:val="${Math.round(cl.fontSize * 2)}"/>`,
+            cl.bold ? '<w:b/>' : '',
+            cl.italic ? '<w:i/>' : '',
+          ]
+            .filter(Boolean)
+            .join('');
+          return `<w:r><w:rPr>${rPrTags}</w:rPr><w:t>${escapeXml(cl.text)}</w:t></w:r>`;
+        })
+        .join('');
 
-      const paraAlign = (c.cells[0] && c.cells[0].align) ? c.cells[0].align : 'left';
+      const paraAlign = c.cells[0] && c.cells[0].align ? c.cells[0].align : 'left';
       const pPr = `<w:pPr><w:jc w:val="${paraAlign}"/></w:pPr>`;
       return `<w:p>${pPr}${runs}</w:p>`;
     })
@@ -215,19 +269,32 @@ export function generateOOXMLComponents(components: ComponentBlock[]): OOXMLChun
 }
 
 function rgbToHex(rgb: [number, number, number]): string {
-  const toHex = (n: number) => Math.round(n * 255).toString(16).padStart(2, '0');
+  const toHex = (n: number) =>
+    Math.round(n * 255)
+      .toString(16)
+      .padStart(2, '0');
   return toHex(rgb[0]) + toHex(rgb[1]) + toHex(rgb[2]);
 }
 
 function escapeXml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 export function assembleDocx(chunks: OOXMLChunk[]): Uint8Array {
   const files: Record<string, Uint8Array> = {};
-  files['[Content_Types].xml'] = new TextEncoder().encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/></Types>`);
-  files['_rels/.rels'] = new TextEncoder().encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
-  files['word/_rels/document.xml.rels'] = new TextEncoder().encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`);
+  files['[Content_Types].xml'] = new TextEncoder().encode(
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/></Types>`,
+  );
+  files['_rels/.rels'] = new TextEncoder().encode(
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`,
+  );
+  files['word/_rels/document.xml.rels'] = new TextEncoder().encode(
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
+  );
   for (const ch of chunks) files[ch.part] = new TextEncoder().encode(ch.xml);
   return zipSync(files);
 }

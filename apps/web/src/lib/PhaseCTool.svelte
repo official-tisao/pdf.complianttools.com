@@ -76,7 +76,7 @@
   let text = $state('');
   let note = $state('');
   let fieldName = $state('name');
-  let fieldType = $state<'text'|'checkbox'>('text');
+  let fieldType = $state<'text' | 'checkbox'>('text');
   let fieldX = $state(72);
   let fieldY = $state(680);
   let recipients = $state('recipient@example.test');
@@ -219,7 +219,15 @@
       } else if (operation === 'create-form') {
         save(
           await engine.createFormPdf(bytes!, [
-            { name: fieldName || 'field', type: fieldType === 'checkbox' ? 'checkbox' : 'text', page, x: fieldX, y: fieldY, width: 220, height: 24 },
+            {
+              name: fieldName || 'field',
+              type: fieldType === 'checkbox' ? 'checkbox' : 'text',
+              page,
+              x: fieldX,
+              y: fieldY,
+              width: 220,
+              height: 24,
+            },
           ]),
           'fillable-form.pdf',
           'application/pdf',
@@ -388,7 +396,7 @@
       onerror={(message) => (error = message)}
       onclick={(event: MouseEvent) => {
         if (operation !== 'create-form') return;
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const target = (event.currentTarget as any) || null;
         if (!target) return;
         const rect = target.getBoundingClientRect();
@@ -508,19 +516,43 @@
       />
       <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
     {:else if operation === 'create-form'}
-      <label>{t('phase.create.fieldLabel', 'Field Label / Name')}<input bind:value={fieldName} placeholder="Field identifier" /></label>
-      <label>{t('phase.create.fieldType', 'Field Type')}
+      <label
+        >{t('phase.create.fieldLabel', 'Field Label / Name')}<input
+          bind:value={fieldName}
+          placeholder="Field identifier"
+        /></label
+      >
+      <label
+        >{t('phase.create.fieldType', 'Field Type')}
         <select bind:value={fieldType}>
           <option value="text">{t('phase.create.textField', 'Text Field')}</option>
           <option value="checkbox">{t('phase.create.checkbox', 'Checkbox')}</option>
         </select>
       </label>
-      <label>{t('phase.create.pagePosition', 'Page Position')}
+      <label
+        >{t('phase.create.pagePosition', 'Page Position')}
         <input type="number" min="1" bind:value={page} />
       </label>
-      <label>{t('phase.create.xPosition', 'X Position (pt)')}<input type="number" max="612" bind:value={fieldX} /></label>
-      <label>{t('phase.create.yPosition', 'Y Position (pt)')}<input type="number" max="792" bind:value={fieldY} /></label>
-      <p class="hint">{t('phase.create.hint', 'Page bounds are roughly 612pt wide by 792pt tall. Top margin starts at ~750pt; bottom margin ends at ~50pt.')}</p>
+      <label
+        >{t('phase.create.xPosition', 'X Position (pt)')}<input
+          type="number"
+          max="612"
+          bind:value={fieldX}
+        /></label
+      >
+      <label
+        >{t('phase.create.yPosition', 'Y Position (pt)')}<input
+          type="number"
+          max="792"
+          bind:value={fieldY}
+        /></label
+      >
+      <p class="hint">
+        {t(
+          'phase.create.hint',
+          'Page bounds are roughly 612pt wide by 792pt tall. Top margin starts at ~750pt; bottom margin ends at ~50pt.',
+        )}
+      </p>
     {:else if operation !== 'password-generator'}
       <label class={operation === 'watermark' ? 'wm-label' : ''}
         >{t(

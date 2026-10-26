@@ -432,7 +432,9 @@ export function isFormatAvailable(format: FormatId, direction: ConversionDirecti
 
 export function getAvailableFormats(direction: ConversionDirection): readonly FormatCapability[] {
   return FORMAT_REGISTRY.filter(
-    (capability) => (capability.status === 'supported' || capability.status === 'available') && capability.directions.includes(direction),
+    (capability) =>
+      (capability.status === 'supported' || capability.status === 'available') &&
+      capability.directions.includes(direction),
   );
 }
 

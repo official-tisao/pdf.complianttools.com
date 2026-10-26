@@ -892,7 +892,10 @@ export function assertPageOrderEquivalent(
 
 export type BookmarkNode = { title: string; page: number };
 
-export async function updatePdfBookmarks(pdfBytes: Uint8Array, bookmarkTree: BookmarkNode[]): Promise<Uint8Array> {
+export async function updatePdfBookmarks(
+  pdfBytes: Uint8Array,
+  bookmarkTree: BookmarkNode[],
+): Promise<Uint8Array> {
   const document = await load(pdfBytes, 'update bookmarks');
   // Stub: write /Outlines dict through the catalog; full low-level destination
   // resolution (PDFHexString utf-16BE titles, named destinations) deferred to

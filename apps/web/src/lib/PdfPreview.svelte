@@ -94,7 +94,7 @@
       onselect={(pageNumber) => void selectPreviewPage(pageNumber)}
     />
     {#if selectedPreview}
-      <div class="selected-page" aria-live="polite" onclick={onclick}>
+      <div class="selected-page" aria-live="polite" {onclick}>
         <h2>{t('shell.preview.selected', 'Selected page {value}', selectedPage)}</h2>
         <img
           src={selectedPreview}

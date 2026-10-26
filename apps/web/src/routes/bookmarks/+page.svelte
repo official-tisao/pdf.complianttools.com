@@ -1,6 +1,6 @@
 <script lang="ts">
   import ToolWorkspace from '$lib/ToolWorkspace.svelte';
-    import { firstBytes, download } from '$lib/pdf-download';
+  import { firstBytes, download } from '$lib/pdf-download';
 
   export type BookmarkNode = { title: string; page: number };
 
@@ -77,8 +77,20 @@
       <tbody>
         {#each bookmarks as b, i (i)}
           <tr>
-            <td><input bind:value={b.title} oninput={() => updateBookmark(i, 'title', b.title)} /></td>
-            <td><input type="number" min="1" bind:value={b.page} oninput={() => updateBookmark(i, 'page', b.page)} /></td>
+            <td
+              ><input
+                bind:value={b.title}
+                oninput={() => updateBookmark(i, 'title', b.title)}
+              /></td
+            >
+            <td
+              ><input
+                type="number"
+                min="1"
+                bind:value={b.page}
+                oninput={() => updateBookmark(i, 'page', b.page)}
+              /></td
+            >
             <td><button onclick={() => deleteBookmark(i)}>Delete</button></td>
           </tr>
         {/each}
@@ -89,11 +101,36 @@
 {/if}
 
 <style>
-  .bookmarks-panel { margin-top: 24px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
-  .toolbar { display: flex; gap: 12px; margin-bottom: 12px; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-  input { width: 100%; padding: 4px; }
-  button { padding: 6px 10px; }
-  .status { color: #555; margin-top: 8px; }
+  .bookmarks-panel {
+    margin-top: 24px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+  }
+  .toolbar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th,
+  td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+  }
+  input {
+    width: 100%;
+    padding: 4px;
+  }
+  button {
+    padding: 6px 10px;
+  }
+  .status {
+    color: #555;
+    margin-top: 8px;
+  }
 </style>

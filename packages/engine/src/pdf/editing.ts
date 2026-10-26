@@ -729,8 +729,7 @@ export async function createFormPdf(
       const bg = (checkBox as unknown).setBackgroundColor;
       if (typeof bg === 'function') bg.call(checkBox);
       checkBox.addToPage(page, appearance);
-    }
-    else if (field.type === 'radio') {
+    } else if (field.type === 'radio') {
       const group = form.createRadioGroup(field.name);
       for (const option of field.options ?? ['Option 1', 'Option 2'])
         group.addOptionToPage(option, page, appearance);
