@@ -1,6 +1,6 @@
 {
   "generated": "by scripts/generate-route-manifest.mjs — do not hand-edit",
-  "routeCount": 149,
+  "routeCount": 157,
   "deadControls": [
     "/pdf-to-pdfa",
     "/rasterize-pdf"
@@ -190,6 +190,13 @@
     },
     {
       "path": "/design-file-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/doc-to-pdf",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,
@@ -490,6 +497,13 @@
       "op": null
     },
     {
+      "path": "/pdf-to-doc",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/pdf-to-docx",
       "shell": "ConversionTool",
       "localized": false,
@@ -658,6 +672,13 @@
       "op": null
     },
     {
+      "path": "/pdf-to-ppt",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/pdf-to-pptx",
       "shell": "ConversionTool",
       "localized": false,
@@ -679,6 +700,13 @@
       "op": null
     },
     {
+      "path": "/pdf-to-tiff",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/pdf-to-txt",
       "shell": "ConversionTool",
       "localized": false,
@@ -687,6 +715,13 @@
     },
     {
       "path": "/pdf-to-txt.html",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/pdf-to-xls",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,
@@ -729,6 +764,13 @@
     },
     {
       "path": "/ppt-pdf.html",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/ppt-to-pdf",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,
@@ -917,6 +959,13 @@
       "op": null
     },
     {
+      "path": "/tiff-to-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
       "path": "/txt-to-pdf",
       "shell": "ConversionTool",
       "localized": false,
@@ -1009,6 +1058,13 @@
     },
     {
       "path": "/word-pdf",
+      "shell": "ConversionTool",
+      "localized": false,
+      "opBinding": null,
+      "op": null
+    },
+    {
+      "path": "/xls-to-pdf",
       "shell": "ConversionTool",
       "localized": false,
       "opBinding": null,
