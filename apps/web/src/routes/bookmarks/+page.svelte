@@ -2,7 +2,7 @@
   import ToolWorkspace from '$lib/ToolWorkspace.svelte';
   import { firstBytes, download } from '$lib/pdf-download';
 
-  export type BookmarkNode = { title: string; page: number };
+  type BookmarkNode = { title: string; page: number };
 
   let bookmarks = $state<BookmarkNode[]>([]);
   let file = $state<File | null>(null);

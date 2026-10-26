@@ -42,7 +42,7 @@
         ? 'PDF pages are rendered directly into compressed slide segments'
         : selectedFormat === 'xlsx'
           ? 'PDF table data is extracted and written into Excel-compatible cells'
-          : selectedFormat === 'md'
+          : selectedFormat === 'markdown'
             ? 'PDF text flow is mapped to Markdown headings and paragraphs'
             : selectedFormat === 'txt'
               ? 'PDF text content is extracted into plain UTF-8 segments'
@@ -118,12 +118,24 @@
             raw,
             ext === '.ppt' ? 'pub' : ext === '.xls' ? 'hwp' : 'indd',
           );
-          downloadHref = URL.createObjectURL(
-            new Blob(
-              [new Uint8Array(mapped.fallback && mapped.fallback.length ? mapped.fallback : raw)],
-              { type: 'application/vnd.openxmlformats-officedocument' },
-            ),
-          );
+          if (mapped.mappedSchema === 'docx') {
+            const docx = assembleDocx(
+              mapped.openXmlParts.map((xml) => ({ part: 'word/document.xml', xml })),
+            );
+            selectedFormat = 'docx';
+            downloadHref = URL.createObjectURL(
+              new Blob([new Uint8Array(docx).buffer], {
+                type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+              }),
+            );
+            status = `Legacy content extracted locally; downloaded as DOCX (${mapped.extractedText.length} text characters).`;
+          } else {
+            selectedFormat = 'txt';
+            downloadHref = URL.createObjectURL(
+              new Blob([mapped.extractedText], { type: 'text/plain;charset=utf-8' }),
+            );
+            status = `Legacy content extracted locally as plain text (${mapped.extractedText.length} text characters); ODT writing is unavailable.`;
+          }
         } else {
           const entries = readOLE2Compound(raw);
           status = `Legacy stream ingested; ${entries.length} compound entry stream(s) mapped to modern OpenXML locally.`;
@@ -144,7 +156,7 @@
       status = 'Layout preserved; mapping to OpenXML...';
       const chunks = generateOOXMLComponents(layoutBlocks);
       const docxBuffer = assembleDocx(chunks);
-      const blob = new Blob([docxBuffer], {
+      const blob = new Blob([new Uint8Array(docxBuffer).buffer], {
         type: 'application/vnd.openxmlformats-officedocument',
       });
       downloadHref = URL.createObjectURL(blob);
@@ -246,14 +258,14 @@
     font-weight: 600;
   }
   select,
-  input,
-  textarea {
+  :global(input),
+  :global(textarea) {
     border: 1px solid var(--color-hairline);
     border-radius: 10px;
     font: inherit;
     padding: 12px;
   }
-  label span {
+  :global(label span) {
     color: var(--color-muted);
     font-size: 0.875rem;
     font-weight: 400;
@@ -261,12 +273,6 @@
   .download {
     color: inherit;
     font-weight: 600;
-  }
-  .unavailable {
-    margin-top: 56px;
-  }
-  li {
-    margin: 10px 0;
   }
   .hidden-infra {
     display: none;

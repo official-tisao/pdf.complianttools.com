@@ -3,7 +3,7 @@
   Not rendered by default; re-activate via route or tab when needed.
 -->
 <script lang="ts">
-  let { pastedHtml }: { pastedHtml: string } = $props();
+  let { pastedHtml = $bindable() }: { pastedHtml: string } = $props();
   // Bidirectional bind preserved via oninput so parent state updates when source activates
 </script>
 

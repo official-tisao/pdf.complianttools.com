@@ -3,7 +3,7 @@
   Not rendered by default; requires Relay configuration when activated.
 -->
 <script lang="ts">
-  let { remoteUrl }: { remoteUrl: string } = $props();
+  let { remoteUrl = $bindable() }: { remoteUrl: string } = $props();
 </script>
 
 <label>
