@@ -34,3 +34,4 @@ export * from './pdf/compare.js';
 export * from './ocr/index.js';
 export * from './pdf/editing-types.js';
 export * from './pdf/editing.js';
+export { updatePdfBookmarks } from './pdf/operations.js';

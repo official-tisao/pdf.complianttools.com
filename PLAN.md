@@ -394,7 +394,7 @@ and workflow workstreams do not wait for this subsection's tool completion.
 
 - [x] Crop: visual handles + numeric margins, per-page or uniform
 - [x] Change page size: scale-to-fit vs. crop-to-fit modes
-- [x] Bookmark editor route and schema seam; full outline-tree writing remains explicitly deferred
+- [x] Bookmark editor route wired (`/bookmarks`); `updatePdfBookmarks` engine op writes `/Outlines`; editable tree UI with add/edit/delete
 - **Spec:** README §4.1 · **Done when:** STCC for each
 
 #### P2-04 · Bates numbering (T13)

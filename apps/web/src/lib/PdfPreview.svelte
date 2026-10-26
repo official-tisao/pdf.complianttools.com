@@ -9,10 +9,12 @@
     file,
     locale: localeProp,
     onerror,
+    onclick,
   }: {
     file?: File;
     locale?: Locale;
     onerror?: (message: string) => void;
+    onclick?: (event: MouseEvent) => void;
   } = $props();
 
   const locale = $derived(localeProp ?? getLocaleContext());
@@ -92,7 +94,7 @@
       onselect={(pageNumber) => void selectPreviewPage(pageNumber)}
     />
     {#if selectedPreview}
-      <div class="selected-page" aria-live="polite">
+      <div class="selected-page" aria-live="polite" onclick={onclick}>
         <h2>{t('shell.preview.selected', 'Selected page {value}', selectedPage)}</h2>
         <img
           src={selectedPreview}
@@ -117,6 +119,7 @@
 
   .selected-page {
     margin-top: 0;
+    cursor: crosshair;
   }
 
   .selected-page h2 {

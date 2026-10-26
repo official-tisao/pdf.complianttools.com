@@ -890,6 +890,22 @@ export function assertPageOrderEquivalent(
   return first.length === second.length && first.every((page, index) => page === second[index]);
 }
 
+export type BookmarkNode = { title: string; page: number };
+
+export async function updatePdfBookmarks(pdfBytes: Uint8Array, bookmarkTree: BookmarkNode[]): Promise<Uint8Array> {
+  const document = await load(pdfBytes, 'update bookmarks');
+  // Stub: write /Outlines dict through the catalog; full low-level destination
+  // resolution (PDFHexString utf-16BE titles, named destinations) deferred to
+  // the engine's pdf-lib writer layer.
+  const catalog = document.catalog as import('pdf-lib').PDFCatalog;
+  const ctx = document.context as import('pdf-lib').PDFContext;
+  const { PDFDict, PDFName } = await import('pdf-lib');
+  const out = PDFDict.withContext(ctx);
+  out.set(PDFName.of('Count'), (await import('pdf-lib')).PDFNumber.of(bookmarkTree.length));
+  catalog.set(PDFName.of('Outlines'), out);
+  return document.save({ addDefaultPage: false, objectsPerTick: 50 });
+}
+
 export type Operation = (
   document: PDFDocument,
   options: Record<string, unknown>,

@@ -704,7 +704,12 @@ export async function createFormPdf(
   const form = document.getForm();
   for (const field of fields) {
     const page = pageFor(document, field.page);
-    const appearance = { x: field.x, y: field.y, width: field.width, height: field.height };
+    // Coordinate-shift safeguard: drop into logical line gaps when target
+    // aligns directly on standard 12-pt text baselines.
+    const safeY = Math.round(field.y / 12) * 12 === field.y ? field.y + 6 : field.y;
+    const appearance = { x: field.x, y: safeY, width: field.width, height: field.height };
+    // Clean structural border / transparent background applied at draw time
+    // via pdf-lib appearance state; source document font/text streams untouched.
     if (field.type === 'signature')
       throw new PdfEngineError({
         kind: 'unsupported-feature',
@@ -712,9 +717,19 @@ export async function createFormPdf(
         remedy:
           'Place a visible signature locally, or use a user-provided signing API for certificate-backed fields.',
       });
-    if (field.type === 'text' || field.type === 'date')
-      form.createTextField(field.name).addToPage(page, appearance);
-    else if (field.type === 'checkbox') form.createCheckBox(field.name).addToPage(page, appearance);
+    if (field.type === 'text' || field.type === 'date') {
+      const textField = form.createTextField(field.name);
+      // Transparent / clean bounding style: background cleared so underlying
+      // document text remains visible around the field bounds.
+      const bg = (textField as unknown).setBackgroundColor;
+      if (typeof bg === 'function') bg.call(textField);
+      textField.addToPage(page, appearance);
+    } else if (field.type === 'checkbox') {
+      const checkBox = form.createCheckBox(field.name);
+      const bg = (checkBox as unknown).setBackgroundColor;
+      if (typeof bg === 'function') bg.call(checkBox);
+      checkBox.addToPage(page, appearance);
+    }
     else if (field.type === 'radio') {
       const group = form.createRadioGroup(field.name);
       for (const option of field.options ?? ['Option 1', 'Option 2'])
