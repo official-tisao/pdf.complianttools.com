@@ -72,8 +72,8 @@ test('the manifest this spec enumerates is not stale', () => {
 });
 
 test('a route with a disabled primary action still explains itself accessibly', () => {
-  // `/bookmarks`, `/pdf-to-pdfa`, and `/rasterize-pdf` render a disabled Run
-  // button by design. `tests/contracts/dead-control-gate.test.mjs` proves the
+  // `/pdf-to-pdfa` and `/rasterize-pdf` render a disabled Run button by design.
+  // `tests/contracts/dead-control-gate.test.mjs` proves the
   // reason is stated in the source; this asserts the manifest agrees, so the
   // three cannot drift apart silently.
   //
@@ -84,7 +84,7 @@ test('a route with a disabled primary action still explains itself accessibly', 
   // renders one is `manifest.deadControls`, which the manifest computes from the
   // shell (`ONRUN_SHELLS`) rather than from this field.
   const dead = manifest.deadControls;
-  expect([...dead].sort()).toEqual(['/bookmarks', '/pdf-to-pdfa', '/rasterize-pdf']);
+  expect([...dead].sort()).toEqual(['/pdf-to-pdfa', '/rasterize-pdf']);
 });
 
 test.describe('keyboard operability', () => {
