@@ -2,7 +2,6 @@
   "generated": "by scripts/generate-route-manifest.mjs — do not hand-edit",
   "routeCount": 149,
   "deadControls": [
-    "/bookmarks",
     "/pdf-to-pdfa",
     "/rasterize-pdf"
   ],
@@ -116,7 +115,7 @@
       "path": "/bookmarks",
       "shell": "ToolWorkspace",
       "localized": false,
-      "opBinding": null,
+      "opBinding": "wired",
       "op": null
     },
     {

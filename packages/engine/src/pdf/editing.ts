@@ -719,15 +719,11 @@ export async function createFormPdf(
       });
     if (field.type === 'text' || field.type === 'date') {
       const textField = form.createTextField(field.name);
-      // Transparent / clean bounding style: background cleared so underlying
-      // document text remains visible around the field bounds.
-      const bg = (textField as unknown).setBackgroundColor;
-      if (typeof bg === 'function') bg.call(textField);
+      // Leave the widget's background and border at pdf-lib defaults so the
+      // editor does not paint over nearby source content.
       textField.addToPage(page, appearance);
     } else if (field.type === 'checkbox') {
       const checkBox = form.createCheckBox(field.name);
-      const bg = (checkBox as unknown).setBackgroundColor;
-      if (typeof bg === 'function') bg.call(checkBox);
       checkBox.addToPage(page, appearance);
     } else if (field.type === 'radio') {
       const group = form.createRadioGroup(field.name);

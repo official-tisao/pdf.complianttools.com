@@ -15,7 +15,7 @@ export interface TextItem {
   color?: number[];
   textAlign?: string;
 }
-export type TextMarkedContent = unknown;
+export type TextMarkedContent = { type: string; id?: string };
 import { zipSync } from 'fflate';
 
 // ------------------------------------------------------------------
@@ -59,23 +59,23 @@ export async function extractLayoutGrid(pdfBuffer: ArrayBuffer): Promise<Compone
       .map((it) => {
         const tx = it.transform;
         const x = tx[4];
-        const y = viewport.height - tx[5];
+        const y = viewport.height - (tx[5] ?? 0);
         return {
           text: it.str,
-          x,
+          x: x ?? 0,
           y,
           w: it.width ?? 0,
           h: it.height ?? 0,
           fontName: (it.fontName as string) ?? 'Unknown',
           fontSize: it.fontSize ?? 12,
-          rgb: it.color ? [it.color[0], it.color[1], it.color[2]] : [0, 0, 0],
+          rgb: it.color ? [it.color[0] ?? 0, it.color[1] ?? 0, it.color[2] ?? 0] : [0, 0, 0],
           align: (it.textAlign ?? 'left') as LayoutCell['align'],
           bold: /bold/i.test(it.fontName ?? ''),
           italic: /italic/i.test(it.fontName ?? ''),
         };
       });
 
-    const bars = detectBackgroundBars(page, cells, viewport);
+    const bars = detectBackgroundBars();
     components.push(...bars);
     components.push(...groupBodyComponents(cells));
   }
