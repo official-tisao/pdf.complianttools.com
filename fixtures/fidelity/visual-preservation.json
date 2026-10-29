@@ -1,0 +1,7 @@
+{
+  "visual_preservation": "raster_per_page_flattened",
+  "editable": false,
+  "renderer_ref": "convert.ts:365-375",
+  "use_case": "retain_appearance_not_editability",
+  "warning": "result_is_image_not_text"
+}
