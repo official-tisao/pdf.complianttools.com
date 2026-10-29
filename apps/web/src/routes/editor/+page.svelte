@@ -3,6 +3,19 @@
   import { onMount } from 'svelte';
   import '$lib/configure-pdfjs';
   import { loadPdfJs } from '@pdf-complianttools/engine/pdfjs';
+  import { JSONLD_CLOSE, JSONLD_OPEN, softwareApplicationLd } from '$lib/seo';
+
+  const description =
+    'Edit simple embedded text runs when evidence supports it, or use a clearly labelled local text-box fallback.';
+  // The path is fixed because this component is shared by all four locale
+  // variants of the route; `page.url.pathname` would differ per locale and
+  // emit a different `url` in the payload on each. The canonical tag in the
+  // layout already resolves the locale variants to one document.
+  const structuredData = softwareApplicationLd({
+    name: 'PDF Editor',
+    description,
+    path: '/editor',
+  });
 
   // loadPdfJs resolves to the pdf.js module itself; getDocument hangs off the
   // module, and the opened document is the await of the loading task's promise.
@@ -184,10 +197,9 @@
   <!-- The layout deliberately ships no default description (SvelteKit does
        not dedupe <svelte:head> by attribute); this route owns its own. -->
   <title>PDF Editor locally</title>
-  <meta
-    name="description"
-    content="Edit simple embedded text runs when evidence supports it, or use a clearly labelled local text-box fallback."
-  />
+  <meta name="description" content={description} />
+  <!-- safe-html-reviewed: JSON-LD needs a script element Svelte cannot emit; the payload is JSON.stringify from $lib/seo with "<" escaped, tested in scripts/seo.test.mjs -->
+  {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
 </svelte:head>
 
 <!--
