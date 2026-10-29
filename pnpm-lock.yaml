@@ -158,6 +158,9 @@ importers:
       pptxgenjs:
         specifier: 4.0.1
         version: 4.0.1
+      puppeteer:
+        specifier: 21.11.0
+        version: 21.11.0(typescript@5.9.3)
       qrcode:
         specifier: 1.5.4
         version: 1.5.4
