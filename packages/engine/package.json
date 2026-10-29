@@ -62,6 +62,16 @@
     "./watcher-process": {
       "types": "./dist/watcher-process.d.ts",
       "import": "./dist/watcher-process.js"
+    },
+    "./layout-preservation": {
+      "types": "./dist/conversion/layout-preservation.d.ts",
+      "import": "./dist/conversion/layout-preservation.js",
+      "development": "./src/conversion/layout-preservation.ts"
+    },
+    "./legacy-decoders": {
+      "types": "./dist/conversion/legacy-decoders.d.ts",
+      "import": "./dist/conversion/legacy-decoders.js",
+      "development": "./src/conversion/legacy-decoders.ts"
     }
   },
   "scripts": {

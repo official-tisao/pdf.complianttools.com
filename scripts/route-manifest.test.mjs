@@ -138,12 +138,12 @@ test('the manifest reports the routes whose primary action is disabled', async (
   assert.ok(committed.deadControls.length === dead.length);
   assert.deepEqual([...committed.deadControls].sort(), dead.sort());
 
-  // Three routes remain disabled on purpose, and each states why on the page
-  // itself: there is no permissive browser writer for an outline tree, none
-  // for PDF/A, and no renderer is bundled for rasterizing. A disabled control
+  // Two routes remain disabled on purpose, and each states why on the page
+  // itself: there is no permissive PDF/A writer, and no renderer is bundled
+  // for rasterizing. A disabled control
   // with an explanation is an honest capability boundary; a wired one that
   // silently does nothing would not be.
-  assert.deepEqual(dead.sort(), ['/bookmarks', '/pdf-to-pdfa', '/rasterize-pdf']);
+  assert.deepEqual(dead.sort(), ['/pdf-to-pdfa', '/rasterize-pdf']);
 });
 
 test('a route that states it is unavailable is not a silent dead control', async () => {

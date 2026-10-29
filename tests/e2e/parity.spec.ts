@@ -34,9 +34,7 @@ let cached: Promise<Fixture> | undefined;
 const loadFixture = (): Promise<Fixture> => {
   cached ??= (async () => ({
     recipe: JSON.parse(await readFile(join(FIXTURE_DIR, 'recipe.json'), 'utf8')),
-    inputBytes: Array.from(
-      await readFile(join(process.cwd(), 'fixtures', 'pdfs', 'one-page.pdf')),
-    ),
+    inputBytes: Array.from(await readFile(join(process.cwd(), 'fixtures', 'pdfs', 'one-page.pdf'))),
     expectedHash: (await readFile(join(FIXTURE_DIR, 'cli-output.sha256'), 'utf8')).trim(),
   }))();
   return cached;
@@ -82,8 +80,9 @@ const runInPage = async (page: import('@playwright/test').Page): Promise<number[
   const { recipe, inputBytes } = await loadFixture();
   return page.evaluate(
     async (paths: { recipe: unknown; input: number[] }) => {
-      const run = (globalThis as { __runRecipeForParity: (r: unknown, i: number[]) => Promise<number[]> })
-        .__runRecipeForParity;
+      const run = (
+        globalThis as { __runRecipeForParity: (r: unknown, i: number[]) => Promise<number[]> }
+      ).__runRecipeForParity;
       return run(paths.recipe, paths.input);
     },
     { recipe, input: inputBytes },
@@ -96,42 +95,47 @@ const runInPage = async (page: import('@playwright/test').Page): Promise<number[
 // slowness, and timing out on that would make this a flake rather than a gate.
 const PARITY_TIMEOUT_MS = 90_000;
 
-test('a recipe produces byte-equivalent output in the browser and in Node', async ({ page }) => {
-  const { expectedHash } = await loadFixture();
-  // The recorded reference must be a real sha256. Without this the comparison below would pass
-  // vacuously if the fixture file were emptied or turned into a path.
-  assert.match(expectedHash, /^[0-9a-f]{64}$/u, 'cli-output.sha256 must hold a sha256');
+test(
+  'a recipe produces byte-equivalent output in the browser and in Node',
+  async ({ page }) => {
+    const { expectedHash } = await loadFixture();
+    // The recorded reference must be a real sha256. Without this the comparison below would pass
+    // vacuously if the fixture file were emptied or turned into a path.
+    assert.match(expectedHash, /^[0-9a-f]{64}$/u, 'cli-output.sha256 must hold a sha256');
 
-  const pageErrors: string[] = [];
-  page.on('pageerror', (error) => pageErrors.push(error.message));
+    const pageErrors: string[] = [];
+    page.on('pageerror', (error) => pageErrors.push(error.message));
 
-  await openHarness(page);
-  const browserBytes = await runInPage(page);
-  const actual = hashOf(browserBytes);
+    await openHarness(page);
+    const browserBytes = await runInPage(page);
+    const actual = hashOf(browserBytes);
 
-  expect(
-    pageErrors,
-    'the page raised an uncaught error while running the recipe',
-  ).toEqual([]);
-  expect(
-    actual,
-    `browser ${actual} (${browserBytes.length} bytes) does not match the CLI's ${expectedHash}. ` +
-      'The same recipe no longer produces the same bytes in both environments.',
-  ).toBe(expectedHash);
-});
+    expect(pageErrors, 'the page raised an uncaught error while running the recipe').toEqual([]);
+    expect(
+      actual,
+      `browser ${actual} (${browserBytes.length} bytes) does not match the CLI's ${expectedHash}. ` +
+        'The same recipe no longer produces the same bytes in both environments.',
+    ).toBe(expectedHash);
+  },
+  PARITY_TIMEOUT_MS,
+);
 
-test('the same recipe is byte-stable across two runs in the same page', async ({ page }) => {
-  // The half the Node-only test could not see. A run must not stamp a wall-clock timestamp:
-  // this is exactly the pdf-lib `updateMetadata` defect, which cost the CLI parity test an
-  // intermittent failure for as long as it went unfixed.
-  await openHarness(page);
-  const first = await runInPage(page);
-  // Long enough to cross a whole second, which is the resolution of the `/ModDate` that was
-  // being stamped. Without the gap the test would pass even if fully broken.
-  await page.waitForTimeout(1100);
-  const second = await runInPage(page);
+test(
+  'the same recipe is byte-stable across two runs in the same page',
+  async ({ page }) => {
+    // The half the Node-only test could not see. A run must not stamp a wall-clock timestamp:
+    // this is exactly the pdf-lib `updateMetadata` defect, which cost the CLI parity test an
+    // intermittent failure for as long as it went unfixed.
+    await openHarness(page);
+    const first = await runInPage(page);
+    // Long enough to cross a whole second, which is the resolution of the `/ModDate` that was
+    // being stamped. Without the gap the test would pass even if fully broken.
+    await page.waitForTimeout(1100);
+    const second = await runInPage(page);
 
-  expect(hashOf(second), 'the browser run is not byte-stable across a one-second gap').toBe(
-    hashOf(first),
-  );
-}, PARITY_TIMEOUT_MS);
+    expect(hashOf(second), 'the browser run is not byte-stable across a one-second gap').toBe(
+      hashOf(first),
+    );
+  },
+  PARITY_TIMEOUT_MS,
+);

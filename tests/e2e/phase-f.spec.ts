@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import { openHydrated } from './helpers';
 
 /**
  * The invoice routes are prerendered, so their static markup accepts input
@@ -78,7 +79,7 @@ test("a Relay failure surfaces the Relay's own remedy rather than silence", asyn
       body: JSON.stringify({ error: 'relay-failed', cause: 'browser closed', remedy }),
     }),
   );
-  await page.goto('/webpage-to-pdf');
+  await openHydrated(page, '/webpage-to-pdf');
   await page.getByLabel('Your Relay endpoint').fill('http://127.0.0.1:8787');
   await page.getByRole('button', { name: /Capture with Relay/i }).click();
   await expect(page.getByRole('status')).toHaveText(remedy);
@@ -89,7 +90,7 @@ test('an unreachable Relay still produces an actionable message', async ({ page 
   // remedy to forward. The user must still be told what to do rather than
   // watching a status line that never changes.
   await page.route('**/render', (route) => route.abort('connectionrefused'));
-  await page.goto('/webpage-to-pdf');
+  await openHydrated(page, '/webpage-to-pdf');
   await page.getByLabel('Your Relay endpoint').fill('http://127.0.0.1:8787');
   await page.getByRole('button', { name: /Capture with Relay/i }).click();
   await expect(page.getByRole('status')).toHaveText(
@@ -331,7 +332,9 @@ test('a saved recipe is restored on reload, not discarded', async ({ page }) => 
   });
 
   await page.getByRole('button', { name: /Save to this browser/i }).click();
-  await expect(page.locator('[role="status"]').filter({ hasText: /Saved to this browser/i })).toBeVisible();
+  await expect(
+    page.locator('[role="status"]').filter({ hasText: /Saved to this browser/i }),
+  ).toBeVisible();
 
   // The default recipe has one step. Removing it, then reloading, is the only way to tell a
   // restored recipe from a fresh default.

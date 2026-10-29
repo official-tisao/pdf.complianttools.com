@@ -9,10 +9,12 @@
     file,
     locale: localeProp,
     onerror,
+    onclick,
   }: {
     file?: File;
     locale?: Locale;
     onerror?: (message: string) => void;
+    onclick?: (event: MouseEvent) => void;
   } = $props();
 
   const locale = $derived(localeProp ?? getLocaleContext());
@@ -92,13 +94,18 @@
       onselect={(pageNumber) => void selectPreviewPage(pageNumber)}
     />
     {#if selectedPreview}
-      <div class="selected-page" aria-live="polite">
+      <button
+        class="selected-page"
+        type="button"
+        aria-label={t('shell.preview.openSelected', 'Open page {value}', selectedPage)}
+        {onclick}
+      >
         <h2>{t('shell.preview.selected', 'Selected page {value}', selectedPage)}</h2>
         <img
           src={selectedPreview}
           alt={t('shell.preview.pageAlt', 'Preview of page {value}', selectedPage)}
         />
-      </div>
+      </button>
     {/if}
   </div>
 {:else if previewError}
@@ -116,7 +123,15 @@
   }
 
   .selected-page {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font: inherit;
     margin-top: 0;
+    cursor: crosshair;
+    padding: 0;
+    text-align: left;
   }
 
   .selected-page h2 {
