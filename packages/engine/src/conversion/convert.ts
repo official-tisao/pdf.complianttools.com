@@ -865,9 +865,10 @@ export async function psdCompositeToPng(bytes: Uint8Array): Promise<Uint8Array> 
       'Only 8-bit RGB/CMYK flattened PSD composites are supported.',
     );
   let offset = 26;
-  offset += view.getUint32(offset) + 4;
-  offset += view.getUint32(offset) + 4;
-  offset += view.getUint32(offset) + 4;
+  offset += view.getUint32(offset) + 4; // Color Mode section
+  offset += view.getUint32(offset) + 4; // Image Resources section
+  offset += view.getUint32(offset) + 4; // Layer and Mask Information section
+  // Image Data section: 2-byte compression method (0=Raw, 1=RLE, 2=ZIP, 3=ZIP+predict); no length prefix per PSD spec
   const compression = view.getUint16(offset);
   offset += 2;
   const planeSize = width * height;
@@ -1008,4 +1009,31 @@ function conversionFailure(format: string, direction: ConversionDirection, cause
     cause,
     remedy: 'Preserve the original file, export it to a supported format, and retry.',
   });
+}
+// Local diagnostic helper: returns structured failure info without exposing file content
+export function psdConversionDiagnostics(input: {
+  fileName?: string;
+  bytesLength: number;
+  headerBytes: string;
+  imageDataOffset?: number;
+  compression?: number;
+}): object {
+  const d = input.bytesLength < 26 ? 'truncated' : 'header-ok';
+  return {
+    stage: d,
+    fileName: input.fileName,
+    byteLength: input.bytesLength,
+    headerBytes: input.headerBytes,
+    imageDataOffset: input.imageDataOffset ?? 'unknown (needs section parse)',
+    compressionClaimed:
+      input.compression === 0
+        ? 'raw (0)'
+        : input.compression === 1
+          ? 'PackBits (1)'
+          : input.compression === 2
+            ? 'ZIP (2) unsupported by this decoder'
+            : input.compression === undefined
+              ? 'unknown (needs section parse)'
+              : 'unknown (' + input.compression + ')',
+  };
 }

@@ -46,6 +46,12 @@ export default [
         HTMLDivElement: 'readonly',
         window: 'readonly',
         getComputedStyle: 'readonly',
+        // Ordinary browser globals used by client components (conversion-
+        // failure logging, deferred pipeline steps). DOM element *types* like
+        // HTMLCanvasElement stay per-file `/* global */` declarations, matching
+        // the existing convention in FileDropZone, PdfViewer, SignaturePad.
+        console: 'readonly',
+        setTimeout: 'readonly',
       },
     },
     rules: {
@@ -73,6 +79,9 @@ export default [
     files: [
       'scripts/**/*.mjs',
       'packages/**/*.test.mjs',
+      // Manual diagnostic helpers (e.g. psd-diag.mjs) also live in test
+      // directories and run under plain node, not in the browser.
+      'packages/**/test/*.mjs',
       'apps/relay/test/**/*.mjs',
       // Contract suites under tests/ run in Node under `node --test`, and read
       // the build output through `new URL(...)`, so they need the same globals.

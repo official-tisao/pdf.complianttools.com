@@ -219,10 +219,10 @@
     },
     {
       "path": "/editor",
-      "shell": "PhaseCTool",
+      "shell": "bespoke",
       "localized": false,
       "opBinding": null,
-      "op": "editor"
+      "op": null
     },
     {
       "path": "/epub-pdf",
