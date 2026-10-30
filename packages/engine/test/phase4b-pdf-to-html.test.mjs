@@ -12,7 +12,9 @@ describe('Phase 4b — PDF to HTML structural fidelity', () => {
       return;
     }
     const bytes = readFileSync(path);
-    const html = await pdfToHtml(new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)));
+    const html = await pdfToHtml(
+      new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+    );
     assert.ok(html.includes('<!doctype html>'), 'valid HTML document');
     const pageSections = html.match(/data-page="\d+"/g);
     assert.ok(pageSections && pageSections.length >= 1, 'pages represented in HTML');
@@ -25,7 +27,9 @@ describe('Phase 4b — PDF to HTML structural fidelity', () => {
       return;
     }
     const bytes = readFileSync(path);
-    const pages = await extractPdfTextPages(new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)));
+    const pages = await extractPdfTextPages(
+      new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+    );
     assert.ok(pages.length > 0, 'pages extracted');
     for (const page of pages) {
       if (page.pageWidth !== undefined && page.pageHeight !== undefined) {
@@ -48,10 +52,16 @@ describe('Phase 4b — PDF to HTML structural fidelity', () => {
     }
     try {
       const bytes = readFileSync(path);
-      const pages = await extractPdfTextPages(new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)));
-      const hasFontMeta = pages.some(p => p.meta?.some(m => m.fontSize !== undefined && m.fontSize > 0 && isFinite(m.fontSize)));
+      const pages = await extractPdfTextPages(
+        new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+      );
+      const hasFontMeta = pages.some((p) =>
+        p.meta?.some((m) => m.fontSize !== undefined && m.fontSize > 0 && isFinite(m.fontSize)),
+      );
       if (hasFontMeta) {
-        const html = await pdfToHtml(new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)));
+        const html = await pdfToHtml(
+          new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+        );
         assert.ok(html.includes('font-size:'), 'font-size CSS applied when metadata present');
       }
     } catch (e) {
@@ -70,10 +80,16 @@ describe('Phase 4b — PDF to HTML structural fidelity', () => {
       return;
     }
     const bytes = readFileSync(path);
-    const pages = await extractPdfTextPages(new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)));
-    const hasColorMeta = pages.some(p => p.meta?.some(m => Array.isArray(m.color) && m.color.length >= 3));
+    const pages = await extractPdfTextPages(
+      new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+    );
+    const hasColorMeta = pages.some((p) =>
+      p.meta?.some((m) => Array.isArray(m.color) && m.color.length >= 3),
+    );
     if (hasColorMeta) {
-      const html = await pdfToHtml(new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)));
+      const html = await pdfToHtml(
+        new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+      );
       const hasColorCss = html.includes('color:rgb(');
       assert.strictEqual(hasColorCss, hasColorMeta, 'color CSS present iff metadata has colors');
     }

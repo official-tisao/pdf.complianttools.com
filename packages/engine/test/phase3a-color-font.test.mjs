@@ -24,7 +24,10 @@ describe('Color/Font meta verification (synthetic fixture)', () => {
     console.log('meta0 fontSize/scale=', meta0?.fontSize, meta0?.scale);
     console.log('meta1 fontSize/scale=', meta1?.fontSize, meta1?.scale);
     // At minimum scale should be present (font-size from matrix scale); fontSize may be absent if PDF.js doesn't expose it
-    assert.ok(meta0 && (meta0.scale !== undefined || meta0.fontSize !== undefined), 'first meta has scale or fontSize');
+    assert.ok(
+      meta0 && (meta0.scale !== undefined || meta0.fontSize !== undefined),
+      'first meta has scale or fontSize',
+    );
   });
 
   it('should NOT invent CSS font-size when meta.fontSize is missing', async () => {

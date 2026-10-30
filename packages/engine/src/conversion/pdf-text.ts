@@ -6,12 +6,26 @@ export type PdfTextPage = {
   readonly pageNumber: number;
   readonly text: string;
   readonly lines: readonly string[];
-  readonly meta?: readonly { color?: number[]; font?: string; fontSize?: number; x?: number; y?: number; scale?: number }[];
+  readonly meta?: readonly {
+    color?: number[];
+    font?: string;
+    fontSize?: number;
+    x?: number;
+    y?: number;
+    scale?: number;
+  }[];
   readonly pageWidth?: number;
   readonly pageHeight?: number;
 };
 
-type TextItem = { str?: string; transform?: readonly number[]; hasEOL?: boolean; color?: number[]; fontName?: string; fontSize?: number; };
+type TextItem = {
+  str?: string;
+  transform?: readonly number[];
+  hasEOL?: boolean;
+  color?: number[];
+  fontName?: string;
+  fontSize?: number;
+};
 
 export async function extractPdfTextPages(bytes: Uint8Array): Promise<readonly PdfTextPage[]> {
   const pdfjs = await loadPdfJs();
@@ -26,9 +40,26 @@ export async function extractPdfTextPages(bytes: Uint8Array): Promise<readonly P
       const viewport = await page.getViewport({ scale: 1 });
       const content = await page.getTextContent();
       const items = content.items as unknown as TextItem[];
-      const linesData: { text: string; meta: { color?: number[]; font?: string; fontSize?: number; x?: number; y?: number; scale?: number } }[] = [];
+      const linesData: {
+        text: string;
+        meta: {
+          color?: number[];
+          font?: string;
+          fontSize?: number;
+          x?: number;
+          y?: number;
+          scale?: number;
+        };
+      }[] = [];
       let lineChars: string[] = [];
-      let lineMeta: { color?: number[]; font?: string; fontSize?: number; x?: number; y?: number; scale?: number } = {};
+      let lineMeta: {
+        color?: number[];
+        font?: string;
+        fontSize?: number;
+        x?: number;
+        y?: number;
+        scale?: number;
+      } = {};
 
       function flushLine() {
         if (lineChars.length > 0) {
@@ -72,7 +103,14 @@ export async function extractPdfTextPages(bytes: Uint8Array): Promise<readonly P
 
       const lines = linesData.map((ld) => ld.text);
       const meta = linesData.map((ld) => ld.meta);
-      pages.push({ pageNumber, text: lines.join(' '), lines, meta, pageWidth: viewport.width, pageHeight: viewport.height });
+      pages.push({
+        pageNumber,
+        text: lines.join(' '),
+        lines,
+        meta,
+        pageWidth: viewport.width,
+        pageHeight: viewport.height,
+      });
     }
   } finally {
     await loadingTask.destroy();
@@ -111,38 +149,46 @@ export async function pdfToHtml(bytes: Uint8Array): Promise<string> {
   const pages = await extractPdfTextPages(bytes);
   // PDF origin is bottom-left; HTML origin top-left; approximate y-flip per page
   const body = pages
-    .map(
-      (page) => {
-        const pageHeight = page.pageHeight ?? 792;
-        return `<section data-page="${page.pageNumber}"><h2>Page ${page.pageNumber}</h2>${page.lines
-          .map((line, i) => {
-            const meta = page.meta?.[i];
-            // Font-size estimation: prefer meta.fontSize; else estimate from transform scale (not [0] blindly)
-            let fontSizeStr: string;
-            if (meta?.fontSize !== undefined && meta.fontSize > 0 && isFinite(meta.fontSize)) {
-              fontSizeStr = `font-size:${Math.round(meta.fontSize)}pt;`;
-            } else {
-              // meta.fontSize unavailable and meta.scale not a reliable font-size source (see audit); leave unset
-              fontSizeStr = '';
-            }
-            // Color: only when meta.color present
-            const colorStr = meta?.color && Array.isArray(meta.color) && meta.color.length >= 3 && meta.color.every((v) => typeof v === 'number' && isFinite(v))
+    .map((page) => {
+      const pageHeight = page.pageHeight ?? 792;
+      return `<section data-page="${page.pageNumber}"><h2>Page ${page.pageNumber}</h2>${page.lines
+        .map((line, i) => {
+          const meta = page.meta?.[i];
+          // Font-size estimation: prefer meta.fontSize; else estimate from transform scale (not [0] blindly)
+          let fontSizeStr: string;
+          if (meta?.fontSize !== undefined && meta.fontSize > 0 && isFinite(meta.fontSize)) {
+            fontSizeStr = `font-size:${Math.round(meta.fontSize)}pt;`;
+          } else {
+            // meta.fontSize unavailable and meta.scale not a reliable font-size source (see audit); leave unset
+            fontSizeStr = '';
+          }
+          // Color: only when meta.color present
+          const colorStr =
+            meta?.color &&
+            Array.isArray(meta.color) &&
+            meta.color.length >= 3 &&
+            meta.color.every((v) => typeof v === 'number' && isFinite(v))
               ? `color:rgb(${meta.color.map((v) => Math.round(Math.min(255, Math.max(0, v * 255)))).join(',')});`
               : '';
-            // Font family: only when meta.font present; treat as internal ID — do not claim readable
-            const fontStr = meta?.font ? `font-family:${escapeCssString(meta.font)};` : '';
-            // Position: approximate from meta.x/y (PDF bottom-left => HTML top-left via y-flip)
-            const yPos = meta?.y !== undefined ? Math.round(pageHeight - meta.y) : undefined;
-            const xPos = meta?.x !== undefined ? Math.round(meta.x) : undefined;
-            const posStr = (xPos !== undefined && yPos !== undefined) ? `position:absolute;left:${xPos}px;top:${yPos}px;` : '';
-            const style = [colorStr, fontStr, fontSizeStr, posStr].filter(Boolean).join(' ');
-            const spans = style ? `<span style="${style}">${escapeHtml(line)}</span>` : `<span>${escapeHtml(line)}</span>`;
-            return `<p style="margin:2pt 0;${posStr ? 'position:relative;' : ''}">${spans}</p>`;
-          })
-          .join('')}</section>`;
+          // Font family: only when meta.font present; treat as internal ID — do not claim readable
+          const fontStr = meta?.font ? `font-family:${escapeCssString(meta.font)};` : '';
+          // Position: approximate from meta.x/y (PDF bottom-left => HTML top-left via y-flip)
+          const yPos = meta?.y !== undefined ? Math.round(pageHeight - meta.y) : undefined;
+          const xPos = meta?.x !== undefined ? Math.round(meta.x) : undefined;
+          const posStr =
+            xPos !== undefined && yPos !== undefined
+              ? `position:absolute;left:${xPos}px;top:${yPos}px;`
+              : '';
+          const style = [colorStr, fontStr, fontSizeStr, posStr].filter(Boolean).join(' ');
+          const spans = style
+            ? `<span style="${style}">${escapeHtml(line)}</span>`
+            : `<span>${escapeHtml(line)}</span>`;
+          return `<p style="margin:2pt 0;${posStr ? 'position:relative;' : ''}">${spans}</p>`;
+        })
+        .join('')}</section>`;
     })
     .join('');
-  const headStyle = pages.some(p => p.meta?.some(m => m.color || m.font))
+  const headStyle = pages.some((p) => p.meta?.some((m) => m.color || m.font))
     ? `<style>p span { font-family:inherit; }</style>`
     : '';
   return `<!doctype html><html><head><meta charset="utf-8"><title>PDF text export</title>${headStyle}</head><body>${body}</body></html>`;
@@ -204,7 +250,9 @@ export async function textPagesToPdf(
   if (renderMode === 'html-css') {
     // Visual-preservation path: accept HTML with full CSS via external renderer (puppeteer/playwright/weasyprint/libreoffice)
     // This replaces text-only reconstruction with a CSS-aware rendering layer.
-    throw new Error('HTML-CSS rendering requires external renderer backend (puppeteer/weasyprint); use render option to invoke.');
+    throw new Error(
+      'HTML-CSS rendering requires external renderer backend (puppeteer/weasyprint); use render option to invoke.',
+    );
   }
   const document = await PDFDocument.create({ updateMetadata: false });
   const font = await document.embedFont(StandardFonts.Helvetica);

@@ -28,7 +28,9 @@ describe('Phase 4 — CSV column reconstruction (evidence check)', () => {
   it('should demonstrate that current split heuristic cannot reconstruct 3 columns from whitespace only', () => {
     // Even with 2+ spaces, split logic doesn't split (only | or whitespace to [line] array entry, not cell split)
     const lines = ['Header Blue   Header Blue   Header Blue', 'Cell gray   Cell gray   Cell gray'];
-    const rows = lines.map((line) => (line.includes('|') ? line.split('|').map((c) => c.trim()) : [line]));
+    const rows = lines.map((line) =>
+      line.includes('|') ? line.split('|').map((c) => c.trim()) : [line],
+    );
     for (const row of rows) {
       assert.strictEqual(row.length, 1, `expected ambiguous single-column row, got ${row.length}`);
     }
