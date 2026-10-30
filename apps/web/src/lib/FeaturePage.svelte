@@ -122,7 +122,7 @@
     const { createTemplatedPdf } = await import('@pdf-complianttools/engine/create');
     const bytes = createTemplatedPdf({
       template,
-      pages: [{ title: 'Local PDF', lines: ['Created in your browser.', 'No file was uploaded.'] }],
+      pages: [{}],
     });
     download(bytes, 'created.pdf');
     status = t('feature.status.created', 'Created locally.');

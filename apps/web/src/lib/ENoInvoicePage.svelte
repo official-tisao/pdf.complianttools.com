@@ -37,6 +37,8 @@
   import { validateEInvoiceXml } from '@pdf-complianttools/engine/invoice-core';
 
   let status = $state('');
+  let xmlFile = $state<File | null>(null);
+  let pdfFile = $state<File | null>(null);
 
   const faq = [
     {
@@ -69,8 +71,35 @@
     downloadBytes(bytes, name, mime);
   }
 
+  async function onFilesXml(files: File[]) {
+    if (files.length) xmlFile = files[0];
+    await onPick(files);
+  }
+
+  async function onFilesPdf(files: File[]) {
+    if (files.length) pdfFile = files[0];
+    await onPickPdf(files);
+  }
+
+  async function runXmlConvert() {
+    if (!xmlFile) {
+      status = 'Drop or select an XML file first.';
+      return;
+    }
+    await onPick([xmlFile]);
+  }
+
+  async function runPdfRecover() {
+    if (!pdfFile) {
+      recoverStatus = 'Drop or select a PDF file first.';
+      return;
+    }
+    await onPickPdf([pdfFile]);
+  }
+
   async function onPick([file]: File[]) {
     if (!file) return;
+    xmlFile = file;
     try {
       const xml = new TextDecoder().decode(new Uint8Array(await file.arrayBuffer()));
       const check = validateEInvoiceXml(xml);
@@ -94,6 +123,7 @@
 
   async function onPickPdf([file]: File[]) {
     if (!file) return;
+    pdfFile = file;
     recovered = undefined;
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
@@ -129,9 +159,18 @@
     <FileDropZone
       label={t('einvoice.drop.xml', 'E-invoice XML file')}
       accept=".xml,application/xml,text/xml"
-      onfiles={onPick}
+      onfiles={onFilesXml}
       describedBy="xml-help"
     />
+    <button
+      type="button"
+      class="primary"
+      onclick={runXmlConvert}
+      aria-label="Convert XML to PDF"
+      disabled={!xmlFile}
+    >
+      {t('einvoice.action.convertXml', 'Convert XML to PDF')}
+    </button>
     <p id="xml-help" class="note">
       {t(
         'einvoice.drop.xmlHelp',
@@ -152,9 +191,18 @@
     <FileDropZone
       label={t('einvoice.drop.pdf', 'Hybrid PDF with an embedded invoice')}
       accept=".pdf,application/pdf"
-      onfiles={onPickPdf}
+      onfiles={onFilesPdf}
       describedBy="recover-help"
     />
+    <button
+      type="button"
+      class="primary"
+      onclick={runPdfRecover}
+      aria-label="Recover XML from PDF"
+      disabled={!pdfFile}
+    >
+      {t('einvoice.action.recoverXml', 'Recover XML from PDF')}
+    </button>
     <p id="recover-help" class="note">
       {t(
         'einvoice.drop.pdfHelp',
