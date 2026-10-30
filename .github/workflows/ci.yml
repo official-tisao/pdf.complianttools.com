@@ -35,9 +35,10 @@ jobs:
       # conditions are `which` probes against a real install; this is the only one
       # that fires here.
       - run: pnpm exec playwright install --with-deps chromium
-      # The engine's HTML-renderer tests launch Puppeteer's pinned Chrome. The
-      # Playwright Chromium install above uses a separate cache and cannot satisfy it.
-      - run: node packages/engine/node_modules/puppeteer/lib/esm/puppeteer/node/cli.js browsers install chrome
+      # The engine's HTML-renderer tests use Puppeteer, but Playwright's Chromium
+      # is already installed in this job. Reuse it rather than downloading Chrome twice.
+      - name: Point Puppeteer at Playwright Chromium
+        run: node --input-type=module -e 'import { chromium } from "@playwright/test"; import { appendFileSync } from "node:fs"; appendFileSync(process.env.GITHUB_ENV, `PUPPETEER_EXECUTABLE_PATH=${chromium.executablePath()}\n`);'
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm verify:source-safety
