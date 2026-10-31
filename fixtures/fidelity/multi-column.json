@@ -1,0 +1,12 @@
+{
+  "name": "multi-column",
+  "pages": 1,
+  "columns": [
+    { "x": 0, "w": 300, "text": "Left col" },
+    { "x": 310, "w": 300, "text": "Right col" }
+  ],
+  "colors": [{ "text": "red", "rgb": [1, 0, 0] }],
+  "geometry": { "width": 612, "height": 792 },
+  "expected_text": "Left col Right col",
+  "visual": "multi-column-render.png"
+}

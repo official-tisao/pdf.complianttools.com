@@ -1,0 +1,6 @@
+{
+  "name": "table-styled",
+  "pages": 1,
+  "table": { "rows": 2, "cols": 3, "colors": ["header-blue", "cell-gray"] },
+  "geometry": { "width": 612, "height": 792 }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "scanned-ocr",
+  "pages": 1,
+  "ocr": true,
+  "text": "Scanned document text",
+  "geometry": { "width": 612, "height": 792 }
+}

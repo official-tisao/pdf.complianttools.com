@@ -93,6 +93,7 @@
     "pdf-lib": "1.17.1",
     "pdfjs-dist": "6.3.289",
     "pptxgenjs": "4.0.1",
+    "puppeteer": "21.11.0",
     "qrcode": "1.5.4",
     "zod": "4.6.5"
   },

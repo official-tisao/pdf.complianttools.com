@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@page { margin: 0.4in; @bottom-right { content: "Page " counter(page); } }
+body { font-family: 'Segoe UI', sans-serif; color: #222; }
+h1 { color: #d00; font-size: 28pt; font-family: Georgia, serif; }
+.table { border-collapse: collapse; width: 100%; }
+.table th { background: #0055aa; color: white; font-size: 12pt; }
+.table td { border: 1px solid #ccc; padding: 6pt; font-size: 10pt; }
+.page-break { page-break-after: always; }
+img { max-width: 100%; height: auto; }
+</style>
+</head>
+<body>
+<h1>Fidelity Title — Red, 28pt, Georgia</h1>
+<p>Body text with <strong>bold</strong> and <em>italic</em>.</p>
+<table class="table"><tr><th>Header Blue</th><th>Header Blue</th></tr><tr><td>Cell gray</td><td>Cell gray</td></tr></table>
+<p>Image below:</p>
+<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGaP7z4OAAAAABJRU5ErkJggg==" alt="tiny" />
+<div class="page-break"></div>
+<h1>Page 2 — Red Title Again</h1>
+<p>Second page content with page-break.</p>
+</body>
+</html>
