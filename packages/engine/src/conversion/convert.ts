@@ -668,6 +668,7 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
   // Constants for text rendering
   const charWidth = 6; // Approximate character width at size 10 in points
   const lineHeight = 14; // Points per text line
+  const baseRowHeight = 14; // Default row height in points when ExcelJS height missing
   const usableHeight = pageSize[1] - margin * 2;
   const maxLinesPerPage = Math.floor(usableHeight / lineHeight);
 
@@ -750,6 +751,9 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
       // Track current X position for cells in this row
       let currentX = margin;
 
+      // Row height drives rectangle and vertical spacing; default when ExcelJS missing
+      const rowHeight = (row.height && typeof row.height === 'number' && row.height > 0) ? row.height : baseRowHeight;
+
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
         const cellValue = cell.text ? cell.text.toString().trim().replace(/[\r\n]+/g, ' ') : '';
         const cellWidth = columnWidths[colNumber - 1] ?? charWidth * 10 + 4;
@@ -762,9 +766,9 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
           : null;
 
         if (fillColor) {
-          // Draw filled rectangle behind text
-          const rectY = currentYPos - lineHeight + 2;
-          const rectHeight = lineHeight - 4;
+          // Draw filled rectangle behind text — height based on actual row height
+          const rectY = currentYPos - rowHeight + 2;
+          const rectHeight = Math.max(4, rowHeight - 4);
           page.drawRectangle({
             x: currentX,
             y: rectY,
@@ -774,10 +778,10 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
           });
         }
 
-        // Draw text on top
+        // Draw text on top — preserve readable font colors; do not force white
         if (cellValue) {
           const textColor = fillColor
-            ? rgb(1, 1, 1) // White text on colored background for contrast
+            ? rgb(0.12, 0.11, 0.1) // Keep dark readable text even on filled background
             : rgb(0.12, 0.11, 0.1); // Dark gray for normal text
 
           page.drawText(cellValue, {
@@ -789,12 +793,18 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
           });
         }
 
-        currentX += cellWidth + 4; // Move to next cell position
+        // Move to next cell position; row advance below
+        currentX += cellWidth + 4;
       });
 
-      // Move to next row
+      // Prevent clipping before advancing; pagination guard
+      if (currentYPos - rowHeight < margin) {
+        page = document.addPage(pageSize);
+        linesOnCurrentPage = 0;
+        currentYPos = pageSize[1] - margin;
+      }
       linesOnCurrentPage += 1;
-      currentYPos -= lineHeight;
+      currentYPos -= rowHeight;
     }
   });
 

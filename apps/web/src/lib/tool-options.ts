@@ -144,6 +144,17 @@ export const toolOptions: Record<string, OptionField[]> = {
       },
     },
     {
+      key: 'position',
+      label: 'Position',
+      type: 'select',
+      value: 'bottom-right',
+      options: ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'],
+      optionLabels: {
+        'top-left': 'Top Left', 'top-center': 'Top Center', 'top-right': 'Top Right',
+        'bottom-left': 'Bottom Left', 'bottom-center': 'Bottom Center', 'bottom-right': 'Bottom Right',
+      },
+    },
+    {
       key: 'alignment',
       label: 'Alignment',
       type: 'select',
@@ -151,6 +162,9 @@ export const toolOptions: Record<string, OptionField[]> = {
       options: ['left', 'center', 'right'],
       optionLabels: { left: 'Left', center: 'Center', right: 'Right' },
     },
+    { key: 'fontName', label: 'Font', type: 'select', value: 'Helvetica', options: ['Helvetica', 'Times-Roman', 'Courier'] },
+    { key: 'fontSize', label: 'Font size', type: 'number', value: 10, min: 6, max: 36, step: 1 },
+    { key: 'color', label: 'Color (hex)', type: 'text', value: '#181818' },
   ],
   // `optimize-web` intentionally has no options. `optimizeForWeb` ignored its
   // `progressive` flag and fell through to `compressPdf` with the balanced

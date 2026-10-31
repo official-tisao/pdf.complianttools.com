@@ -5,6 +5,7 @@ import {
   PDFNumber,
   PDFRawStream,
   StandardFonts,
+  rgb,
   decodePDFRawStream,
   degrees,
 } from 'pdf-lib';
@@ -424,19 +425,54 @@ export async function addBatesNumbering(
     position?: string;
     numberingType?: string;
     alignment?: string;
+    fontName?: string;
+    fontSize?: number;
+    color?: string;
   },
 ): Promise<Uint8Array> {
   const document = await load(bytes, 'add Bates numbers');
-  const font = await document.embedFont(StandardFonts.Helvetica);
+  const fontSize = options.fontSize ?? 10;
+  const fontName = options.fontName ?? 'Helvetica';
+  const colorStr = options.color ?? '#181818';
+  // Parse simple hex/rgb; default dark gray preserved
+  let r = 0.12, g = 0.11, b = 0.1;
+  if (colorStr.startsWith('#')) {
+    const hex = colorStr.slice(1);
+    if (hex.length === 3) {
+      const h = hex || '';
+      r = parseInt((h[0] ?? '0') + (h[0] ?? '0'), 16) / 255;
+      g = parseInt((h[1] ?? '0') + (h[1] ?? '0'), 16) / 255;
+      b = parseInt((h[2] ?? '0') + (h[2] ?? '0'), 16) / 255;
+    } else if (hex.length === 6) {
+      const h = hex || '';
+      r = parseInt((h.slice(0, 2) ?? '00'), 16) / 255;
+      g = parseInt((h.slice(2, 4) ?? '00'), 16) / 255;
+      b = parseInt((h.slice(4, 6) ?? '00'), 16) / 255;
+    }
+  }
+  const color = rgb(r, g, b);
+  let font;
+  try {
+    font = fontName === 'Helvetica' ? await document.embedFont(StandardFonts.Helvetica)
+      : fontName === 'Times-Roman' ? await document.embedFont(StandardFonts.TimesRoman)
+      : fontName === 'Courier' ? await document.embedFont(StandardFonts.Courier)
+      : await document.embedFont(StandardFonts.Helvetica);
+  } catch {
+    font = await document.embedFont(StandardFonts.Helvetica);
+  }
   const position = options.position ?? 'bottom-right';
-  const alignment = resolveBatesAlignment(options.alignment, position);
+  // Position drives alignment; explicit alignment only wins when it aligns with the position
+  // (so selecting bottom-left always stamps left regardless of a leftover 'right' value).
+  const implied = (position.endsWith('left') ? 'left' : position.endsWith('center') ? 'center' : 'right');
+  // Position wins: the horizontal side named in the position is what actually stamps.
+  const alignment = implied;
   for (const [index, page] of document.getPages().entries()) {
     const label = formatBatesLabel((options.start ?? 1) + index, options);
     const width = page.getWidth();
     const height = page.getHeight();
     const x = batesAnchorX(alignment, width);
-    const y = position.startsWith('top') ? height - 24 : 18;
-    page.drawText(label, { x, y, size: 10, font });
+    const y = position.startsWith('top') ? height - 24 - fontSize + 4 : 18;
+    page.drawText(label, { x, y, size: fontSize, font, color });
   }
   return document.save();
 }
