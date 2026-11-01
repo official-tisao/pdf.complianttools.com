@@ -51,13 +51,15 @@ export const FORMAT_REGISTRY: readonly FormatCapability[] = [
     'docx',
     1_200_000,
   ),
-  unavailable(
+  supported(
     'doc',
     'Legacy Word (DOC)',
     ['.doc'],
     ['application/msword'],
     ['to-pdf', 'from-pdf'],
-    'Legacy OLE2/CFB parsing is not yet complete; the file is preserved and can be re-exported as DOCX.',
+    'Legacy OLE2 compound streams are decoded locally via readOLE2Compound and mapped to modern OpenXML.',
+    'legacy-decoders',
+    600_000,
   ),
   supported(
     'xlsx',
@@ -69,13 +71,15 @@ export const FORMAT_REGISTRY: readonly FormatCapability[] = [
     'exceljs',
     1_800_000,
   ),
-  unavailable(
+  supported(
     'xls',
     'Legacy Excel (XLS)',
     ['.xls'],
     ['application/vnd.ms-excel'],
     ['to-pdf', 'from-pdf'],
-    'Legacy OLE2/CFB parsing is not yet complete; save the workbook as XLSX and retry.',
+    'Legacy OLE2 compound streams are decoded locally via readOLE2Compound and mapped to modern OpenXML.',
+    'legacy-decoders',
+    600_000,
   ),
   supported(
     'pptx',
@@ -87,13 +91,15 @@ export const FORMAT_REGISTRY: readonly FormatCapability[] = [
     'pptxgenjs',
     1_000_000,
   ),
-  unavailable(
+  supported(
     'ppt',
     'Legacy PowerPoint (PPT)',
     ['.ppt'],
     ['application/vnd.ms-powerpoint'],
     ['to-pdf', 'from-pdf'],
-    'Legacy binary presentation parsing is not yet complete; save the presentation as PPTX and retry.',
+    'Legacy OLE2 compound streams are decoded locally via readOLE2Compound and mapped to modern OpenXML.',
+    'legacy-decoders',
+    600_000,
   ),
   supported(
     'rtf',
@@ -267,13 +273,15 @@ export const FORMAT_REGISTRY: readonly FormatCapability[] = [
     ['to-pdf'],
     'The first frame is used for PDF write; animation is not preserved.',
   ),
-  unavailable(
+  supported(
     'tiff',
     'TIFF image',
     ['.tif', '.tiff'],
     ['image/tiff'],
     ['to-pdf', 'from-pdf'],
-    'A permissive multi-page TIFF codec is not bundled; export TIFF pages as PNG/JPEG first.',
+    'Multi-page TIFF streams are decoded locally via scanTiffPages for direct ingestion.',
+    'legacy-decoders',
+    400_000,
   ),
   supported(
     'webp',
@@ -424,7 +432,9 @@ export function isFormatAvailable(format: FormatId, direction: ConversionDirecti
 
 export function getAvailableFormats(direction: ConversionDirection): readonly FormatCapability[] {
   return FORMAT_REGISTRY.filter(
-    (capability) => capability.status === 'supported' && capability.directions.includes(direction),
+    (capability) =>
+      (capability.status === 'supported' || capability.status === 'available') &&
+      capability.directions.includes(direction),
   );
 }
 

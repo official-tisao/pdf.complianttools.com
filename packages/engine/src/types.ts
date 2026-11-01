@@ -98,7 +98,7 @@ export type FormatId =
   | 'pdf-odp'
   | 'pdf-epub';
 
-export type CapabilityStatus = 'supported' | 'unavailable';
+export type CapabilityStatus = 'supported' | 'available' | 'unavailable';
 
 export type FormatCapability = {
   readonly id: FormatId;

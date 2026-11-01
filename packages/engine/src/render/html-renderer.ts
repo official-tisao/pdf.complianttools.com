@@ -11,7 +11,9 @@ export class PuppeteerHtmlRenderer implements HtmlRenderer {
     options?: { pageSize?: 'letter' | 'a4'; margin?: number },
   ): Promise<{ bytes: Uint8Array; warnings: string[] }> {
     const puppeteer = await import('puppeteer');
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
     const browser = await puppeteer.launch({
+      ...(executablePath ? { executablePath } : {}),
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
       timeout: 30000,
