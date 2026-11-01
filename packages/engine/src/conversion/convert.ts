@@ -922,7 +922,9 @@ function groupItemsIntoRows(
   for (const [y, items] of rowMap.entries()) {
     result.push({ y, items });
   }
-  return result.sort((a, b) => a.y - b.y) as readonly {
+  // PDF origin is bottom-left; a larger y sits higher on the page. Reading order
+  // is top-to-bottom, so sort descending by y.
+  return result.sort((a, b) => b.y - a.y) as readonly {
     readonly y: number;
     readonly items: readonly { readonly str: string; readonly x?: number }[];
   }[];
