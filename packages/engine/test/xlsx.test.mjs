@@ -219,8 +219,15 @@ test('xlsxToPdf renders cell fill colors as PDF rectangles', async () => {
   assert.ok(content.includes('0 1 0 rg'), 'green fill rectangle drawn');
   assert.ok(content.includes('1 0 0 rg'), 'red fill rectangle drawn');
   const pathFills = (content.match(/\nh\nf\b/g) ?? []).length;
-  assert.strictEqual(pathFills, 4, `four filled cells drawn as path rectangles (found ${pathFills})`);
-  assert.ok(!content.includes('[fill:'), 'fill markers not present - colors rendered as rectangles');
+  assert.strictEqual(
+    pathFills,
+    4,
+    `four filled cells drawn as path rectangles (found ${pathFills})`,
+  );
+  assert.ok(
+    !content.includes('[fill:'),
+    'fill markers not present - colors rendered as rectangles',
+  );
 });
 
 test('xlsxToPdf renders with worksheet column widths', async () => {
@@ -317,7 +324,10 @@ test('xlsxToPdf preserves readable font colors and does not force white on fills
   const content = streams.join('\n');
   // There must be dark text colors (near-black rgb) rather than pure white (1 1 1 rg) for all text
   const whiteTextRuns = (content.match(/1 1 1 rg/g) ?? []).length;
-  assert.ok(whiteTextRuns <= 1, `readable dark text preserved; expected <=1 white text run, found ${whiteTextRuns}`);
+  assert.ok(
+    whiteTextRuns <= 1,
+    `readable dark text preserved; expected <=1 white text run, found ${whiteTextRuns}`,
+  );
   // Actual text content must survive extraction
   const text = await extractedText(pdf.bytes);
   assert.ok(text.includes('RedOnBlue'), 'colored-cell text preserved');

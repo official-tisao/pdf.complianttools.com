@@ -198,7 +198,9 @@ async function convertToPdfRequest(
       break;
     case 'xlsx':
       pdf = await xlsxToPdf(bytes, options);
-      warnings.push('XLSX layout is reconstructed as text rows; column widths are content-based estimates.');
+      warnings.push(
+        'XLSX layout is reconstructed as text rows; column widths are content-based estimates.',
+      );
       break;
     case 'pptx': {
       const rendered = await pptxToPdf(bytes, options);
@@ -216,9 +218,19 @@ async function convertToPdfRequest(
       pdf = await markdownToPdf(safeDecode(bytes), options);
       break;
     case 'html': {
-      const result = await (await import('../render/html-renderer.js')).renderHtmlToPdf(decoder.decode(bytes), { pageSize: options.pageSize === 'a4' ? 'a4' : 'letter', margin: options.margin ?? 48 });
-      pdf = result.bytes && result.bytes.length > 0 ? result.bytes : await htmlToPdf(decoder.decode(bytes), options);
-      warnings.push('Only pasted HTML is processed locally; external URLs and active content are removed.');
+      const result = await (
+        await import('../render/html-renderer.js')
+      ).renderHtmlToPdf(decoder.decode(bytes), {
+        pageSize: options.pageSize === 'a4' ? 'a4' : 'letter',
+        margin: options.margin ?? 48,
+      });
+      pdf =
+        result.bytes && result.bytes.length > 0
+          ? result.bytes
+          : await htmlToPdf(decoder.decode(bytes), options);
+      warnings.push(
+        'Only pasted HTML is processed locally; external URLs and active content are removed.',
+      );
       if (!pdf.length || pdf.length === 0) {
         warnings.push('HTML conversion produced no output — renderer may have failed.');
       }
@@ -232,7 +244,9 @@ async function convertToPdfRequest(
       break;
     case 'epub': {
       pdf = await epubToPdf(bytes, options);
-      warnings.push('EPUB converted via HTML pipeline; structural markup preserved where renderer supports it.');
+      warnings.push(
+        'EPUB converted via HTML pipeline; structural markup preserved where renderer supports it.',
+      );
       break;
     }
     case 'csv':
@@ -602,7 +616,12 @@ async function markdownToPdf(markdown: string, options: ConversionOptions): Prom
 
 async function htmlToPdf(html: string, options: ConversionOptions = {}): Promise<Uint8Array> {
   // Preserve full HTML/CSS; use renderer when available; explicit fallback with warning
-  const rendererResult = await (await import('../render/html-renderer.js')).renderHtmlToPdf(html, { pageSize: options.pageSize === 'a4' ? 'a4' : 'letter', margin: options.margin ?? 48 });
+  const rendererResult = await (
+    await import('../render/html-renderer.js')
+  ).renderHtmlToPdf(html, {
+    pageSize: options.pageSize === 'a4' ? 'a4' : 'letter',
+    margin: options.margin ?? 48,
+  });
   if (rendererResult.bytes && rendererResult.bytes.length > 0) {
     return rendererResult.bytes;
   }
@@ -658,8 +677,7 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
   await workbook.xlsx.load(bytes.slice().buffer);
 
   // Calculate page dimensions
-  const pageSize: [number, number] =
-    options.pageSize === 'a4' ? [595.28, 841.89] : [612, 792];
+  const pageSize: [number, number] = options.pageSize === 'a4' ? [595.28, 841.89] : [612, 792];
   const margin = options.margin ?? 48;
 
   const document = await PDFDocument.create({ updateMetadata: false });
@@ -726,14 +744,21 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
     worksheet.eachRow((row) => {
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
         // Use column.width if available, otherwise estimate from text
-        const colWidth = (worksheet as unknown as { columns?: { width?: number }[] }).columns?.[colNumber - 1]?.width;
+        const colWidth = (worksheet as unknown as { columns?: { width?: number }[] }).columns?.[
+          colNumber - 1
+        ]?.width;
         let cellWidth: number;
 
         if (typeof colWidth === 'number' && colWidth > 0) {
           cellWidth = colWidth;
         } else {
           // Estimate from text content
-          const text = cell.text ? cell.text.toString().replace(/[\r\n]+/g, ' ').trim() : '';
+          const text = cell.text
+            ? cell.text
+                .toString()
+                .replace(/[\r\n]+/g, ' ')
+                .trim()
+            : '';
           cellWidth = Math.max(charWidth * 10 + 4, text.length * charWidth + 4);
         }
 
@@ -752,18 +777,29 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
       let currentX = margin;
 
       // Row height drives rectangle and vertical spacing; default when ExcelJS missing
-      const rowHeight = (row.height && typeof row.height === 'number' && row.height > 0) ? row.height : baseRowHeight;
+      const rowHeight =
+        row.height && typeof row.height === 'number' && row.height > 0 ? row.height : baseRowHeight;
 
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-        const cellValue = cell.text ? cell.text.toString().trim().replace(/[\r\n]+/g, ' ') : '';
+        const cellValue = cell.text
+          ? cell.text
+              .toString()
+              .trim()
+              .replace(/[\r\n]+/g, ' ')
+          : '';
         const cellWidth = columnWidths[colNumber - 1] ?? charWidth * 10 + 4;
 
         // Check for fill color and render as background rectangle
         // ExcelJS fill format: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFRRGGBB' } }
-        const fillInfo = cell.fill as unknown as { type?: string; pattern?: string; fgColor?: { argb?: string } };
-        const fillColor = fillInfo?.type === 'pattern' && fillInfo?.pattern === 'solid' && fillInfo?.fgColor?.argb
-          ? parseColor(fillInfo.fgColor.argb)
-          : null;
+        const fillInfo = cell.fill as unknown as {
+          type?: string;
+          pattern?: string;
+          fgColor?: { argb?: string };
+        };
+        const fillColor =
+          fillInfo?.type === 'pattern' && fillInfo?.pattern === 'solid' && fillInfo?.fgColor?.argb
+            ? parseColor(fillInfo.fgColor.argb)
+            : null;
 
         if (fillColor) {
           // Draw filled rectangle behind text — height based on actual row height
@@ -853,13 +889,118 @@ async function textToPptx(pages: readonly { lines: readonly string[] }[]): Promi
   return new Uint8Array(output as ArrayBuffer);
 }
 
+/**
+ * Row-groups text items by vertical proximity, then column-groups each row by
+ * x-coordinate clustering. Splits into multiple columns only when positional
+ * evidence is reliable (consistent x-clusters across ≥2 rows); otherwise falls
+ * back to a single line-level cell per row so ordinary text spacing never
+ * fabricates table columns.
+ */
+function groupItemsIntoRows(
+  items: readonly { str: string; x?: number | undefined; y?: number | undefined }[],
+): readonly {
+  readonly y: number;
+  readonly items: readonly { readonly str: string; readonly x?: number }[];
+}[] {
+  const rowMap: Map<number, { str: string; x?: number }[]> = new Map();
+  for (const item of items) {
+    const y = item.y;
+    if (y === undefined) continue;
+    const roundedY = Math.round(y);
+    const existing = rowMap.get(roundedY);
+    if (existing) {
+      const cell: { str: string; x?: number } = { str: item.str };
+      if (item.x !== undefined) cell.x = item.x;
+      existing.push(cell);
+    } else {
+      const cell: { str: string; x?: number } = { str: item.str };
+      if (item.x !== undefined) cell.x = item.x;
+      rowMap.set(roundedY, [cell]);
+    }
+  }
+  const result: { y: number; items: { str: string; x?: number }[] }[] = [];
+  for (const [y, items] of rowMap.entries()) {
+    result.push({ y, items });
+  }
+  return result.sort((a, b) => a.y - b.y) as readonly {
+    readonly y: number;
+    readonly items: readonly { readonly str: string; readonly x?: number }[];
+  }[];
+}
+
+/**
+ * Cluster row items into columns by horizontal gap. A new column starts when
+ * the gap between consecutive item x-positions exceeds a threshold relative
+ * to page width (here, ≥20pt absolute separation on a letter page).
+ */
+function clusterByX(
+  rowItems: readonly { readonly str: string; readonly x?: number }[],
+): string[][] {
+  const sorted = rowItems
+    .filter((i) => i.str.trim().length > 0)
+    .sort((a, b) => (a.x ?? 0) - (b.x ?? 0));
+  const columns: string[][] = [];
+  let current: string[] = [];
+  let lastX: number | undefined;
+  for (const item of sorted) {
+    const x = item.x ?? 0;
+    if (lastX !== undefined && x - lastX >= 20) {
+      if (current.length > 0) columns.push(current);
+      current = [];
+    }
+    current.push(item.str.trim());
+    lastX = x;
+  }
+  if (current.length > 0) columns.push(current);
+  return columns;
+}
+
 async function pdfToCsv(bytes: Uint8Array): Promise<string> {
+  if (bytes.length === 0) return '';
   const pages = await extractPdfTextPages(bytes);
-  const rows = pages.flatMap((page) =>
-    page.lines
-      .filter(Boolean)
-      .map((line) => (line.includes('|') ? line.split('|').map((cell) => cell.trim()) : [line])),
-  );
+  const rows: string[][] = [];
+  for (const page of pages) {
+    const pageItems = page.items ?? [];
+    if (pageItems.length === 0) {
+      for (const line of page.lines.filter(Boolean)) {
+        rows.push(line.includes('|') ? line.split('|').map((c) => c.trim()) : [line]);
+      }
+      continue;
+    }
+    const rowGroups = groupItemsIntoRows(pageItems);
+    // Evidence gate: require ≥2 rows and ≥2 distinct x-clusters in every row
+    // before trusting item-level column reconstruction.
+    const rowClusters = rowGroups.map((g) => clusterByX(g.items));
+    const multiColumnRows = rowClusters.filter((cols) => cols.length > 1);
+    const hasConsistentColumns =
+      rowGroups.length >= 2 &&
+      multiColumnRows.length >= Math.ceil(rowGroups.length * 0.6) &&
+      rowClusters.every((cols) => cols.length === multiColumnRows[0]?.length || cols.length === 1);
+    if (hasConsistentColumns && multiColumnRows[0]) {
+      for (const group of rowGroups) {
+        const cols = clusterByX(group.items);
+        // Only emit multi-column when that row actually has ≥2 clusters.
+        const cells =
+          cols.length > 1
+            ? cols.flatMap((c) => c)
+            : [
+                group.items
+                  .map((i) => i.str)
+                  .join('')
+                  .trim(),
+              ];
+        rows.push(cells);
+      }
+    } else {
+      for (const group of rowGroups) {
+        const text = group.items
+          .map((i) => i.str)
+          .join('')
+          .trim();
+        if (text.length > 0) rows.push([text]);
+      }
+    }
+  }
   return rowsToCsv(rows);
 }
 

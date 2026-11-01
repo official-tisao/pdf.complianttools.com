@@ -435,7 +435,9 @@ export async function addBatesNumbering(
   const fontName = options.fontName ?? 'Helvetica';
   const colorStr = options.color ?? '#181818';
   // Parse simple hex/rgb; default dark gray preserved
-  let r = 0.12, g = 0.11, b = 0.1;
+  let r = 0.12,
+    g = 0.11,
+    b = 0.1;
   if (colorStr.startsWith('#')) {
     const hex = colorStr.slice(1);
     if (hex.length === 3) {
@@ -445,27 +447,30 @@ export async function addBatesNumbering(
       b = parseInt((h[2] ?? '0') + (h[2] ?? '0'), 16) / 255;
     } else if (hex.length === 6) {
       const h = hex || '';
-      r = parseInt((h.slice(0, 2) ?? '00'), 16) / 255;
-      g = parseInt((h.slice(2, 4) ?? '00'), 16) / 255;
-      b = parseInt((h.slice(4, 6) ?? '00'), 16) / 255;
+      r = parseInt(h.slice(0, 2) ?? '00', 16) / 255;
+      g = parseInt(h.slice(2, 4) ?? '00', 16) / 255;
+      b = parseInt(h.slice(4, 6) ?? '00', 16) / 255;
     }
   }
   const color = rgb(r, g, b);
   let font;
   try {
-    font = fontName === 'Helvetica' ? await document.embedFont(StandardFonts.Helvetica)
-      : fontName === 'Times-Roman' ? await document.embedFont(StandardFonts.TimesRoman)
-      : fontName === 'Courier' ? await document.embedFont(StandardFonts.Courier)
-      : await document.embedFont(StandardFonts.Helvetica);
+    font =
+      fontName === 'Helvetica'
+        ? await document.embedFont(StandardFonts.Helvetica)
+        : fontName === 'Times-Roman'
+          ? await document.embedFont(StandardFonts.TimesRoman)
+          : fontName === 'Courier'
+            ? await document.embedFont(StandardFonts.Courier)
+            : await document.embedFont(StandardFonts.Helvetica);
   } catch {
     font = await document.embedFont(StandardFonts.Helvetica);
   }
   const position = options.position ?? 'bottom-right';
-  // Position drives alignment; explicit alignment only wins when it aligns with the position
-  // (so selecting bottom-left always stamps left regardless of a leftover 'right' value).
-  const implied = (position.endsWith('left') ? 'left' : position.endsWith('center') ? 'center' : 'right');
-  // Position wins: the horizontal side named in the position is what actually stamps.
-  const alignment = implied;
+  // Explicit alignment wins when set; otherwise the horizontal side named in
+  // `position` determines the anchor (backward compatibility for callers that
+  // only pass position).
+  const alignment = resolveBatesAlignment(options.alignment, position);
   for (const [index, page] of document.getPages().entries()) {
     const label = formatBatesLabel((options.start ?? 1) + index, options);
     const width = page.getWidth();

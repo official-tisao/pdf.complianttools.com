@@ -4,8 +4,11 @@ import { readFileSync, existsSync } from 'node:fs';
 import { convertFromPdf, csvToRows } from '../dist/index.js';
 
 test('pdfToCsv reconstructs table columns from item-level positional metadata', async () => {
-  const path = 'table-fixture.pdf';
-  if (!existsSync(path)) { console.log('fixture missing, skipping'); return; }
+  const path = './table-fixture.pdf';
+  if (!existsSync(path)) {
+    console.log('fixture missing, skipping');
+    return;
+  }
   const buf = readFileSync(path);
   const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
   const csvResult = await convertFromPdf('csv', bytes);
@@ -24,7 +27,11 @@ test('pdfToCsv reconstructs table columns from item-level positional metadata', 
 
   // Verify no fabricated columns beyond the expected 2
   for (const row of rows) {
-    assert.equal(row.length, 2, `each row has exactly 2 columns, got ${row.length}: ${row.join(',')}`);
+    assert.equal(
+      row.length,
+      2,
+      `each row has exactly 2 columns, got ${row.length}: ${row.join(',')}`,
+    );
   }
 });
 
@@ -34,8 +41,11 @@ test('pdfToCsv boundary: no fabricated split without reliable column-boundary ev
   // column splitting. When evidence is present and consistent, Beta/200 are
   // properly split into separate columns rather than merged into one field.
   // When evidence is insufficient, the conservative line-level fallback activates.
-  const path = 'table-fixture.pdf';
-  if (!existsSync(path)) { console.log('fixture missing, skipping'); return; }
+  const path = './table-fixture.pdf';
+  if (!existsSync(path)) {
+    console.log('fixture missing, skipping');
+    return;
+  }
   const buf = readFileSync(path);
   const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
   const csvResult = await convertFromPdf('csv', bytes);
@@ -43,8 +53,10 @@ test('pdfToCsv boundary: no fabricated split without reliable column-boundary ev
 
   // With sufficient evidence: Beta and 200 are in separate columns
   const rows = csvToRows(csv);
-  assert.ok(rows.some(r => r.length === 2 && r.includes('Beta') && r.includes('200')),
-    'Beta and 200 appear as separate columns when positional evidence supports it');
+  assert.ok(
+    rows.some((r) => r.length === 2 && r.includes('Beta') && r.includes('200')),
+    'Beta and 200 appear as separate columns when positional evidence supports it',
+  );
 
   // No fabricated columns beyond the evidence-justified count
   for (const row of rows) {

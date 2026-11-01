@@ -2,7 +2,11 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'fs';
 const { pdfToHtml } = await import('../dist/index.js').catch(async () => {
-  try { return await import('../src/conversion/pdf-text.js'); } catch { throw new Error('dist missing'); }
+  try {
+    return await import('../src/conversion/pdf-text.js');
+  } catch {
+    throw new Error('dist missing');
+  }
 });
 describe('Phase 3C Stage A1 — multi-page dimensions', () => {
   it('uses per-page height from viewport (not global 792) for coordinate conversion', async () => {
@@ -19,7 +23,10 @@ describe('Phase 3C Stage A1 — multi-page dimensions', () => {
     // If implementation used pages[0].pageHeight globally, multi-page fixtures fail
     // We verify by inspecting that code uses (page) => { const pageHeight = page.pageHeight ?? 792 }
     const src = readFileSync('src/conversion/pdf-text.ts', 'utf8');
-    assert.ok(src.includes('const pageHeight = page.pageHeight ?? 792'), 'per-page height uses page variable');
+    assert.ok(
+      src.includes('const pageHeight = page.pageHeight ?? 792'),
+      'per-page height uses page variable',
+    );
     assert.ok(!src.includes('pages[0]?.pageHeight'), 'global pages[0] removed');
   });
 });

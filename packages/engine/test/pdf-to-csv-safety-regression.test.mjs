@@ -24,11 +24,17 @@ describe('PDF to CSV safety regression', () => {
     const page = pdfdoc.addPage([612, 792]);
     const font = await pdfdoc.embedFont(StandardFonts.Helvetica);
     page.drawText('This is prose text that spans the page width without column structure.', {
-      x: 50, y: 700, size: 12, font,
+      x: 50,
+      y: 700,
+      size: 12,
+      font,
     });
     const bytes = await pdfdoc.save();
 
-    const csvResult = await convertFromPdf('csv', new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)));
+    const csvResult = await convertFromPdf(
+      'csv',
+      new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+    );
     const csv = toCsv(csvResult);
 
     // Prose should not produce multi-column table output
@@ -37,7 +43,10 @@ describe('PDF to CSV safety regression', () => {
     // Each row should have at most 1 column (no fabricated split)
     for (const row of rows) {
       const cells = row.split(',');
-      assert.ok(cells.length <= 1, `prose should not fabricate columns: got ${cells.length} cells: "${row}"`);
+      assert.ok(
+        cells.length <= 1,
+        `prose should not fabricate columns: got ${cells.length} cells: "${row}"`,
+      );
     }
   });
 
@@ -46,11 +55,17 @@ describe('PDF to CSV safety regression', () => {
     const page = pdfdoc.addPage([612, 792]);
     const font = await pdfdoc.embedFont(StandardFonts.Helvetica);
     page.drawText('Single column item with trailing content 200', {
-      x: 50, y: 720, size: 12, font,
+      x: 50,
+      y: 720,
+      size: 12,
+      font,
     });
     const bytes = await pdfdoc.save();
 
-    const csvResult = await convertFromPdf('csv', new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)));
+    const csvResult = await convertFromPdf(
+      'csv',
+      new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+    );
     const csv = toCsv(csvResult);
     console.log('DEBUG single-column CSV:', csv);
 
@@ -59,7 +74,10 @@ describe('PDF to CSV safety regression', () => {
     for (const row of rows) {
       const cells = row.split(',');
       // Should not artificially split into 2+ columns without evidence
-      assert.ok(cells.length <= 2, `single-column should not fabricate split: ${cells.length} cells: "${row}"`);
+      assert.ok(
+        cells.length <= 2,
+        `single-column should not fabricate split: ${cells.length} cells: "${row}"`,
+      );
     }
   });
 
@@ -67,13 +85,21 @@ describe('PDF to CSV safety regression', () => {
     // Verify that existing attribution and line-level contract is preserved
     // when the engine processes standard PDFs
     const path = '../../fixtures/fidelity/phase1-synthetic.pdf';
-    if (!existsSync(path)) { console.log('fixture not found, skipping'); return; }
+    if (!existsSync(path)) {
+      console.log('fixture not found, skipping');
+      return;
+    }
     const bytes = readFileSync(path);
-    const csvResult = await convertFromPdf('csv', new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)));
+    const csvResult = await convertFromPdf(
+      'csv',
+      new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+    );
     const csv = toCsv(csvResult);
 
     // CSV output must include the expected header and data
-    assert.ok(csv.includes('Name,Amount') || csv.trim().split('\n').length > 1,
-      'CSV output preserves line-level contract');
+    assert.ok(
+      csv.includes('Name,Amount') || csv.trim().split('\n').length > 1,
+      'CSV output preserves line-level contract',
+    );
   });
 });
