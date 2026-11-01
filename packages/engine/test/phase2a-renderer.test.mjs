@@ -16,8 +16,14 @@ describe('Phase 2A — isolated HTML renderer POC', () => {
     const result = await renderHtmlToPdf(html, { pageSize: 'letter', margin: 48 });
     // Fallback if renderer unavailable: check warnings
     if (!result.bytes || result.bytes.length === 0) {
-      assert.ok(result.warnings.some(w => w.includes('unavailable') || w.includes('Falling back')), 'clear fallback warning required');
-      console.log('Renderer unavailable — fallback triggered (expected if binary missing):', result.warnings[0]);
+      assert.ok(
+        result.warnings.some((w) => w.includes('unavailable') || w.includes('Falling back')),
+        'clear fallback warning required',
+      );
+      console.log(
+        'Renderer unavailable — fallback triggered (expected if binary missing):',
+        result.warnings[0],
+      );
       return;
     }
     // Success path: verify 2 pages via pdf-lib
@@ -32,7 +38,10 @@ describe('Phase 2A — isolated HTML renderer POC', () => {
     if (!result.bytes || result.bytes.length === 0) {
       assert.ok(Array.isArray(result.warnings), 'warnings array');
       assert.ok(result.warnings.length > 0, 'warning emitted');
-      assert.ok(result.warnings[0].includes('unavailable') || result.warnings[0].includes('Falling back'), 'clear warning text');
+      assert.ok(
+        result.warnings[0].includes('unavailable') || result.warnings[0].includes('Falling back'),
+        'clear warning text',
+      );
     }
   });
 

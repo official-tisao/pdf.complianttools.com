@@ -198,7 +198,9 @@ async function convertToPdfRequest(
       break;
     case 'xlsx':
       pdf = await xlsxToPdf(bytes, options);
-      warnings.push('XLSX layout is reconstructed as text rows; column widths are content-based estimates.');
+      warnings.push(
+        'XLSX layout is reconstructed as text rows; column widths are content-based estimates.',
+      );
       break;
     case 'pptx': {
       const rendered = await pptxToPdf(bytes, options);
@@ -216,9 +218,19 @@ async function convertToPdfRequest(
       pdf = await markdownToPdf(safeDecode(bytes), options);
       break;
     case 'html': {
-      const result = await (await import('../render/html-renderer.js')).renderHtmlToPdf(decoder.decode(bytes), { pageSize: options.pageSize === 'a4' ? 'a4' : 'letter', margin: options.margin ?? 48 });
-      pdf = result.bytes && result.bytes.length > 0 ? result.bytes : await htmlToPdf(decoder.decode(bytes), options);
-      warnings.push('Only pasted HTML is processed locally; external URLs and active content are removed.');
+      const result = await (
+        await import('../render/html-renderer.js')
+      ).renderHtmlToPdf(decoder.decode(bytes), {
+        pageSize: options.pageSize === 'a4' ? 'a4' : 'letter',
+        margin: options.margin ?? 48,
+      });
+      pdf =
+        result.bytes && result.bytes.length > 0
+          ? result.bytes
+          : await htmlToPdf(decoder.decode(bytes), options);
+      warnings.push(
+        'Only pasted HTML is processed locally; external URLs and active content are removed.',
+      );
       if (!pdf.length || pdf.length === 0) {
         warnings.push('HTML conversion produced no output — renderer may have failed.');
       }
@@ -232,7 +244,9 @@ async function convertToPdfRequest(
       break;
     case 'epub': {
       pdf = await epubToPdf(bytes, options);
-      warnings.push('EPUB converted via HTML pipeline; structural markup preserved where renderer supports it.');
+      warnings.push(
+        'EPUB converted via HTML pipeline; structural markup preserved where renderer supports it.',
+      );
       break;
     }
     case 'csv':
@@ -602,7 +616,12 @@ async function markdownToPdf(markdown: string, options: ConversionOptions): Prom
 
 async function htmlToPdf(html: string, options: ConversionOptions = {}): Promise<Uint8Array> {
   // Preserve full HTML/CSS; use renderer when available; explicit fallback with warning
-  const rendererResult = await (await import('../render/html-renderer.js')).renderHtmlToPdf(html, { pageSize: options.pageSize === 'a4' ? 'a4' : 'letter', margin: options.margin ?? 48 });
+  const rendererResult = await (
+    await import('../render/html-renderer.js')
+  ).renderHtmlToPdf(html, {
+    pageSize: options.pageSize === 'a4' ? 'a4' : 'letter',
+    margin: options.margin ?? 48,
+  });
   if (rendererResult.bytes && rendererResult.bytes.length > 0) {
     return rendererResult.bytes;
   }
@@ -658,8 +677,7 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
   await workbook.xlsx.load(bytes.slice().buffer);
 
   // Calculate page dimensions
-  const pageSize: [number, number] =
-    options.pageSize === 'a4' ? [595.28, 841.89] : [612, 792];
+  const pageSize: [number, number] = options.pageSize === 'a4' ? [595.28, 841.89] : [612, 792];
   const margin = options.margin ?? 48;
 
   const document = await PDFDocument.create({ updateMetadata: false });
@@ -726,14 +744,21 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
     worksheet.eachRow((row) => {
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
         // Use column.width if available, otherwise estimate from text
-        const colWidth = (worksheet as unknown as { columns?: { width?: number }[] }).columns?.[colNumber - 1]?.width;
+        const colWidth = (worksheet as unknown as { columns?: { width?: number }[] }).columns?.[
+          colNumber - 1
+        ]?.width;
         let cellWidth: number;
 
         if (typeof colWidth === 'number' && colWidth > 0) {
           cellWidth = colWidth;
         } else {
           // Estimate from text content
-          const text = cell.text ? cell.text.toString().replace(/[\r\n]+/g, ' ').trim() : '';
+          const text = cell.text
+            ? cell.text
+                .toString()
+                .replace(/[\r\n]+/g, ' ')
+                .trim()
+            : '';
           cellWidth = Math.max(charWidth * 10 + 4, text.length * charWidth + 4);
         }
 
@@ -755,15 +780,25 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
       const rowHeight = (row.height && typeof row.height === 'number' && row.height > 0) ? row.height : baseRowHeight;
 
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-        const cellValue = cell.text ? cell.text.toString().trim().replace(/[\r\n]+/g, ' ') : '';
+        const cellValue = cell.text
+          ? cell.text
+              .toString()
+              .trim()
+              .replace(/[\r\n]+/g, ' ')
+          : '';
         const cellWidth = columnWidths[colNumber - 1] ?? charWidth * 10 + 4;
 
         // Check for fill color and render as background rectangle
         // ExcelJS fill format: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFRRGGBB' } }
-        const fillInfo = cell.fill as unknown as { type?: string; pattern?: string; fgColor?: { argb?: string } };
-        const fillColor = fillInfo?.type === 'pattern' && fillInfo?.pattern === 'solid' && fillInfo?.fgColor?.argb
-          ? parseColor(fillInfo.fgColor.argb)
-          : null;
+        const fillInfo = cell.fill as unknown as {
+          type?: string;
+          pattern?: string;
+          fgColor?: { argb?: string };
+        };
+        const fillColor =
+          fillInfo?.type === 'pattern' && fillInfo?.pattern === 'solid' && fillInfo?.fgColor?.argb
+            ? parseColor(fillInfo.fgColor.argb)
+            : null;
 
         if (fillColor) {
           // Draw filled rectangle behind text — height based on actual row height
@@ -1025,9 +1060,10 @@ export async function psdCompositeToPng(bytes: Uint8Array): Promise<Uint8Array> 
       'Only 8-bit RGB/CMYK flattened PSD composites are supported.',
     );
   let offset = 26;
-  offset += view.getUint32(offset) + 4;
-  offset += view.getUint32(offset) + 4;
-  offset += view.getUint32(offset) + 4;
+  offset += view.getUint32(offset) + 4; // Color Mode section
+  offset += view.getUint32(offset) + 4; // Image Resources section
+  offset += view.getUint32(offset) + 4; // Layer and Mask Information section
+  // Image Data section: 2-byte compression method (0=Raw, 1=RLE, 2=ZIP, 3=ZIP+predict); no length prefix per PSD spec
   const compression = view.getUint16(offset);
   offset += 2;
   const planeSize = width * height;
@@ -1168,4 +1204,31 @@ function conversionFailure(format: string, direction: ConversionDirection, cause
     cause,
     remedy: 'Preserve the original file, export it to a supported format, and retry.',
   });
+}
+// Local diagnostic helper: returns structured failure info without exposing file content
+export function psdConversionDiagnostics(input: {
+  fileName?: string;
+  bytesLength: number;
+  headerBytes: string;
+  imageDataOffset?: number;
+  compression?: number;
+}): object {
+  const d = input.bytesLength < 26 ? 'truncated' : 'header-ok';
+  return {
+    stage: d,
+    fileName: input.fileName,
+    byteLength: input.bytesLength,
+    headerBytes: input.headerBytes,
+    imageDataOffset: input.imageDataOffset ?? 'unknown (needs section parse)',
+    compressionClaimed:
+      input.compression === 0
+        ? 'raw (0)'
+        : input.compression === 1
+          ? 'PackBits (1)'
+          : input.compression === 2
+            ? 'ZIP (2) unsupported by this decoder'
+            : input.compression === undefined
+              ? 'unknown (needs section parse)'
+              : 'unknown (' + input.compression + ')',
+  };
 }

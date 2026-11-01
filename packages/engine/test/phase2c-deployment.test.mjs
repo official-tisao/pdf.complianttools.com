@@ -28,7 +28,7 @@ describe('Phase 2C — Security / Resource / Timeout', () => {
   it('should clean up browser after success', async () => {
     const html = '<html><body>test</body></html>';
     const res = await renderer.render(html, { pageSize: 'letter', margin: 48 });
-    assert.ok(res.bytes && res.bytes.length > 0 || res.bytes.length === 0, 'result present');
+    assert.ok((res.bytes && res.bytes.length > 0) || res.bytes.length === 0, 'result present');
   });
 
   it('should emit clear fallback if renderer unavailable (simulated via bad import)', async () => {

@@ -64,7 +64,10 @@ describe('Phase 4 — HTML fallback structure preservation', () => {
   it('should produce readable text under the renderer-unavailable fallback', () => {
     const html = readFileSync('fixtures/fidelity/phase2a-fidelity.html', 'utf8');
     const preserved = parseHtmlPreserveStyle(html);
-    assert.ok(typeof preserved === 'string' && preserved.length > 0, 'fallback produces non-empty text');
+    assert.ok(
+      typeof preserved === 'string' && preserved.length > 0,
+      'fallback produces non-empty text',
+    );
     assert.ok(preserved.includes('Fidelity Title'), 'fallback text readable');
     assert.ok(!preserved.includes('<table'), 'no literal tags in fallback');
     assert.ok(!preserved.includes('<h1'), 'no literal h1 in fallback');

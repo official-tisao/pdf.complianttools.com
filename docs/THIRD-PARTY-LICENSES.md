@@ -36,6 +36,7 @@ Generated from the locked dependency graph.
 - pdf.complianttools.com@0.1.0 — UNLICENSED — registry metadata
 - prettier-plugin-svelte@4.1.1 — MIT — https://github.com/sveltejs/prettier-plugin-svelte
 - prettier@3.9.8 — MIT — https://github.com/prettier/prettier
+- puppeteer@21.11.0 — Apache-2.0 — https://github.com/puppeteer/puppeteer.git#main
 - simple-git-hooks@2.14.0 — MIT — https://github.com/toplenboren/simple-git-hooks
 - svelte-eslint-parser@1.8.1 — MIT — https://github.com/sveltejs/svelte-eslint-parser
 - svelte@5.57.1 — MIT — https://github.com/sveltejs/svelte

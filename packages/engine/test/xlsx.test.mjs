@@ -219,8 +219,15 @@ test('xlsxToPdf renders cell fill colors as PDF rectangles', async () => {
   assert.ok(content.includes('0 1 0 rg'), 'green fill rectangle drawn');
   assert.ok(content.includes('1 0 0 rg'), 'red fill rectangle drawn');
   const pathFills = (content.match(/\nh\nf\b/g) ?? []).length;
-  assert.strictEqual(pathFills, 4, `four filled cells drawn as path rectangles (found ${pathFills})`);
-  assert.ok(!content.includes('[fill:'), 'fill markers not present - colors rendered as rectangles');
+  assert.strictEqual(
+    pathFills,
+    4,
+    `four filled cells drawn as path rectangles (found ${pathFills})`,
+  );
+  assert.ok(
+    !content.includes('[fill:'),
+    'fill markers not present - colors rendered as rectangles',
+  );
 });
 
 test('xlsxToPdf renders with worksheet column widths', async () => {

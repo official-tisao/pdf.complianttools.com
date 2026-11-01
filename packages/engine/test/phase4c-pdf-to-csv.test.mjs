@@ -16,7 +16,10 @@ describe('Phase 4c — PDF to CSV structural fidelity', () => {
       return;
     }
     const bytes = readFileSync(path);
-    const csvResult = await convertFromPdf('csv', new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)));
+    const csvResult = await convertFromPdf(
+      'csv',
+      new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+    );
     const csv = toPdfCsv(csvResult);
     assert.ok(csv.length > 0 || csv === '', 'CSV content produced');
   });
@@ -28,10 +31,17 @@ describe('Phase 4c — PDF to CSV structural fidelity', () => {
       return;
     }
     const bytes = readFileSync(path);
-    const pages = await extractPdfTextPages(new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)));
-    const hasColorMeta = pages.some(p => p.meta?.some(m => Array.isArray(m.color) && m.color.length >= 3));
+    const pages = await extractPdfTextPages(
+      new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+    );
+    const hasColorMeta = pages.some((p) =>
+      p.meta?.some((m) => Array.isArray(m.color) && m.color.length >= 3),
+    );
     if (hasColorMeta) {
-      const csvResult = await convertFromPdf('csv', new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)));
+      const csvResult = await convertFromPdf(
+        'csv',
+        new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+      );
       const csv = toPdfCsv(csvResult);
       // CSV output does not preserve color - this test documents expected behavior
       // Color styling is only preserved in HTML output via pdfToHtml()
@@ -59,7 +69,10 @@ describe('Phase 4c — PDF to CSV structural fidelity', () => {
     }
     try {
       const bytes = readFileSync(path);
-      const csvResult = await convertFromPdf('csv', new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)));
+      const csvResult = await convertFromPdf(
+        'csv',
+        new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+      );
       const csv = toPdfCsv(csvResult);
       const rows = csv.trim().split('\n');
       assert.ok(rows.length >= 1, 'at least one row extracted');
@@ -80,7 +93,10 @@ describe('Phase 4c — PDF to CSV structural fidelity', () => {
     }
     const bytes = readFileSync(path);
     try {
-      const csvResult = await convertFromPdf('csv', new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)));
+      const csvResult = await convertFromPdf(
+        'csv',
+        new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)),
+      );
       const csv = toPdfCsv(csvResult);
       const rows = csv.trim().split('\n');
       // Each line becomes a row, split by | or treated as single cell
