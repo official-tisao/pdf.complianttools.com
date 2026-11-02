@@ -116,6 +116,9 @@ export const operationSchemas = {
       .enum(['numeric', 'roman-lowercase', 'roman-uppercase', 'alphabetical-lowercase'])
       .default('numeric'),
     alignment: z.enum(['left', 'center', 'right']).optional(),
+    fontName: z.enum(['Helvetica', 'Times-Roman', 'Courier']).default('Helvetica').optional(),
+    fontSize: z.number().positive().default(10).optional(),
+    color: z.string().default('#181818').optional(),
   }),
   compress: z.object({
     preset: z.enum(['extreme', 'balanced', 'high-quality', 'custom']).default('balanced'),

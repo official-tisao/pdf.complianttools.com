@@ -2,6 +2,18 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import type { ConversionOptions } from '../types.js';
 import { loadPdfJs } from '../pdf/pdfjs.js';
 
+export type PdfTextItem = {
+  readonly str: string;
+  readonly x?: number | undefined;
+  readonly y?: number | undefined;
+  readonly width?: number | undefined;
+  readonly height?: number | undefined;
+  readonly fontName?: string | undefined;
+  readonly fontSize?: number | undefined;
+  readonly color?: number[] | undefined;
+  readonly scale?: number | undefined;
+};
+
 export type PdfTextPage = {
   readonly pageNumber: number;
   readonly text: string;
@@ -14,6 +26,7 @@ export type PdfTextPage = {
     y?: number;
     scale?: number;
   }[];
+  readonly items?: readonly PdfTextItem[] | undefined;
   readonly pageWidth?: number;
   readonly pageHeight?: number;
 };
@@ -40,6 +53,7 @@ export async function extractPdfTextPages(bytes: Uint8Array): Promise<readonly P
       const viewport = await page.getViewport({ scale: 1 });
       const content = await page.getTextContent();
       const items = content.items as unknown as TextItem[];
+      const itemsData: PdfTextItem[] = [];
       const linesData: {
         text: string;
         meta: {
@@ -89,15 +103,27 @@ export async function extractPdfTextPages(bytes: Uint8Array): Promise<readonly P
         if (x !== undefined) lineMeta.x = x;
         if (y !== undefined) lineMeta.y = y;
         // Scale estimate from transform matrix (not [0] blindly); store for font-size inference
+        let scale: number | undefined;
         if (item.transform) {
           const a = item.transform[0] ?? 1;
           const b = item.transform[2] ?? 0;
           const d = item.transform[3] ?? 1;
           if (typeof a === 'number' && typeof d === 'number') {
-            const scale = Math.sqrt(a * a + b * b);
-            if (scale > 0 && isFinite(scale)) lineMeta.scale = scale;
+            const s = Math.sqrt(a * a + b * b);
+            if (s > 0 && isFinite(s)) scale = s;
           }
         }
+        if (scale !== undefined) lineMeta.scale = scale;
+        // Item-level pairing: preserve content + positional metadata together (stage 1)
+        itemsData.push({
+          str: value,
+          x: x !== undefined ? x : undefined,
+          y: y !== undefined ? y : undefined,
+          fontName: fontName,
+          fontSize: fontSize,
+          color: color,
+          scale,
+        });
       }
       flushLine();
 
@@ -108,6 +134,7 @@ export async function extractPdfTextPages(bytes: Uint8Array): Promise<readonly P
         text: lines.join(' '),
         lines,
         meta,
+        items: itemsData.length > 0 ? itemsData : undefined,
         pageWidth: viewport.width,
         pageHeight: viewport.height,
       });

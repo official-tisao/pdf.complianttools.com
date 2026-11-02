@@ -311,6 +311,29 @@ test('xlsxToPdf handles multi-page worksheets', async () => {
   assert.strictEqual(pageCount, 3, '120 rows + header split across 3 pages');
 });
 
+test('xlsxToPdf preserves readable font colors and does not force white on fills', async () => {
+  // Font colors must stay readable; filled cells must not be universally forced to white text.
+  const ExcelJS = await loadExcelJs();
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Fonts');
+  const header = sheet.addRow(['RedOnBlue', 'NormalText']);
+  header.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0000FF' } };
+  sheet.addRow(['Data', 'More']);
+  const pdf = await convertToPdf('xlsx', await workbook.xlsx.writeBuffer());
+  const streams = await inflatedContentStreams(pdf.bytes);
+  const content = streams.join('\n');
+  // There must be dark text colors (near-black rgb) rather than pure white (1 1 1 rg) for all text
+  const whiteTextRuns = (content.match(/1 1 1 rg/g) ?? []).length;
+  assert.ok(
+    whiteTextRuns <= 1,
+    `readable dark text preserved; expected <=1 white text run, found ${whiteTextRuns}`,
+  );
+  // Actual text content must survive extraction
+  const text = await extractedText(pdf.bytes);
+  assert.ok(text.includes('RedOnBlue'), 'colored-cell text preserved');
+  assert.ok(text.includes('NormalText'), 'normal text preserved');
+});
+
 test('xlsxToPdf handles cells without fill colors', async () => {
   // Ensure cells without fills don't break rendering
   const ExcelJS = await loadExcelJs();
@@ -335,4 +358,16 @@ test('xlsxToPdf handles cells without fill colors', async () => {
   const content = (await inflatedContentStreams(pdf.bytes)).join('\n');
   const pathFills = (content.match(/\nh\nf\b/g) ?? []).length;
   assert.equal(pathFills, 0, `no filled path rectangles without cell fills (found ${pathFills})`);
+
+  // Large worksheet paginates and retains text from later rows — verify with 120 rows
+  const ExcelJS2 = await loadExcelJs();
+  const big = new ExcelJS2.Workbook();
+  const bigSheet = big.addWorksheet('Big');
+  for (let i = 0; i < 120; i++) bigSheet.addRow([`Row${i}`]);
+  const bigPdf = await convertToPdf('xlsx', await big.xlsx.writeBuffer());
+  const bigText = await extractedText(bigPdf.bytes);
+  assert.ok(bigText.includes('Row0'), 'first row present after pagination');
+  assert.ok(bigText.includes('Row119'), 'last row present after pagination');
+  const bigPages = await pdfPageCount(bigPdf.bytes);
+  assert.ok(bigPages >= 2, `multi-page worksheet paginates (pages=${bigPages})`);
 });

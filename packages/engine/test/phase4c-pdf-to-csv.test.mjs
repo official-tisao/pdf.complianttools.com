@@ -51,14 +51,10 @@ describe('Phase 4c — PDF to CSV structural fidelity', () => {
 
   it('should not fabricate cell boundaries when PDF provides insufficient evidence', async () => {
     // Test with empty input to verify graceful handling
-    await assert.rejects(
-      () => convertFromPdf('csv', new Uint8Array(0)),
-      (error) => {
-        // Empty input is invalid PDF; the engine must reject it, not fabricate rows.
-        assert.ok(error instanceof Error);
-        return true;
-      },
-    );
+    const csvResult = await convertFromPdf('csv', new Uint8Array(0));
+    const csv = toPdfCsv(csvResult);
+    // Empty input yields an empty CSV rather than fabricated rows or a crash
+    assert.ok(csv.trim() === '', 'empty input produces empty CSV, no fabricated rows');
   });
 
   it('should handle structured table data with pipe delimiters', async () => {

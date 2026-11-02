@@ -686,6 +686,7 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
   // Constants for text rendering
   const charWidth = 6; // Approximate character width at size 10 in points
   const lineHeight = 14; // Points per text line
+  const baseRowHeight = 14; // Default row height in points when ExcelJS height missing
   const usableHeight = pageSize[1] - margin * 2;
   const maxLinesPerPage = Math.floor(usableHeight / lineHeight);
 
@@ -775,6 +776,10 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
       // Track current X position for cells in this row
       let currentX = margin;
 
+      // Row height drives rectangle and vertical spacing; default when ExcelJS missing
+      const rowHeight =
+        row.height && typeof row.height === 'number' && row.height > 0 ? row.height : baseRowHeight;
+
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
         const cellValue = cell.text
           ? cell.text
@@ -797,9 +802,9 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
             : null;
 
         if (fillColor) {
-          // Draw filled rectangle behind text
-          const rectY = currentYPos - lineHeight + 2;
-          const rectHeight = lineHeight - 4;
+          // Draw filled rectangle behind text — height based on actual row height
+          const rectY = currentYPos - rowHeight + 2;
+          const rectHeight = Math.max(4, rowHeight - 4);
           page.drawRectangle({
             x: currentX,
             y: rectY,
@@ -809,10 +814,10 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
           });
         }
 
-        // Draw text on top
+        // Draw text on top — preserve readable font colors; do not force white
         if (cellValue) {
           const textColor = fillColor
-            ? rgb(1, 1, 1) // White text on colored background for contrast
+            ? rgb(0.12, 0.11, 0.1) // Keep dark readable text even on filled background
             : rgb(0.12, 0.11, 0.1); // Dark gray for normal text
 
           page.drawText(cellValue, {
@@ -824,12 +829,18 @@ async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
           });
         }
 
-        currentX += cellWidth + 4; // Move to next cell position
+        // Move to next cell position; row advance below
+        currentX += cellWidth + 4;
       });
 
-      // Move to next row
+      // Prevent clipping before advancing; pagination guard
+      if (currentYPos - rowHeight < margin) {
+        page = document.addPage(pageSize);
+        linesOnCurrentPage = 0;
+        currentYPos = pageSize[1] - margin;
+      }
       linesOnCurrentPage += 1;
-      currentYPos -= lineHeight;
+      currentYPos -= rowHeight;
     }
   });
 
@@ -878,13 +889,120 @@ async function textToPptx(pages: readonly { lines: readonly string[] }[]): Promi
   return new Uint8Array(output as ArrayBuffer);
 }
 
+/**
+ * Row-groups text items by vertical proximity, then column-groups each row by
+ * x-coordinate clustering. Splits into multiple columns only when positional
+ * evidence is reliable (consistent x-clusters across ≥2 rows); otherwise falls
+ * back to a single line-level cell per row so ordinary text spacing never
+ * fabricates table columns.
+ */
+function groupItemsIntoRows(
+  items: readonly { str: string; x?: number | undefined; y?: number | undefined }[],
+): readonly {
+  readonly y: number;
+  readonly items: readonly { readonly str: string; readonly x?: number }[];
+}[] {
+  const rowMap: Map<number, { str: string; x?: number }[]> = new Map();
+  for (const item of items) {
+    const y = item.y;
+    if (y === undefined) continue;
+    const roundedY = Math.round(y);
+    const existing = rowMap.get(roundedY);
+    if (existing) {
+      const cell: { str: string; x?: number } = { str: item.str };
+      if (item.x !== undefined) cell.x = item.x;
+      existing.push(cell);
+    } else {
+      const cell: { str: string; x?: number } = { str: item.str };
+      if (item.x !== undefined) cell.x = item.x;
+      rowMap.set(roundedY, [cell]);
+    }
+  }
+  const result: { y: number; items: { str: string; x?: number }[] }[] = [];
+  for (const [y, items] of rowMap.entries()) {
+    result.push({ y, items });
+  }
+  // PDF origin is bottom-left; a larger y sits higher on the page. Reading order
+  // is top-to-bottom, so sort descending by y.
+  return result.sort((a, b) => b.y - a.y) as readonly {
+    readonly y: number;
+    readonly items: readonly { readonly str: string; readonly x?: number }[];
+  }[];
+}
+
+/**
+ * Cluster row items into columns by horizontal gap. A new column starts when
+ * the gap between consecutive item x-positions exceeds a threshold relative
+ * to page width (here, ≥20pt absolute separation on a letter page).
+ */
+function clusterByX(
+  rowItems: readonly { readonly str: string; readonly x?: number }[],
+): string[][] {
+  const sorted = rowItems
+    .filter((i) => i.str.trim().length > 0)
+    .sort((a, b) => (a.x ?? 0) - (b.x ?? 0));
+  const columns: string[][] = [];
+  let current: string[] = [];
+  let lastX: number | undefined;
+  for (const item of sorted) {
+    const x = item.x ?? 0;
+    if (lastX !== undefined && x - lastX >= 20) {
+      if (current.length > 0) columns.push(current);
+      current = [];
+    }
+    current.push(item.str.trim());
+    lastX = x;
+  }
+  if (current.length > 0) columns.push(current);
+  return columns;
+}
+
 async function pdfToCsv(bytes: Uint8Array): Promise<string> {
+  if (bytes.length === 0) return '';
   const pages = await extractPdfTextPages(bytes);
-  const rows = pages.flatMap((page) =>
-    page.lines
-      .filter(Boolean)
-      .map((line) => (line.includes('|') ? line.split('|').map((cell) => cell.trim()) : [line])),
-  );
+  const rows: string[][] = [];
+  for (const page of pages) {
+    const pageItems = page.items ?? [];
+    if (pageItems.length === 0) {
+      for (const line of page.lines.filter(Boolean)) {
+        rows.push(line.includes('|') ? line.split('|').map((c) => c.trim()) : [line]);
+      }
+      continue;
+    }
+    const rowGroups = groupItemsIntoRows(pageItems);
+    // Evidence gate: require ≥2 rows and ≥2 distinct x-clusters in every row
+    // before trusting item-level column reconstruction.
+    const rowClusters = rowGroups.map((g) => clusterByX(g.items));
+    const multiColumnRows = rowClusters.filter((cols) => cols.length > 1);
+    const hasConsistentColumns =
+      rowGroups.length >= 2 &&
+      multiColumnRows.length >= Math.ceil(rowGroups.length * 0.6) &&
+      rowClusters.every((cols) => cols.length === multiColumnRows[0]?.length || cols.length === 1);
+    if (hasConsistentColumns && multiColumnRows[0]) {
+      for (const group of rowGroups) {
+        const cols = clusterByX(group.items);
+        // Only emit multi-column when that row actually has ≥2 clusters.
+        const cells =
+          cols.length > 1
+            ? cols.flatMap((c) => c)
+            : [
+                group.items
+                  .map((i) => i.str)
+                  .join('')
+                  .trim(),
+              ];
+        rows.push(cells);
+      }
+    } else {
+      for (const group of rowGroups) {
+        const text = group.items
+          .map((i) => i.str)
+          .join('')
+          .trim();
+        if (text.length > 0) rows.push([text]);
+      }
+    }
+  }
   return rowsToCsv(rows);
 }
 
