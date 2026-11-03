@@ -483,6 +483,7 @@ export async function addWatermark(
     tiled?: boolean;
     behindContent?: boolean;
     size?: number;
+    color?: { r: number; g: number; b: number };
   },
 ): Promise<Uint8Array> {
   if (options.behindContent)
@@ -504,7 +505,7 @@ export async function addWatermark(
           x: 40 + ((index % 3) * width) / 3,
           y: height - 70 - (Math.floor(index / 3) * height) / 3,
         }))
-      : [{ x: width / 2 - text.length * size * 0.15, y: height / 2 }];
+      : [{ x: width / 2, y: height / 2 }];
     for (const placement of placements)
       page.drawText(text, {
         ...placement,
@@ -512,7 +513,7 @@ export async function addWatermark(
         font,
         opacity: safeOpacity(options.opacity ?? 0.25),
         rotate: degrees(options.rotation ?? 45),
-        color: rgb(0.45, 0.45, 0.45),
+        color: color(options.color),
       });
   }
   return document.save();

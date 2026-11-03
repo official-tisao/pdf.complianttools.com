@@ -16,7 +16,7 @@
     "lint": "eslint .",
     "prepare": "simple-git-hooks",
     "test": "turbo run test --concurrency=1 && pnpm test:unit:scripts",
-    "test:e2e": "playwright test",
+    "test:e2e": "node scripts/kill-orphaned-vite.mjs && playwright test",
     "test:unit": "node --test --test-timeout=120000 --test-force-exit scripts/*.test.mjs packages/engine/test/*.test.mjs tests/contracts/dead-control-gate.test.mjs tests/contracts/format-pairs.test.mjs tests/contracts/seo-locale.test.mjs tests/contracts/sitemap.test.mjs tests/contracts/spcc.test.mjs tests/contracts/tool-directory.test.mjs",
     "test:unit:scripts": "node --test --test-timeout=120000 --test-force-exit scripts/*.test.mjs",
     "test:latency": "node scripts/measure-latency.mjs",

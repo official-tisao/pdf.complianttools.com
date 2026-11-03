@@ -55,6 +55,7 @@ export default defineConfig({
     // happens to be open in the developer's browser. Set this explicitly only
     // when intentionally reusing a server with matching source.
     reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === '1',
+    gracefulShutdown: { timeout: 5000, killSignal: 'SIGTERM' },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });

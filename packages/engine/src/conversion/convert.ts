@@ -1,3 +1,4 @@
+import { PDFDocument, PDFPage, StandardFonts, rgb } from 'pdf-lib';
 import { unzipSync, zipSync, zlibSync } from 'fflate';
 import { PdfEngineError } from '../errors.js';
 import { mergePdfBuffers } from '../pdf/merge.js';
@@ -22,7 +23,6 @@ import {
 } from './pdf-text.js';
 import { imageToPdf, renderPdfPageToPng } from './images.js';
 import { pptxToPdf } from './pptx.js';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -637,20 +637,240 @@ async function htmlToPdf(html: string, options: ConversionOptions = {}): Promise
 
 async function csvToPdf(csv: string, options: ConversionOptions): Promise<Uint8Array> {
   const rows = csvToRows(csv);
-  const widths = rows.reduce<number[]>(
-    (current, row) =>
-      row.map((cell, index) => Math.min(28, Math.max(current[index] ?? 0, cell.length))),
-    [],
-  );
-  const lines = rows
-    .map((row) =>
-      row
-        .map((cell, index) => cell.padEnd(widths[index] ?? cell.length))
-        .join('   ')
-        .trimEnd(),
-    )
-    .join('\\n');
-  return textToPdf(lines, options);
+  if (rows.length === 0) {
+    // Return an empty PDF with a note
+    return textToPdf('(empty CSV)', options);
+  }
+
+  // Calculate column widths based on content
+  const numCols = Math.max(...rows.map((row) => row.length));
+  const cellPadding = 6;
+  const headerFontSize = 11;
+  const bodyFontSize = 10;
+  const headerHeight = 20;
+  const rowHeight = 20;
+  const maxCellWidth = 300; // Maximum width for a single cell
+  const minCellWidth = 50; // Minimum width for a single cell
+
+  // First pass: determine column widths based on text content
+  const colWidths: number[] = [];
+  for (let col = 0; col < numCols; col += 1) {
+    let maxWidth = minCellWidth;
+    for (const row of rows) {
+      const cell = row[col] ?? '';
+      // Estimate text width using average character width
+      // For Helvetica, average char width is about 0.6 * fontSize
+      const charWidth = bodyFontSize * 0.55;
+      const textWidth = cell.length * charWidth + cellPadding * 2;
+      maxWidth = Math.max(maxWidth, Math.min(textWidth, maxCellWidth));
+    }
+    colWidths.push(maxWidth);
+  }
+
+  const totalTableWidth = colWidths.reduce((sum, w) => sum + w, 0);
+
+  // Page size selection
+  const pageSizePreset = options.pageSize ?? 'letter';
+  const pageSizes: Record<string, [number, number]> = {
+    letter: [612, 792],
+    a4: [595.28, 841.89],
+    legal: [612, 1008],
+  };
+  const [pageW, pageH] = (pageSizes[pageSizePreset] ?? [612, 792]) as [number, number];
+
+  // Choose orientation based on table width
+  const margin = options.margin ?? 48;
+  const usableWidth = pageW - margin * 2;
+
+  // Use landscape if table is significantly wider than usable width in portrait
+  const orientation = totalTableWidth > usableWidth ? 'landscape' : 'portrait';
+  const [usablePageW, usablePageH] = orientation === 'landscape' ? [pageH, pageW] : [pageW, pageH];
+  const finalUsableWidth = usablePageW - margin * 2;
+
+  // Scale / expand column widths to fill available printable width
+  let finalColWidths = colWidths;
+  const targetWidth = finalUsableWidth;
+  const currentSum = colWidths.reduce((sum, w) => sum + w, 0);
+  if (currentSum < targetWidth) {
+    // Proportionally expand while respecting min/max per column
+    const extra = targetWidth - currentSum;
+    const expandRatio = extra / currentSum;
+    finalColWidths = colWidths.map((w) => {
+      const expanded = Math.round(w + w * expandRatio);
+      return Math.min(maxCellWidth, Math.max(minCellWidth, expanded));
+    });
+    // After expansion, adjust final sum to exactly target by tweaking largest
+    const finalSum = finalColWidths.reduce((sum, w) => sum + w, 0);
+    if (finalSum < targetWidth) {
+      const diff = targetWidth - finalSum;
+      const idx = finalColWidths.indexOf(Math.max(...finalColWidths))!;
+      finalColWidths[idx]! += diff;
+    }
+  } else if (currentSum > targetWidth) {
+    const scale = targetWidth / currentSum;
+    finalColWidths = colWidths.map((w) => Math.max(minCellWidth, Math.round(w * scale)));
+  }
+
+  const tableWidth = finalColWidths.reduce((sum, w) => sum + w, 0);
+  // maxRowsPerPage retained as pagination reference (not directly computed in loop)
+
+  const document = await PDFDocument.create({ updateMetadata: false });
+  const font = await document.embedFont(StandardFonts.Helvetica);
+  const boldFont = await document.embedFont(StandardFonts.HelveticaBold);
+
+  const headerBgColor = rgb(0.2, 0.2, 0.25); // Dark header background
+  const headerTextColor = rgb(1, 1, 1);
+  const rowAltColor = rgb(0.95, 0.95, 0.97);
+  const rowColor = rgb(1, 1, 1);
+  const borderColor = rgb(0.7, 0.7, 0.75);
+  const textColor = rgb(0.12, 0.11, 0.1);
+
+  function drawTableHeader(page: PDFPage, x: number, y: number) {
+    let cellX = x;
+    for (let col = 0; col < numCols; col += 1) {
+      const cellWidth = finalColWidths[col] ?? minCellWidth;
+      // Header background
+      page.drawRectangle({
+        x: cellX,
+        y: y - headerHeight,
+        width: cellWidth,
+        height: headerHeight,
+        color: headerBgColor,
+      });
+      // Header text
+      const headerText = (rows[0] ?? [])[col] ?? `Column ${col + 1}`;
+      const textWidth = boldFont.widthOfTextAtSize(headerText, headerFontSize);
+      const textX = cellX + (cellWidth - Math.min(textWidth, cellWidth - cellPadding * 2)) / 2;
+      page.drawText(headerText, {
+        x: Math.max(cellX + cellPadding, textX),
+        y: y - headerHeight + (headerHeight - headerFontSize) / 2,
+        size: headerFontSize,
+        font: boldFont,
+        color: headerTextColor,
+        maxWidth: cellWidth - cellPadding * 2,
+      });
+      // Header cell border
+      page.drawRectangle({
+        x: cellX,
+        y: y - headerHeight,
+        width: cellWidth,
+        height: headerHeight,
+        borderColor: borderColor,
+        borderWidth: 0.5,
+      });
+      cellX += cellWidth;
+    }
+  }
+
+  function drawTableRow(
+    page: PDFPage,
+    row: readonly string[],
+    rowIndex: number,
+    x: number,
+    y: number,
+  ): void {
+    const isAltRow = rowIndex % 2 === 1;
+    let cellX = x;
+    for (let col = 0; col < numCols; col += 1) {
+      const cellWidth = finalColWidths[col] ?? minCellWidth;
+      const cellText = row[col] ?? '';
+
+      // Alternating row background
+      page.drawRectangle({
+        x: cellX,
+        y: y - rowHeight,
+        width: cellWidth,
+        height: rowHeight,
+        color: isAltRow ? rowAltColor : rowColor,
+      });
+
+      // Cell text with wrapping
+      const maxTextWidth = cellWidth - cellPadding * 2;
+      const words = cellText.split(/\s+/u);
+      let line = '';
+      let lineY = y - (rowHeight - bodyFontSize) / 2 - 3;
+
+      for (const word of words) {
+        const candidate = line ? `${line} ${word}` : word;
+        const candidateWidth = font.widthOfTextAtSize(candidate, bodyFontSize);
+        if (candidateWidth > maxTextWidth && line) {
+          // Draw the current line
+          page.drawText(line, {
+            x: cellX + cellPadding,
+            y: lineY,
+            size: bodyFontSize,
+            font,
+            color: textColor,
+            maxWidth: maxTextWidth,
+          });
+          lineY -= bodyFontSize * 1.2;
+          line = word;
+        } else {
+          line = candidate;
+        }
+      }
+      if (line) {
+        page.drawText(line, {
+          x: cellX + cellPadding,
+          y: lineY,
+          size: bodyFontSize,
+          font,
+          color: textColor,
+          maxWidth: maxTextWidth,
+        });
+      }
+
+      // Cell border
+      page.drawRectangle({
+        x: cellX,
+        y: y - rowHeight,
+        width: cellWidth,
+        height: rowHeight,
+        borderColor: borderColor,
+        borderWidth: 0.5,
+      });
+      cellX += cellWidth;
+    }
+  }
+
+  const tableStartX = Math.round(margin + (finalUsableWidth - tableWidth) / 2);
+
+  let currentPage = document.addPage([usablePageW, usablePageH]);
+  let currentY = usablePageH - margin;
+  let dataRowIndex = 0;
+
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+    const isHeader = rowIndex === 0;
+    const rowHeightNeeded = isHeader ? headerHeight : rowHeight;
+
+    // Check if we need a new page
+    if (currentY - rowHeightNeeded < margin) {
+      currentPage = document.addPage([usablePageW, usablePageH]);
+      currentY = usablePageH - margin;
+    }
+
+    if (isHeader) {
+      drawTableHeader(currentPage, tableStartX, currentY);
+      currentY -= headerHeight;
+    } else {
+      const row = rows[rowIndex];
+      if (row) {
+        drawTableRow(currentPage, row, dataRowIndex, tableStartX, currentY);
+        currentY -= rowHeight;
+        dataRowIndex += 1;
+      }
+    }
+
+    // Repeat header on new pages
+    if (currentY - headerHeight < margin && rowIndex < rows.length - 1) {
+      currentPage = document.addPage([usablePageW, usablePageH]);
+      currentY = usablePageH - margin;
+      drawTableHeader(currentPage, tableStartX, currentY);
+      currentY -= headerHeight;
+    }
+  }
+
+  return document.save();
 }
 
 async function xmlInvoiceToPdf(xml: string, options: ConversionOptions): Promise<Uint8Array> {

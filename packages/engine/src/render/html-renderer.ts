@@ -1,3 +1,5 @@
+import puppeteer, { HTTPRequest, HTTPResponse } from 'puppeteer';
+
 export interface HtmlRenderer {
   render(
     html: string,
@@ -10,7 +12,6 @@ export class PuppeteerHtmlRenderer implements HtmlRenderer {
     html: string,
     options?: { pageSize?: 'letter' | 'a4'; margin?: number },
   ): Promise<{ bytes: Uint8Array; warnings: string[] }> {
-    const puppeteer = await import('puppeteer');
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
     const browser = await puppeteer.launch({
       ...(executablePath ? { executablePath } : {}),
@@ -18,12 +19,12 @@ export class PuppeteerHtmlRenderer implements HtmlRenderer {
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
       timeout: 30000,
     });
-    let page;
+    let page: import('puppeteer').Page | undefined;
     try {
       page = await browser.newPage();
       // Security: apply resource blocking BEFORE untrusted content loads
       await page.setRequestInterception(true);
-      page.on('request', (req) => {
+      page.on('request', (req: HTTPRequest) => {
         const url = req.url();
         if (url.startsWith('data:')) {
           req.continue();
@@ -36,7 +37,7 @@ export class PuppeteerHtmlRenderer implements HtmlRenderer {
         }
       });
       // Block redirects to remote hosts (security hardening, defense in depth)
-      page.on('response', (res) => {
+      page.on('response', (res: HTTPResponse) => {
         const url = res.url();
         if ((url.startsWith('http') || url.startsWith('https')) && res.status() === 3) {
           // Redirect to external; already blocked by initial interception but defend in depth

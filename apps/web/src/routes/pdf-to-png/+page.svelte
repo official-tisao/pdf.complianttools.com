@@ -12,7 +12,10 @@
 <ConversionTool
   title="PDF to PNG image"
   description="Turn PDF pages into PNG image locally, in your browser. Nothing is uploaded."
-  format="png"
+  format="pdf-image"
+  accept=".pdf,application/pdf"
   direction="from-pdf"
-  accept=".png,image/png"
+  available={false}
+  unavailableReason="This route needs the approved pdfium renderer (createPdfiumRenderer) to be initialized for the current browser worker. No permissive browser-compatible PNG rasterizer is bundled in this build."
+  note="The engine exposes renderPdfPageToPng once a renderer is injected through options.renderer; no server-side rasterizer is used. The original file is unchanged."
 />

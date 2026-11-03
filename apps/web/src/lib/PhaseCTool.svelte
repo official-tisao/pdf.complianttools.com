@@ -74,6 +74,9 @@
    * for the empty case, which is the behaviour that was actually intended.
    */
   let text = $state('');
+  let wmSize = $state(48);
+  let wmRotation = $state(45);
+  let wmColor = $state('#707070');
   let note = $state('');
   let fieldName = $state('name');
   let fieldType = $state<'text' | 'checkbox'>('text');
@@ -201,7 +204,17 @@
         status = t('phase.status.pageNumbers', 'Page numbers exported locally.');
       } else if (operation === 'watermark') {
         save(
-          await engine.addWatermark(bytes!, { text: text || 'DRAFT', opacity: 0.25, rotation: 45 }),
+          await engine.addWatermark(bytes!, {
+            text: text || 'DRAFT',
+            opacity: 0.25,
+            rotation: wmRotation,
+            size: wmSize,
+            color: {
+              r: parseInt(wmColor.slice(1, 3), 16) / 255,
+              g: parseInt(wmColor.slice(3, 5), 16) / 255,
+              b: parseInt(wmColor.slice(5, 7), 16) / 255,
+            },
+          }),
           'watermarked.pdf',
           'application/pdf',
         );
@@ -515,45 +528,33 @@
         label={t('phase.sign.upload', 'Upload a PNG or JPEG signature')}
       />
       <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
-    {:else if operation === 'create-form'}
-      <label
-        >{t('phase.create.fieldLabel', 'Field Label / Name')}<input
-          bind:value={fieldName}
-          placeholder="Field identifier"
-        /></label
+    {:else if operation === 'watermark'}
+      <div
+        class="wm-controls"
+        role="group"
+        aria-label={t('phase.watermark.controls', 'Watermark controls')}
       >
-      <label
-        >{t('phase.create.fieldType', 'Field Type')}
-        <select bind:value={fieldType}>
-          <option value="text">{t('phase.create.textField', 'Text Field')}</option>
-          <option value="checkbox">{t('phase.create.checkbox', 'Checkbox')}</option>
-        </select>
-      </label>
-      <label
-        >{t('phase.create.pagePosition', 'Page Position')}
-        <input type="number" min="1" bind:value={page} />
-      </label>
-      <label
-        >{t('phase.create.xPosition', 'X Position (pt)')}<input
-          type="number"
-          max="612"
-          bind:value={fieldX}
-        /></label
-      >
-      <label
-        >{t('phase.create.yPosition', 'Y Position (pt)')}<input
-          type="number"
-          max="792"
-          bind:value={fieldY}
-        /></label
-      >
-      <p class="hint">
-        {t(
-          'phase.create.hint',
-          'Page bounds are roughly 612pt wide by 792pt tall. Top margin starts at ~750pt; bottom margin ends at ~50pt.',
-        )}
-      </p>
-    {:else if operation !== 'password-generator'}
+        <label>
+          {t('phase.watermark.size', 'Font size')}<input
+            type="number"
+            min="6"
+            max="300"
+            bind:value={wmSize}
+          />
+        </label>
+        <label>
+          {t('phase.watermark.rotation', 'Rotation (degrees)')}<select bind:value={wmRotation}
+            ><option value={0}>0°</option><option value={45}>45°</option><option value={90}
+              >90°</option
+            ><option value={135}>135°</option><option value={180}>180°</option><option value={225}
+              >225°</option
+            ><option value={270}>270°</option><option value={315}>315°</option></select
+          >
+        </label>
+        <label>
+          {t('phase.watermark.color', 'Color')}<input type="color" bind:value={wmColor} />
+        </label>
+      </div>
       <label class={operation === 'watermark' ? 'wm-label' : ''}
         >{t(
           'phase.sign.label',

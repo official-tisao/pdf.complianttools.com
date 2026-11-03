@@ -86,6 +86,7 @@ export default [
       // Contract suites under tests/ run in Node under `node --test`, and read
       // the build output through `new URL(...)`, so they need the same globals.
       'tests/**/*.mjs',
+      'test-exports.mjs',
       'playwright.config.ts',
     ],
     languageOptions: {
