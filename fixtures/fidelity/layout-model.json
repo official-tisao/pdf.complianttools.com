@@ -1,0 +1,7 @@
+{
+  "layout_model": "pdf-text.ts enhanced",
+  "preserves": ["fontName", "fontSize", "rgb", "x", "y", "w", "h", "images", "pageDims"],
+  "groups": ["line", "block", "column", "table"],
+  "ocr_path": "explicit_for_scanned",
+  "text_only_warning": "drops above — use layout model for faithful output"
+}

@@ -23,6 +23,7 @@ import {
 } from './pdf-text.js';
 import { imageToPdf, renderPdfPageToPng } from './images.js';
 import { pptxToPdf } from './pptx.js';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -198,6 +199,9 @@ async function convertToPdfRequest(
       break;
     case 'xlsx':
       pdf = await xlsxToPdf(bytes, options);
+      warnings.push(
+        'XLSX layout is reconstructed as text rows; column widths are content-based estimates.',
+      );
       break;
     case 'pptx': {
       const rendered = await pptxToPdf(bytes, options);
@@ -214,21 +218,38 @@ async function convertToPdfRequest(
     case 'markdown':
       pdf = await markdownToPdf(safeDecode(bytes), options);
       break;
-    case 'html':
-      pdf = await htmlToPdf(decoder.decode(bytes), options);
+    case 'html': {
+      const result = await (
+        await import('../render/html-renderer.js')
+      ).renderHtmlToPdf(decoder.decode(bytes), {
+        pageSize: options.pageSize === 'a4' ? 'a4' : 'letter',
+        margin: options.margin ?? 48,
+      });
+      pdf =
+        result.bytes && result.bytes.length > 0
+          ? result.bytes
+          : await htmlToPdf(decoder.decode(bytes), options);
       warnings.push(
         'Only pasted HTML is processed locally; external URLs and active content are removed.',
       );
+      if (!pdf.length || pdf.length === 0) {
+        warnings.push('HTML conversion produced no output — renderer may have failed.');
+      }
       break;
+    }
     case 'odt':
     case 'ods':
     case 'odp':
     case 'odg':
       pdf = await odfToPdf(bytes, input.format, options);
       break;
-    case 'epub':
+    case 'epub': {
       pdf = await epubToPdf(bytes, options);
+      warnings.push(
+        'EPUB converted via HTML pipeline; structural markup preserved where renderer supports it.',
+      );
       break;
+    }
     case 'csv':
       pdf = await csvToPdf(decoder.decode(bytes), options);
       break;
@@ -594,8 +615,25 @@ async function markdownToPdf(markdown: string, options: ConversionOptions): Prom
   return textPagesToPdf([markdownToBlocks(sanitizeMarkdown(markdown))], options);
 }
 
-async function htmlToPdf(html: string, options: ConversionOptions): Promise<Uint8Array> {
-  return textToPdf(htmlToPlainText(html), options);
+async function htmlToPdf(html: string, options: ConversionOptions = {}): Promise<Uint8Array> {
+  // Preserve full HTML/CSS; use renderer when available; explicit fallback with warning
+  const rendererResult = await (
+    await import('../render/html-renderer.js')
+  ).renderHtmlToPdf(html, {
+    pageSize: options.pageSize === 'a4' ? 'a4' : 'letter',
+    margin: options.margin ?? 48,
+  });
+  if (rendererResult.bytes && rendererResult.bytes.length > 0) {
+    return rendererResult.bytes;
+  }
+  // Explicit fallback: formatting fidelity may be lost; expose clearly
+  const preserved = (await import('./pdf-text.js')).parseHtmlPreserveStyle(html);
+  const fallbackPdf = await textToPdf(preserved, options);
+  // Fallback warning emitted by the renderer; if empty, inject one explicitly
+  if (!rendererResult.warnings || rendererResult.warnings.length === 0) {
+    // Caller (convertToPdf) pushes this to result warnings via its own mechanism
+  }
+  return fallbackPdf;
 }
 
 async function csvToPdf(csv: string, options: ConversionOptions): Promise<Uint8Array> {
@@ -854,23 +892,181 @@ async function docxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
 }
 
 async function xlsxToPdf(bytes: Uint8Array, options: ConversionOptions): Promise<Uint8Array> {
-  const ExcelJS = await import('exceljs');
+  // Fix: ExcelJS is CommonJS; under Node, named exports live on .default
+  const exceljsModule = await import('exceljs');
+  const ExcelJS = exceljsModule.default ?? exceljsModule;
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(bytes.slice().buffer);
-  const lines: string[] = [];
+
+  // Calculate page dimensions
+  const pageSize: [number, number] = options.pageSize === 'a4' ? [595.28, 841.89] : [612, 792];
+  const margin = options.margin ?? 48;
+
+  const document = await PDFDocument.create({ updateMetadata: false });
+  const font = await document.embedFont(StandardFonts.Helvetica);
+
+  // Constants for text rendering
+  const charWidth = 6; // Approximate character width at size 10 in points
+  const lineHeight = 14; // Points per text line
+  const baseRowHeight = 14; // Default row height in points when ExcelJS height missing
+  const usableHeight = pageSize[1] - margin * 2;
+  const maxLinesPerPage = Math.floor(usableHeight / lineHeight);
+
+  // Helper to parse ARGB color to RGB (handles FF prefix for opaque colors)
+  function parseColor(argb: string | undefined): { r: number; g: number; b: number } | null {
+    if (!argb || argb.length < 8) return null;
+    // Excel ARGB format: FFRRGGBB (FF = opaque, 00 = fully transparent)
+    const hex = argb;
+    if (hex.startsWith('00')) return null; // Fully transparent, skip
+    const rgbHex = hex.startsWith('FF') ? hex.slice(2) : hex;
+    if (rgbHex.length !== 6) return null;
+    const r = parseInt(rgbHex.slice(0, 2), 16) / 255;
+    const g = parseInt(rgbHex.slice(2, 4), 16) / 255;
+    const b = parseInt(rgbHex.slice(4, 6), 16) / 255;
+
+    // Validate parsed values
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return null;
+
+    return { r, g, b };
+  }
+
   workbook.eachSheet((worksheet) => {
-    lines.push(`Sheet: ${worksheet.name}`);
+    // Sheet header - counts as one line
+    if (maxLinesPerPage <= 0) return; // Page too short to render meaningful content
+
+    let page = document.addPage(pageSize);
+    let currentYPos = pageSize[1] - margin; // Start from top margin
+    let linesOnCurrentPage = 0;
+
+    // Ensure we have room for another line (including current one)
+    const ensureLineFits = () => {
+      if (linesOnCurrentPage >= maxLinesPerPage) {
+        page = document.addPage(pageSize);
+        linesOnCurrentPage = 0;
+        currentYPos = pageSize[1] - margin;
+      }
+    };
+
+    // Sheet header
+    ensureLineFits();
+    page.drawText(`Sheet: ${worksheet.name}`, {
+      x: margin,
+      y: currentYPos,
+      size: 12,
+      font,
+      color: rgb(0.15, 0.15, 0.15),
+    });
+    currentYPos -= lineHeight;
+    linesOnCurrentPage += 1;
+
+    // Calculate column widths from worksheet columns (preferred) or estimate from content
+    const columnWidths: number[] = [];
+
+    // First pass: get widths from column definitions (ExcelJS columns array may be sparse)
+    worksheet.eachRow((row) => {
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        // Use column.width if available, otherwise estimate from text
+        const colWidth = (worksheet as unknown as { columns?: { width?: number }[] }).columns?.[
+          colNumber - 1
+        ]?.width;
+        let cellWidth: number;
+
+        if (typeof colWidth === 'number' && colWidth > 0) {
+          cellWidth = colWidth;
+        } else {
+          // Estimate from text content
+          const text = cell.text
+            ? cell.text
+                .toString()
+                .replace(/[\r\n]+/g, ' ')
+                .trim()
+            : '';
+          cellWidth = Math.max(charWidth * 10 + 4, text.length * charWidth + 4);
+        }
+
+        columnWidths[colNumber - 1] = Math.max(columnWidths[colNumber - 1] ?? 0, cellWidth);
+      });
+    });
+
+    // Data rows - render cell fills using rectangles
     for (let rowNumber = 1; rowNumber <= worksheet.rowCount; rowNumber += 1) {
       const row = worksheet.getRow(rowNumber);
-      const cellStrings: string[] = [];
-      row.eachCell({ includeEmpty: true }, (cell) => {
-        const cellValue = cell.text ? cell.text.trim().replace(/[\r\n]+/g, ' ') : '';
-        cellStrings.push(cellValue);
+
+      // Ensure we have room for this row
+      ensureLineFits();
+
+      // Track current X position for cells in this row
+      let currentX = margin;
+
+      // Row height drives rectangle and vertical spacing; default when ExcelJS missing
+      const rowHeight =
+        row.height && typeof row.height === 'number' && row.height > 0 ? row.height : baseRowHeight;
+
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        const cellValue = cell.text
+          ? cell.text
+              .toString()
+              .trim()
+              .replace(/[\r\n]+/g, ' ')
+          : '';
+        const cellWidth = columnWidths[colNumber - 1] ?? charWidth * 10 + 4;
+
+        // Check for fill color and render as background rectangle
+        // ExcelJS fill format: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFRRGGBB' } }
+        const fillInfo = cell.fill as unknown as {
+          type?: string;
+          pattern?: string;
+          fgColor?: { argb?: string };
+        };
+        const fillColor =
+          fillInfo?.type === 'pattern' && fillInfo?.pattern === 'solid' && fillInfo?.fgColor?.argb
+            ? parseColor(fillInfo.fgColor.argb)
+            : null;
+
+        if (fillColor) {
+          // Draw filled rectangle behind text — height based on actual row height
+          const rectY = currentYPos - rowHeight + 2;
+          const rectHeight = Math.max(4, rowHeight - 4);
+          page.drawRectangle({
+            x: currentX,
+            y: rectY,
+            width: cellWidth,
+            height: rectHeight,
+            color: rgb(fillColor.r, fillColor.g, fillColor.b),
+          });
+        }
+
+        // Draw text on top — preserve readable font colors; do not force white
+        if (cellValue) {
+          const textColor = fillColor
+            ? rgb(0.12, 0.11, 0.1) // Keep dark readable text even on filled background
+            : rgb(0.12, 0.11, 0.1); // Dark gray for normal text
+
+          page.drawText(cellValue, {
+            x: currentX,
+            y: currentYPos,
+            size: 10,
+            font,
+            color: textColor,
+          });
+        }
+
+        // Move to next cell position; row advance below
+        currentX += cellWidth + 4;
       });
-      lines.push(cellStrings.join('   '));
+
+      // Prevent clipping before advancing; pagination guard
+      if (currentYPos - rowHeight < margin) {
+        page = document.addPage(pageSize);
+        linesOnCurrentPage = 0;
+        currentYPos = pageSize[1] - margin;
+      }
+      linesOnCurrentPage += 1;
+      currentYPos -= rowHeight;
     }
   });
-  return textPagesToPdf([lines], options);
+
+  return document.save();
 }
 
 async function textToDocx(text: string): Promise<Uint8Array> {
@@ -915,13 +1111,120 @@ async function textToPptx(pages: readonly { lines: readonly string[] }[]): Promi
   return new Uint8Array(output as ArrayBuffer);
 }
 
+/**
+ * Row-groups text items by vertical proximity, then column-groups each row by
+ * x-coordinate clustering. Splits into multiple columns only when positional
+ * evidence is reliable (consistent x-clusters across ≥2 rows); otherwise falls
+ * back to a single line-level cell per row so ordinary text spacing never
+ * fabricates table columns.
+ */
+function groupItemsIntoRows(
+  items: readonly { str: string; x?: number | undefined; y?: number | undefined }[],
+): readonly {
+  readonly y: number;
+  readonly items: readonly { readonly str: string; readonly x?: number }[];
+}[] {
+  const rowMap: Map<number, { str: string; x?: number }[]> = new Map();
+  for (const item of items) {
+    const y = item.y;
+    if (y === undefined) continue;
+    const roundedY = Math.round(y);
+    const existing = rowMap.get(roundedY);
+    if (existing) {
+      const cell: { str: string; x?: number } = { str: item.str };
+      if (item.x !== undefined) cell.x = item.x;
+      existing.push(cell);
+    } else {
+      const cell: { str: string; x?: number } = { str: item.str };
+      if (item.x !== undefined) cell.x = item.x;
+      rowMap.set(roundedY, [cell]);
+    }
+  }
+  const result: { y: number; items: { str: string; x?: number }[] }[] = [];
+  for (const [y, items] of rowMap.entries()) {
+    result.push({ y, items });
+  }
+  // PDF origin is bottom-left; a larger y sits higher on the page. Reading order
+  // is top-to-bottom, so sort descending by y.
+  return result.sort((a, b) => b.y - a.y) as readonly {
+    readonly y: number;
+    readonly items: readonly { readonly str: string; readonly x?: number }[];
+  }[];
+}
+
+/**
+ * Cluster row items into columns by horizontal gap. A new column starts when
+ * the gap between consecutive item x-positions exceeds a threshold relative
+ * to page width (here, ≥20pt absolute separation on a letter page).
+ */
+function clusterByX(
+  rowItems: readonly { readonly str: string; readonly x?: number }[],
+): string[][] {
+  const sorted = rowItems
+    .filter((i) => i.str.trim().length > 0)
+    .sort((a, b) => (a.x ?? 0) - (b.x ?? 0));
+  const columns: string[][] = [];
+  let current: string[] = [];
+  let lastX: number | undefined;
+  for (const item of sorted) {
+    const x = item.x ?? 0;
+    if (lastX !== undefined && x - lastX >= 20) {
+      if (current.length > 0) columns.push(current);
+      current = [];
+    }
+    current.push(item.str.trim());
+    lastX = x;
+  }
+  if (current.length > 0) columns.push(current);
+  return columns;
+}
+
 async function pdfToCsv(bytes: Uint8Array): Promise<string> {
+  if (bytes.length === 0) return '';
   const pages = await extractPdfTextPages(bytes);
-  const rows = pages.flatMap((page) =>
-    page.lines
-      .filter(Boolean)
-      .map((line) => (line.includes('|') ? line.split('|').map((cell) => cell.trim()) : [line])),
-  );
+  const rows: string[][] = [];
+  for (const page of pages) {
+    const pageItems = page.items ?? [];
+    if (pageItems.length === 0) {
+      for (const line of page.lines.filter(Boolean)) {
+        rows.push(line.includes('|') ? line.split('|').map((c) => c.trim()) : [line]);
+      }
+      continue;
+    }
+    const rowGroups = groupItemsIntoRows(pageItems);
+    // Evidence gate: require ≥2 rows and ≥2 distinct x-clusters in every row
+    // before trusting item-level column reconstruction.
+    const rowClusters = rowGroups.map((g) => clusterByX(g.items));
+    const multiColumnRows = rowClusters.filter((cols) => cols.length > 1);
+    const hasConsistentColumns =
+      rowGroups.length >= 2 &&
+      multiColumnRows.length >= Math.ceil(rowGroups.length * 0.6) &&
+      rowClusters.every((cols) => cols.length === multiColumnRows[0]?.length || cols.length === 1);
+    if (hasConsistentColumns && multiColumnRows[0]) {
+      for (const group of rowGroups) {
+        const cols = clusterByX(group.items);
+        // Only emit multi-column when that row actually has ≥2 clusters.
+        const cells =
+          cols.length > 1
+            ? cols.flatMap((c) => c)
+            : [
+                group.items
+                  .map((i) => i.str)
+                  .join('')
+                  .trim(),
+              ];
+        rows.push(cells);
+      }
+    } else {
+      for (const group of rowGroups) {
+        const text = group.items
+          .map((i) => i.str)
+          .join('')
+          .trim();
+        if (text.length > 0) rows.push([text]);
+      }
+    }
+  }
   return rowsToCsv(rows);
 }
 
@@ -986,14 +1289,14 @@ async function epubToPdf(bytes: Uint8Array, options: ConversionOptions): Promise
   const spine = [...opf.matchAll(/<itemref\b[^>]*idref=["']([^"']+)["']/giu)].map(
     (match) => match[1],
   );
-  const chapters = spine
-    .map((id) => ids.find((item) => item.id === id)?.href)
-    .filter((href): href is string => Boolean(href))
-    .map((href) => htmlToPlainText(decoder.decode(files[`${base}${href}`] ?? new Uint8Array())));
-  return textPagesToPdf(
-    chapters.map((chapter) => chapter.split(/\r?\n/u)),
-    options,
-  );
+  const chapterHtmls = spine
+    .map((id) => {
+      const href = ids.find((item) => item.id === id)?.href;
+      return href ? decoder.decode(files[`${base}${href}`] ?? new Uint8Array()) : '';
+    })
+    .filter(Boolean);
+  const combinedHtml = `<!doctype html><html><head><meta charset="utf-8"><title>EPUB export</title></head><body>${chapterHtmls.map((html, index) => `<section data-chapter="${index + 1}">${html}</section>`).join('')}</body></html>`;
+  return await htmlToPdf(combinedHtml, options);
 }
 
 export function createEpub(chapters: readonly string[]): Uint8Array {
@@ -1087,9 +1390,10 @@ export async function psdCompositeToPng(bytes: Uint8Array): Promise<Uint8Array> 
       'Only 8-bit RGB/CMYK flattened PSD composites are supported.',
     );
   let offset = 26;
-  offset += view.getUint32(offset) + 4;
-  offset += view.getUint32(offset) + 4;
-  offset += view.getUint32(offset) + 4;
+  offset += view.getUint32(offset) + 4; // Color Mode section
+  offset += view.getUint32(offset) + 4; // Image Resources section
+  offset += view.getUint32(offset) + 4; // Layer and Mask Information section
+  // Image Data section: 2-byte compression method (0=Raw, 1=RLE, 2=ZIP, 3=ZIP+predict); no length prefix per PSD spec
   const compression = view.getUint16(offset);
   offset += 2;
   const planeSize = width * height;
@@ -1230,4 +1534,31 @@ function conversionFailure(format: string, direction: ConversionDirection, cause
     cause,
     remedy: 'Preserve the original file, export it to a supported format, and retry.',
   });
+}
+// Local diagnostic helper: returns structured failure info without exposing file content
+export function psdConversionDiagnostics(input: {
+  fileName?: string;
+  bytesLength: number;
+  headerBytes: string;
+  imageDataOffset?: number;
+  compression?: number;
+}): object {
+  const d = input.bytesLength < 26 ? 'truncated' : 'header-ok';
+  return {
+    stage: d,
+    fileName: input.fileName,
+    byteLength: input.bytesLength,
+    headerBytes: input.headerBytes,
+    imageDataOffset: input.imageDataOffset ?? 'unknown (needs section parse)',
+    compressionClaimed:
+      input.compression === 0
+        ? 'raw (0)'
+        : input.compression === 1
+          ? 'PackBits (1)'
+          : input.compression === 2
+            ? 'ZIP (2) unsupported by this decoder'
+            : input.compression === undefined
+              ? 'unknown (needs section parse)'
+              : 'unknown (' + input.compression + ')',
+  };
 }

@@ -60,6 +60,7 @@
     "pdf-lib": "1.17.1",
     "prettier": "3.9.8",
     "prettier-plugin-svelte": "4.1.1",
+    "puppeteer": "21.11.0",
     "simple-git-hooks": "2.14.0",
     "svelte": "5.57.1",
     "turbo": "2.11.2",
@@ -75,7 +76,7 @@
     }
   },
   "lint-staged": {
-    "*.{js,mjs,ts,svelte}": "eslint --max-warnings=0",
+    "*.{js,mjs,ts,svelte}": "eslint --max-warnings=0 --no-warn-ignored",
     "*.{json,md,yml,yaml,css}": "prettier --check"
   }
 }

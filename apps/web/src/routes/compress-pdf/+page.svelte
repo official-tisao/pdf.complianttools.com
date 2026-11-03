@@ -13,7 +13,8 @@
     });
     download(bytes, 'compressed.pdf');
     const change = Math.round((1 - bytes.byteLength / inputBytes.byteLength) * 100);
-    return `Compressed locally: ${formatBytes(inputBytes.byteLength)} → ${formatBytes(bytes.byteLength)} (${change >= 0 ? `${change}% smaller` : `${Math.abs(change)}% larger`}).`;
+    const changeText = change >= 0 ? `${change}% reduced` : `${Math.abs(change)}% larger`;
+    return `Compressed locally: ${formatBytes(inputBytes.byteLength)} → ${formatBytes(bytes.byteLength)} (${changeText}).`;
   }
 
   function formatBytes(value: number): string {

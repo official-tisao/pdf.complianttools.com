@@ -6,6 +6,14 @@ import { defineConfig, devices } from '@playwright/test';
 // keep using the app on 4173 while the test runner starts the current source.
 const TEST_PORT = process.env.PLAYWRIGHT_PORT ?? (process.env.CI ? '4173' : '4174');
 const BASE_URL = `http://127.0.0.1:${TEST_PORT}`;
+
+/**
+ * Exported for `global-setup.ts`, which runs before workers exist and so has
+ * no `PLAYWRIGHT_TEST_BASE_URL` to read — Playwright only injects that for the
+ * tests themselves. Importing the config from the setup is safe: the setup is
+ * resolved by path, and the config never imports it back.
+ */
+export { BASE_URL };
 const DEV = {
   command: `pnpm exec vite dev --host 127.0.0.1 --port ${TEST_PORT}`,
   cwd: 'apps/web',
@@ -21,6 +29,13 @@ const offline = process.env.OFFLINE === '1';
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
+  // `fullyParallel` + a cold vite cache is a thundering-herd compile storm:
+  // every worker hits the dev server with its first navigation at once and
+  // hydration misses its budget while vite re-bundles under the load (measured:
+  // 16 workers fail 10 route audits, 4 workers pass all 157). `globalSetup`
+  // pays the shared compile cost once, serially, before workers spawn — see
+  // tests/e2e/global-setup.ts.
+  globalSetup: './tests/e2e/global-setup.ts',
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? 'github' : 'list',
   // The offline suite asserts against the production build: a service worker is

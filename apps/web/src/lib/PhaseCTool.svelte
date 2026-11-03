@@ -78,6 +78,10 @@
   let wmRotation = $state(45);
   let wmColor = $state('#707070');
   let note = $state('');
+  let fieldName = $state('name');
+  let fieldType = $state<'text' | 'checkbox'>('text');
+  let fieldX = $state(72);
+  let fieldY = $state(680);
   let recipients = $state('recipient@example.test');
   let threshold = $state(32);
   let page = $state(1);
@@ -224,8 +228,15 @@
       } else if (operation === 'create-form') {
         save(
           await engine.createFormPdf(bytes!, [
-            { name: 'name', type: 'text', page, x: 72, y: 680, width: 220, height: 24 },
-            { name: 'agree', type: 'checkbox', page, x: 72, y: 640, width: 18, height: 18 },
+            {
+              name: fieldName || 'field',
+              type: fieldType === 'checkbox' ? 'checkbox' : 'text',
+              page,
+              x: fieldX,
+              y: fieldY,
+              width: 220,
+              height: 24,
+            },
           ]),
           'fillable-form.pdf',
           'application/pdf',
@@ -388,7 +399,22 @@
     />
   {/if}
   {#if operation !== 'signature-background' && operation !== 'password-generator'}
-    <PdfPreview file={files[0]} {locale} onerror={(message) => (error = message)} />
+    <PdfPreview
+      file={files[0]}
+      {locale}
+      onerror={(message) => (error = message)}
+      onclick={(event: MouseEvent) => {
+        if (operation !== 'create-form') return;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const target = (event.currentTarget as any) || null;
+        if (!target) return;
+        const rect = target.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / rect.width) * 612;
+        const y = ((event.clientY - rect.top) / rect.height) * 792;
+        fieldX = Math.round(x);
+        fieldY = Math.round(y);
+      }}
+    />
   {/if}
   <div class="panel">
     {#if operation === 'editor'}
@@ -645,6 +671,11 @@
     margin: 0 0 8px 0;
     font-size: 1.1rem;
     letter-spacing: -0.02em;
+  }
+  .hint {
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    margin: 4px 0 8px;
   }
   .info-banner {
     background: #f0f4f8;

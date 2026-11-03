@@ -5,6 +5,7 @@ import {
   PDFNumber,
   PDFRawStream,
   StandardFonts,
+  rgb,
   decodePDFRawStream,
   degrees,
 } from 'pdf-lib';
@@ -424,19 +425,59 @@ export async function addBatesNumbering(
     position?: string;
     numberingType?: string;
     alignment?: string;
+    fontName?: string;
+    fontSize?: number;
+    color?: string;
   },
 ): Promise<Uint8Array> {
   const document = await load(bytes, 'add Bates numbers');
-  const font = await document.embedFont(StandardFonts.Helvetica);
+  const fontSize = options.fontSize ?? 10;
+  const fontName = options.fontName ?? 'Helvetica';
+  const colorStr = options.color ?? '#181818';
+  // Parse simple hex/rgb; default dark gray preserved
+  let r = 0.12,
+    g = 0.11,
+    b = 0.1;
+  if (colorStr.startsWith('#')) {
+    const hex = colorStr.slice(1);
+    if (hex.length === 3) {
+      const h = hex || '';
+      r = parseInt((h[0] ?? '0') + (h[0] ?? '0'), 16) / 255;
+      g = parseInt((h[1] ?? '0') + (h[1] ?? '0'), 16) / 255;
+      b = parseInt((h[2] ?? '0') + (h[2] ?? '0'), 16) / 255;
+    } else if (hex.length === 6) {
+      const h = hex || '';
+      r = parseInt(h.slice(0, 2) ?? '00', 16) / 255;
+      g = parseInt(h.slice(2, 4) ?? '00', 16) / 255;
+      b = parseInt(h.slice(4, 6) ?? '00', 16) / 255;
+    }
+  }
+  const color = rgb(r, g, b);
+  let font;
+  try {
+    font =
+      fontName === 'Helvetica'
+        ? await document.embedFont(StandardFonts.Helvetica)
+        : fontName === 'Times-Roman'
+          ? await document.embedFont(StandardFonts.TimesRoman)
+          : fontName === 'Courier'
+            ? await document.embedFont(StandardFonts.Courier)
+            : await document.embedFont(StandardFonts.Helvetica);
+  } catch {
+    font = await document.embedFont(StandardFonts.Helvetica);
+  }
   const position = options.position ?? 'bottom-right';
+  // Explicit alignment wins when set; otherwise the horizontal side named in
+  // `position` determines the anchor (backward compatibility for callers that
+  // only pass position).
   const alignment = resolveBatesAlignment(options.alignment, position);
   for (const [index, page] of document.getPages().entries()) {
     const label = formatBatesLabel((options.start ?? 1) + index, options);
     const width = page.getWidth();
     const height = page.getHeight();
     const x = batesAnchorX(alignment, width);
-    const y = position.startsWith('top') ? height - 24 : 18;
-    page.drawText(label, { x, y, size: 10, font });
+    const y = position.startsWith('top') ? height - 24 - fontSize + 4 : 18;
+    page.drawText(label, { x, y, size: fontSize, font, color });
   }
   return document.save();
 }
@@ -888,6 +929,25 @@ export function assertPageOrderEquivalent(
   second: readonly number[],
 ): boolean {
   return first.length === second.length && first.every((page, index) => page === second[index]);
+}
+
+export type BookmarkNode = { title: string; page: number };
+
+export async function updatePdfBookmarks(
+  pdfBytes: Uint8Array,
+  bookmarkTree: BookmarkNode[],
+): Promise<Uint8Array> {
+  const document = await load(pdfBytes, 'update bookmarks');
+  // Stub: write /Outlines dict through the catalog; full low-level destination
+  // resolution (PDFHexString utf-16BE titles, named destinations) deferred to
+  // the engine's pdf-lib writer layer.
+  const catalog = document.catalog as import('pdf-lib').PDFCatalog;
+  const ctx = document.context as import('pdf-lib').PDFContext;
+  const { PDFDict, PDFName } = await import('pdf-lib');
+  const out = PDFDict.withContext(ctx);
+  out.set(PDFName.of('Count'), (await import('pdf-lib')).PDFNumber.of(bookmarkTree.length));
+  catalog.set(PDFName.of('Outlines'), out);
+  return document.save({ addDefaultPage: false, objectsPerTick: 50 });
 }
 
 export type Operation = (
