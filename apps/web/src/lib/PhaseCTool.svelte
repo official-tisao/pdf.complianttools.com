@@ -209,7 +209,11 @@
             opacity: 0.25,
             rotation: wmRotation,
             size: wmSize,
-            color: { r: parseInt(wmColor.slice(1,3),16)/255, g: parseInt(wmColor.slice(3,5),16)/255, b: parseInt(wmColor.slice(5,7),16)/255 },
+            color: {
+              r: parseInt(wmColor.slice(1, 3), 16) / 255,
+              g: parseInt(wmColor.slice(3, 5), 16) / 255,
+              b: parseInt(wmColor.slice(5, 7), 16) / 255,
+            },
           }),
           'watermarked.pdf',
           'application/pdf',
@@ -525,24 +529,30 @@
       />
       <label>{t('phase.sign.label', 'Signature text')}<input bind:value={text} /></label>
     {:else if operation === 'watermark'}
-      <div class="wm-controls" role="group" aria-label={t('phase.watermark.controls', 'Watermark controls')}>
+      <div
+        class="wm-controls"
+        role="group"
+        aria-label={t('phase.watermark.controls', 'Watermark controls')}
+      >
         <label>
-          {t(
-            'phase.watermark.size',
-            'Font size',
-          )}<input type="number" min="6" max="300" bind:value={wmSize} />
+          {t('phase.watermark.size', 'Font size')}<input
+            type="number"
+            min="6"
+            max="300"
+            bind:value={wmSize}
+          />
         </label>
         <label>
-          {t(
-            'phase.watermark.rotation',
-            'Rotation (degrees)',
-          )}<select bind:value={wmRotation}><option value={0}>0°</option><option value={45}>45°</option><option value={90}>90°</option><option value={135}>135°</option><option value={180}>180°</option><option value={225}>225°</option><option value={270}>270°</option><option value={315}>315°</option></select>
+          {t('phase.watermark.rotation', 'Rotation (degrees)')}<select bind:value={wmRotation}
+            ><option value={0}>0°</option><option value={45}>45°</option><option value={90}
+              >90°</option
+            ><option value={135}>135°</option><option value={180}>180°</option><option value={225}
+              >225°</option
+            ><option value={270}>270°</option><option value={315}>315°</option></select
+          >
         </label>
         <label>
-          {t(
-            'phase.watermark.color',
-            'Color',
-          )}<input type="color" bind:value={wmColor} />
+          {t('phase.watermark.color', 'Color')}<input type="color" bind:value={wmColor} />
         </label>
       </div>
       <label class={operation === 'watermark' ? 'wm-label' : ''}

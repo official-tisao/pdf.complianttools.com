@@ -685,8 +685,7 @@ async function csvToPdf(csv: string, options: ConversionOptions): Promise<Uint8A
 
   // Use landscape if table is significantly wider than usable width in portrait
   const orientation = totalTableWidth > usableWidth ? 'landscape' : 'portrait';
-  const [usablePageW, usablePageH] =
-    orientation === 'landscape' ? [pageH, pageW] : [pageW, pageH];
+  const [usablePageW, usablePageH] = orientation === 'landscape' ? [pageH, pageW] : [pageW, pageH];
   const finalUsableWidth = usablePageW - margin * 2;
 
   // Scale / expand column widths to fill available printable width

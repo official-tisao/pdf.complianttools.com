@@ -22,4 +22,7 @@ for (const p of pages) {
 }
 
 const allText = pages.map((p) => p.lines.join(' ')).join(' ');
-console.log('\nContains all cells?', allText.includes('name') && allText.includes('local') && allText.includes('notes'));
+console.log(
+  '\nContains all cells?',
+  allText.includes('name') && allText.includes('local') && allText.includes('notes'),
+);

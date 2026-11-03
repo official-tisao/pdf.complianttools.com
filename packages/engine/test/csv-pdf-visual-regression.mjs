@@ -22,8 +22,8 @@ describe('CSV→PDF visual quality regression', () => {
     assert.equal((await classifyPdfInput(res.bytes)).ok, true);
   });
   it('wide table lands landscape', async () => {
-    let csv = Array.from({length: 18}, (_, i) => `C${i}`).join(',') + '\n';
-    csv += Array.from({length: 18}, (_, i) => `V${i}`).join(',') + '\n';
+    let csv = Array.from({ length: 18 }, (_, i) => `C${i}`).join(',') + '\n';
+    csv += Array.from({ length: 18 }, (_, i) => `V${i}`).join(',') + '\n';
     const res = await convertToPdf('csv', new TextEncoder().encode(csv), { fileName: 't.csv' });
     assert.equal((await classifyPdfInput(res.bytes)).ok, true);
   });

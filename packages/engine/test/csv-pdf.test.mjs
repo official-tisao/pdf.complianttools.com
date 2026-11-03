@@ -22,7 +22,7 @@ Mary,"Finance, Lead",6000`;
 
 test('CSV parsing handles escaped quotes', () => {
   const csv = `Name,Notes
-John,"He said ""Hello"""`
+John,"He said ""Hello"""`;
   const rows = csvToRows(csv);
   assert.deepEqual(rows, [
     ['Name', 'Notes'],
@@ -136,11 +136,11 @@ test('CSV to PDF with custom page size options', async () => {
 John,5000`;
   const pdfLetter = await convertToPdf('csv', new TextEncoder().encode(csv), {
     fileName: 'test.csv',
-    pageSize: 'letter'
+    pageSize: 'letter',
   });
   const pdfA4 = await convertToPdf('csv', new TextEncoder().encode(csv), {
     fileName: 'test.csv',
-    pageSize: 'a4'
+    pageSize: 'a4',
   });
   assert.equal((await classifyPdfInput(pdfLetter.bytes)).ok, true);
   assert.equal((await classifyPdfInput(pdfA4.bytes)).ok, true);
@@ -173,7 +173,9 @@ test('CSV to PDF handles different line endings', async () => {
   const csvCRLF = 'Name,Value\r\nJohn,5000\r\nMary,6000';
   const csvLF = 'Name,Value\nJohn,5000\nMary,6000';
 
-  const pdf1 = await convertToPdf('csv', new TextEncoder().encode(csvCRLF), { fileName: 'test.csv' });
+  const pdf1 = await convertToPdf('csv', new TextEncoder().encode(csvCRLF), {
+    fileName: 'test.csv',
+  });
   const pdf2 = await convertToPdf('csv', new TextEncoder().encode(csvLF), { fileName: 'test.csv' });
 
   assert.equal((await classifyPdfInput(pdf1.bytes)).ok, true);
@@ -185,6 +187,8 @@ test('CSV to PDF with malformed records handles gracefully', async () => {
 John,5000
 Mary,6000,extra,data
 David`;
-  const pdf = await convertToPdf('csv', new TextEncoder().encode(csv), { fileName: 'malformed.csv' });
+  const pdf = await convertToPdf('csv', new TextEncoder().encode(csv), {
+    fileName: 'malformed.csv',
+  });
   assert.equal((await classifyPdfInput(pdf.bytes)).ok, true);
 });

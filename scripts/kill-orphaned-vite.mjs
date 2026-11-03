@@ -61,7 +61,10 @@ function findPidsUnix(output) {
  */
 function getProcessCommandLineWindows(pid) {
   try {
-    const out = execSync(`powershell -Command "Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}' | Select-Object -ExpandProperty CommandLine"`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+    const out = execSync(
+      `powershell -Command "Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}' | Select-Object -ExpandProperty CommandLine"`,
+      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 2000 },
+    );
     return out.trim();
   } catch {
     return '';
@@ -74,7 +77,12 @@ function getProcessCommandLineWindows(pid) {
 function isOrphanedViteProcess(pid, cmdLine) {
   const cmd = cmdLine || getProcessCommandLineWindows(pid);
   const isNode = cmd.includes('node') || cmd.includes('node.exe') || cmd.includes('nodejs');
-  const isVite = /vite/.test(cmd) || /dev/.test(cmd) || /vite/.test(cmd) || cmd.includes('vite') || cmd.includes('dev');
+  const isVite =
+    /vite/.test(cmd) ||
+    /dev/.test(cmd) ||
+    /vite/.test(cmd) ||
+    cmd.includes('vite') ||
+    cmd.includes('dev');
   return isNode && isVite;
 }
 
@@ -95,19 +103,18 @@ for (const port of PORTS) {
     continue;
   }
 
-  const pids = platform() === 'win32'
-    ? findPidsWindows(output)
-    : findPidsUnix(output);
+  const pids = platform() === 'win32' ? findPidsWindows(output) : findPidsUnix(output);
+  // Prevent processing invalid PID 0 which causes hang on Windows get-process queries
+  const validPids = pids.filter((pid) => pid > 0);
 
-  if (pids.length === 0) {
+  if (validPids.length === 0) {
     console.log(`No orphaned process found on port ${port}`);
     continue;
   }
 
-  for (const pid of pids) {
-    const cmdLine = platform() === 'win32'
-      ? getProcessCommandLineWindows(pid)
-      : getProcessCommandLineUnix(pid);
+  for (const pid of validPids) {
+    const cmdLine =
+      platform() === 'win32' ? getProcessCommandLineWindows(pid) : getProcessCommandLineUnix(pid);
 
     if (!isOrphanedViteProcess(pid, cmdLine)) {
       console.log(`Skipping PID ${pid} on port ${port} — unrelated process`);
@@ -128,7 +135,10 @@ for (const port of PORTS) {
  */
 function getProcessCommandLineUnix(pid) {
   try {
-    const out = execSync(`cat /proc/${pid}/cmdline 2>/dev/null | tr '\0' ' '`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+    const out = execSync(`cat /proc/${pid}/cmdline 2>/dev/null | tr '\0' ' '`, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
     return out.trim();
   } catch {
     return '';

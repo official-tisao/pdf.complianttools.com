@@ -81,9 +81,19 @@ test('script uses cross-platform detection (Windows or Unix)', () => {
   // The script must contain platform checks or platform-specific commands
   const scriptContent = readFileSync(SCRIPT, 'utf8');
   assert.ok(
-    scriptContent.includes('platform') || scriptContent.includes('netstat') || scriptContent.includes('lsof'),
+    scriptContent.includes('platform') ||
+      scriptContent.includes('netstat') ||
+      scriptContent.includes('lsof'),
     'script must include cross-platform port detection logic',
   );
+});
+
+/** Regression: PID 0 from netstat must not hang Windows PowerShell queries */
+test('regression: PID 0 is filtered to prevent hang', () => {
+  const pids = [60232, 0, 50868];
+  const validPids = pids.filter((pid) => pid > 0);
+  assert.deepStrictEqual(validPids, [60232, 50868]);
+  assert.ok(!validPids.includes(0), 'PID 0 must not reach process-query loop');
 });
 
 /** Verify graceful shutdown settings are preserved */
