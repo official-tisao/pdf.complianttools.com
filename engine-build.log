@@ -1,0 +1,16 @@
+
+> @pdf-complianttools/engine@0.1.0 build C:\Users\ganiyu\codebase\pdf.complianttools.com\packages\engine
+> tsc -p tsconfig.json
+
+src/conversion/convert.ts(1,10): error TS2300: Duplicate identifier 'PDFDocument'.
+src/conversion/convert.ts(1,32): error TS2300: Duplicate identifier 'StandardFonts'.
+src/conversion/convert.ts(1,47): error TS2300: Duplicate identifier 'rgb'.
+src/conversion/convert.ts(26,10): error TS2300: Duplicate identifier 'PDFDocument'.
+src/conversion/convert.ts(26,23): error TS2300: Duplicate identifier 'StandardFonts'.
+src/conversion/convert.ts(26,38): error TS2300: Duplicate identifier 'rgb'.
+src/render/html-renderer.ts(13,36): error TS2307: Cannot find module 'puppeteer' or its corresponding type declarations.
+src/render/html-renderer.ts(26,27): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/render/html-renderer.ts(39,28): error TS7006: Parameter 'res' implicitly has an 'any' type.
+C:\Users\ganiyu\codebase\pdf.complianttools.com\packages\engine:
+ÔÇëERR_PNPM_RECURSIVE_RUN_FIRST_FAILÔÇë @pdf-complianttools/engine@0.1.0 build: `tsc -p tsconfig.json`
+Exit status 2

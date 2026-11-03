@@ -1,7 +1,5 @@
 import { describe, it } from 'node:test';
 
-// Node globals for ESLint
-/* global TextEncoder */
 import assert from 'node:assert/strict';
 import { convertToPdf, classifyPdfInput } from '../dist/index.js';
 

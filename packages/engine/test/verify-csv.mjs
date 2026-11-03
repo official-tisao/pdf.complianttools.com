@@ -1,7 +1,5 @@
 import { convertToPdf } from '../dist/index.js';
 
-// Node globals for ESLint
-/* global TextEncoder, console */
 import { extractPdfTextPages } from '../dist/conversion/pdf-text.js';
 
 const csvContent = `name,value,notes

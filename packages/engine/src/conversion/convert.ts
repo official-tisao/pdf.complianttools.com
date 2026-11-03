@@ -23,7 +23,6 @@ import {
 } from './pdf-text.js';
 import { imageToPdf, renderPdfPageToPng } from './images.js';
 import { pptxToPdf } from './pptx.js';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
