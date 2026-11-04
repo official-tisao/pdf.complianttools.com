@@ -1,6 +1,15 @@
-import { PDFDocument, StandardFonts, degrees } from 'pdf-lib';
+import {
+  PDFArray,
+  PDFDict,
+  PDFDocument,
+  PDFName,
+  PDFRef,
+  PDFString,
+  StandardFonts,
+  degrees,
+} from 'pdf-lib';
 import { PdfEngineError } from '../errors.js';
-import type { MergeOptions, SplitOptions, Step } from '../types.js';
+import type { BookmarkEntry, MergeOptions, SplitOptions, Step } from '../types.js';
 import {
   batesAnchorX,
   formatBatesLabel,
@@ -348,26 +357,164 @@ export async function splitGraph(
   options: SplitOptions = {},
 ): Promise<Uint8Array[]> {
   const count = graph.pageCount;
+  const selectedPages = options.selectedPages ?? [];
+  const splitMethod = options.splitMethod ?? 'pagesPerFile';
+
+  // Validate selectedPages for the ranges method — but keep the UI flowing.
+  if (splitMethod === 'ranges') {
+    for (const idx of selectedPages) {
+      if (!Number.isInteger(idx) || idx < 1 || idx > count) {
+        throw new PdfEngineError({
+          kind: 'invalid-operation',
+          operation: 'split',
+          remedy: 'Page numbers must be integers between 1 and the total number of pages.',
+        });
+      }
+    }
+  }
+
+  const outputs: Uint8Array[] = [];
   const groups: number[][] = [];
-  if (options.ranges?.length) {
-    for (const range of options.ranges) groups.push(parseRange(range, count));
+
+  if (splitMethod === 'ranges' || splitMethod === 'everyPage') {
+    if (splitMethod === 'everyPage') {
+      // One output file per page
+      for (let i = 1; i <= count; i++) {
+        groups.push([i]);
+      }
+    } else {
+      // Each comma-separated range token is one output file. `ranges` carries
+      // the tokens verbatim — "1-2, 3" is two files (pages 1-2, then page 3) —
+      // and `selectedPages` is the same selection flattened to a page list for
+      // callers that only have a set. Where a caller supplies only a flat
+      // selection, consecutive pages stay together so "1, 2, 3" is one file
+      // rather than three identical singletons.
+      const ranges = options.ranges ?? [];
+      if (ranges.length > 0) {
+        for (const token of ranges) {
+          const pages = parseRange(token.trim(), count);
+          if (pages.length > 0) groups.push(pages);
+        }
+      } else {
+        let run: number[] = [];
+        const flushRun = (): void => {
+          if (run.length > 0) groups.push(run);
+          run = [];
+        };
+        const ordered = [...new Set(selectedPages)].sort((a, b) => a - b);
+        for (const page of ordered) {
+          if (page >= 1 && page <= count) {
+            const previous = run[run.length - 1];
+            if (previous !== undefined && page === previous + 1) {
+              run.push(page);
+            } else {
+              flushRun();
+              run = [page];
+            }
+          }
+        }
+        flushRun();
+      }
+    }
+  } else if (splitMethod === 'bookmarks') {
+    // Bookmark-based splitting: walk the outline dict chain with pdf-lib's own
+    // lookup APIs. The Outlines dict exposes /First and /Next as indirect
+    // references, so each hop is a catalog.lookup away from a PDFDict.
+    const unsupported = (): PdfEngineError =>
+      new PdfEngineError({
+        kind: 'unsupported-feature',
+        feature: 'PDF bookmarks',
+        remedy:
+          'The PDF does not contain any bookmark/outline entries. Use page selection or "Every Page Separately" instead.',
+      });
+
+    const bookmarkEntries: BookmarkEntry[] = [];
+    const collect = (item: PDFDict, level: number): void => {
+      const title = item.lookup(PDFName.of('Title'), PDFString) ?? undefined;
+      bookmarkEntries.push({
+        title: title?.decodeText() ?? '',
+        page: outlineTargetPage(item, graph),
+        level,
+      });
+      const child = item.lookupMaybe(PDFName.of('First'), PDFDict);
+      if (child) collect(child, level + 1);
+    };
+
+    try {
+      const outlines = graph.document.catalog.lookupMaybe(PDFName.of('Outlines'), PDFDict);
+      const first = outlines?.lookupMaybe(PDFName.of('First'), PDFDict);
+      if (!outlines || !first) throw unsupported();
+
+      let current: PDFDict | undefined = first;
+      while (current) {
+        collect(current, 0);
+        current = current.lookupMaybe(PDFName.of('Next'), PDFDict);
+      }
+
+      if (bookmarkEntries.length === 0) throw unsupported();
+
+      // Each bookmark starts a new output file. Pages before the first bookmark
+      // are included in the first file so no content is lost.
+      const bookmarkPages = bookmarkEntries
+        .map((node) => node.page)
+        .filter((page) => page >= 1 && page <= count)
+        .sort((a, b) => a - b);
+      let currentChunk: number[] = [];
+      let lastPage = 1;
+
+      for (const bookmarkPage of bookmarkPages) {
+        // Pages before this bookmark go into the current chunk
+        for (let p = lastPage; p < bookmarkPage; p++) {
+          currentChunk.push(p);
+        }
+        if (currentChunk.length > 0) {
+          groups.push(currentChunk);
+          currentChunk = [];
+        }
+        // Start new chunk at bookmark page
+        currentChunk.push(bookmarkPage);
+        lastPage = bookmarkPage + 1;
+      }
+
+      // Remaining pages after last bookmark
+      for (let p = lastPage; p <= count; p++) {
+        currentChunk.push(p);
+      }
+      if (currentChunk.length > 0) {
+        groups.push(currentChunk);
+      }
+    } catch (error) {
+      if (error instanceof PdfEngineError && error.details.kind === 'unsupported-feature')
+        throw error;
+      throw error;
+    }
   } else {
+    // pagesPerFile mode
     const size = Math.max(1, options.pagesPerFile ?? count);
-    for (let start = 1; start <= count; start += size)
+    for (let start = 1; start <= count; start += size) {
       groups.push(
         Array.from({ length: Math.min(size, count - start + 1) }, (_, offset) => start + offset),
       );
+    }
   }
-  const outputs: Uint8Array[] = [];
-  for (const group of groups) {
+
+  // Progress reporting
+  const onProgress = options.onProgress;
+  const totalSteps = groups.length;
+  for (let i = 0; i < groups.length; i++) {
+    onProgress?.(i + 1, totalSteps, `Generating part ${i + 1}…`);
+    const group = groups[i];
+    if (!group) continue;
     const output = await PDFDocument.create({ updateMetadata: false });
-    const pages = await output.copyPages(
+    const copied = await output.copyPages(
       graph.document,
       group.map((page) => page - 1),
     );
-    for (const page of pages) output.addPage(page);
+    for (const p of copied) output.addPage(p);
+    options.onPart?.({ index: i, pages: [...group] });
     outputs.push(await output.save());
   }
+
   const maxBytes = options.maxBytes;
   if (
     maxBytes !== undefined &&
@@ -377,9 +524,35 @@ export async function splitGraph(
     return splitGraph(graph, {
       pagesPerFile: Math.max(1, Math.ceil((options.pagesPerFile ?? count) / 2)),
       maxBytes,
+      ...(onProgress ? { onProgress } : {}),
+      ...(options.pdfaConformance ? { pdfaConformance: options.pdfaConformance } : {}),
     });
   }
+
   return outputs;
+}
+
+/**
+ * Resolves the page a bookmark/outline item points at. A standard destination
+ * is an array whose first element is the target page's indirect reference;
+ * pdf-lib hands each page back with its ref, so matching on object and
+ * generation numbers yields the 1-based page. Named destinations and GoTo
+ * actions are not resolved here — those items split from page 1, and the
+ * document still loses nothing.
+ */
+function outlineTargetPage(item: PDFDict, graph: MutationGraph): number {
+  const dest = item.lookup(PDFName.of('Dest'));
+  if (!(dest instanceof PDFArray)) return 1;
+  const target = dest.get(0);
+  if (!(target instanceof PDFRef)) return 1;
+  const index = graph.document
+    .getPages()
+    .findIndex(
+      (page) =>
+        page.ref.objectNumber === target.objectNumber &&
+        page.ref.generationNumber === target.generationNumber,
+    );
+  return index >= 0 ? index + 1 : 1;
 }
 
 export async function applyGraphStep(

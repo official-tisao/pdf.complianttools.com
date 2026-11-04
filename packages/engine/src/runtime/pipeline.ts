@@ -145,3 +145,17 @@ export async function splitPdf(
   const graph = await MutationGraph.fromInputs([bytes]);
   return splitGraph(graph, options);
 }
+
+/** Split with PDF/A conformance support and progress reporting. */
+export async function splitPdfWithAdaConformance(
+  bytes: Uint8Array,
+  options: SplitOptions & { pdfaConformance: '1b' | '2b' | '3b' },
+  onProgress?: (completed: number, total: number, message: string) => void,
+): Promise<Uint8Array[]> {
+  const graph = await MutationGraph.fromInputs([bytes]);
+  return splitGraph(graph, {
+    ...options,
+    ...(onProgress ? { onProgress } : {}),
+    pdfaConformance: options.pdfaConformance,
+  });
+}

@@ -156,6 +156,7 @@ export const shellArabic: Readonly<Record<string, string>> = {
   'feature.qr.dots': 'نقاط',
   'feature.qr.extraRounded': 'مُدور جدًا',
   'feature.qr.logoTitle': 'الشعار',
+  'feature.qr.logoUpload': 'تحميل شعار',
   'feature.qr.logoSize': 'حجم الشعار %',
   'feature.qr.removeLogo': 'إزالة الشعار',
   'feature.qr.coloursTitle': 'الألوان',
