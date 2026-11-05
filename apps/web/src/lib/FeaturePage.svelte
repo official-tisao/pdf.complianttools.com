@@ -682,13 +682,13 @@
         {:else}
           <p class="note">{t('feature.qr.enterTextHint', 'Enter text; preview updates live.')}</p>
         {/if}
-        <div class="qr-downloads">
-          <button onclick={downloadStyledSvg}>{t('feature.qr.downloadSvg', 'Download SVG')}</button>
-          <button onclick={downloadStyledPng}>{t('feature.qr.downloadPng', 'Download PNG')}</button>
-          <button onclick={downloadStyledPdf}
-            >{t('feature.qr.downloadPdf', 'Download print PDF')}</button
-          >
-        </div>
+      </div>
+      <div class="qr-actions">
+        <button onclick={downloadStyledSvg}>{t('feature.qr.downloadSvg', 'Download SVG')}</button>
+        <button onclick={downloadStyledPng}>{t('feature.qr.downloadPng', 'Download PNG')}</button>
+        <button onclick={downloadStyledPdf}
+          >{t('feature.qr.downloadPdf', 'Export QR PDF')}</button
+        >
       </div>
     </div>
   {:else if kind === 'scan'}
@@ -960,6 +960,10 @@
   .recipe-description {
     color: var(--color-muted);
     line-height: 1.6;
+  }
+  .qr-actions {
+    display: flex;
+    flex-wrap: wrap;
   }
   .batch-rows {
     list-style: none;

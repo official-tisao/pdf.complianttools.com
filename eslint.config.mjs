@@ -87,6 +87,12 @@ export default [
       // the build output through `new URL(...)`, so they need the same globals.
       'tests/**/*.mjs',
       'test-exports.mjs',
+      // Root-level manual diagnostic scripts run under plain node and reach
+      // deep node_modules via relative imports (repro-install-hang.mjs reaches
+      // `@puppeteer/browsers` from the working tree root). These already get
+      // the Node globals above; only add the repro here rather than weakening
+      // no-undef or adding a blanket env:['Node'] for every browser file.
+      'repro-install-hang.mjs',
       'playwright.config.ts',
     ],
     languageOptions: {
