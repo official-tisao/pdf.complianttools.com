@@ -19,7 +19,29 @@ export const toolOptions: Record<string, OptionField[]> = {
     },
   ],
   split: [
+    {
+      key: 'splitMethod',
+      label: 'Split Method',
+      type: 'select',
+      value: 'pagesPerFile',
+      options: ['pagesPerFile', 'ranges', 'everyPage', 'bookmarks'],
+    },
     { key: 'pagesPerFile', label: 'Pages per file', type: 'number', value: 1, min: 1, step: 1 },
+    {
+      key: 'pageRanges',
+      label: 'Page Ranges',
+      type: 'text',
+      value: '',
+      placeholder: '1-5, 7, 10-12',
+    },
+    {
+      key: 'pdfaConformance',
+      label: 'PDF/A Conformance',
+      type: 'select',
+      value: 'none',
+      options: ['none', '1b', '2b', '3b'],
+      advanced: true,
+    },
     {
       key: 'maxBytes',
       label: 'Maximum output bytes',

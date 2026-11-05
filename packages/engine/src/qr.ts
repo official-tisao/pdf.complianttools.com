@@ -133,3 +133,123 @@ export async function generateQr(payload: QrPayload): Promise<QrRender> {
 export function qrPayloadText(payload: QrPayload): string {
   return payloadText(payload);
 }
+
+/** Professional customization layer using qr-code-styling (browser/DOM only). Preserves basic generateQr. */
+export interface QrStyleOptions {
+  cornerSquare?: 'square' | 'rounded' | 'circle';
+  cornerDot?: 'square' | 'rounded' | 'dot';
+  dotsType?: 'square' | 'rounded' | 'dots' | 'extra-rounded';
+  foreground?: string;
+  background?: string;
+  logoUrl?: string;
+  logoSize?: number;
+  frame?: boolean;
+  frameText?: string;
+  errorCorrection?: 'L' | 'M' | 'Q' | 'H';
+}
+
+export function buildStyledQrOptions(text: string, opts: QrStyleOptions = {}) {
+  return {
+    width: 300,
+    height: 300,
+    type: 'svg' as const,
+    data: text,
+    image: opts.logoUrl || '',
+    dotsOptions: {
+      type: (opts.dotsType || 'rounded') as string,
+      color: opts.foreground || '#181818',
+    },
+    cornersSquareOptions: {
+      type: (opts.cornerSquare || 'square') as string,
+      color: opts.foreground || '#181818',
+    },
+    cornersDotOptions: {
+      type: (opts.cornerDot || 'square') as string,
+      color: opts.foreground || '#181818',
+    },
+    backgroundOptions: {
+      color: opts.background || '#ffffff',
+    },
+    qrOptions: {
+      errorCorrectionLevel: (opts.errorCorrection || 'M') as string,
+    },
+    imageOptions: {
+      hideBackgroundDots: true,
+      imageSize: (opts.logoSize || 30) / 100,
+    },
+  };
+}
+
+/**
+ * Renders the styled QR as an SVG string. Requires a DOM (browser). In Node the library's
+ * svg window shim is absent, so this throws — callers must feature-detect `document`.
+ */
+export async function generateStyledQrSvg(
+  text: string,
+  opts: QrStyleOptions = {},
+): Promise<string> {
+  // Dynamic import avoids pulling the DOM library into Node build graph eagerly.
+  const mod = await import('qr-code-styling');
+  const QRCodeStyling =
+    (mod as unknown as { default?: new (opts: unknown) => unknown }).default || mod;
+  if (typeof (globalThis as Record<string, unknown>).document === 'undefined')
+    throw new PdfEngineError({
+      kind: 'unsupported-feature',
+      feature: 'styled QR rendering',
+      remedy:
+        'Styled QR rendering needs a browser environment. Use generateQr for server-side generation.',
+    });
+  const instance = new (
+    QRCodeStyling as unknown as new (o: unknown) => {
+      _getElement: (e: string) => Promise<Record<string, unknown> | undefined>;
+    }
+  )(buildStyledQrOptions(text, opts));
+  const svgElement: Record<string, unknown> | undefined = await instance._getElement('svg');
+  if (!svgElement || typeof svgElement !== 'object')
+    throw new PdfEngineError({
+      kind: 'conversion-failed',
+      format: 'svg',
+      direction: 'to-pdf',
+      cause: 'styled renderer returned no element',
+      remedy: 'Simplify the QR design and retry.',
+    });
+  return (svgElement as { outerHTML?: string }).outerHTML ?? String(svgElement);
+}
+
+/** Renders the styled QR as PNG bytes at a given scale for print-quality export. Browser only. */
+export async function generateStyledQrPng(
+  text: string,
+  opts: QrStyleOptions = {},
+  size = 1024,
+): Promise<Uint8Array> {
+  if (typeof (globalThis as Record<string, unknown>).document === 'undefined')
+    throw new PdfEngineError({
+      kind: 'unsupported-feature',
+      feature: 'styled QR rendering',
+      remedy: 'Styled QR export needs a browser environment.',
+    });
+  const options = {
+    ...buildStyledQrOptions(text, opts),
+    width: size,
+    height: size,
+    type: 'canvas' as const,
+  };
+  const mod = await import('qr-code-styling');
+  const QRCodeStyling =
+    (mod as unknown as { default?: new (opts: unknown) => unknown }).default || mod;
+  const instance = new (
+    QRCodeStyling as unknown as new (o: unknown) => {
+      getRawData: (e?: string) => Promise<Blob | null>;
+    }
+  )(options);
+  const blob = await instance.getRawData('png');
+  if (!(blob instanceof Blob))
+    throw new PdfEngineError({
+      kind: 'conversion-failed',
+      format: 'png',
+      direction: 'to-pdf',
+      cause: 'styled renderer returned no PNG data',
+      remedy: 'Simplify the QR design and retry.',
+    });
+  return new Uint8Array(await blob.arrayBuffer());
+}

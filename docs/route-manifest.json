@@ -918,10 +918,10 @@
     },
     {
       "path": "/split",
-      "shell": "ToolWorkspace",
+      "shell": "SplitTool",
       "localized": false,
-      "opBinding": "wired",
-      "op": "split"
+      "opBinding": null,
+      "op": null
     },
     {
       "path": "/split.html",

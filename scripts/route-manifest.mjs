@@ -23,6 +23,7 @@
  */
 export const SHELLS = /** @type {const} */ ([
   'ToolWorkspace',
+  'SplitTool',
   'PhaseCTool',
   'ConversionTool',
   'FeaturePage',
@@ -38,12 +39,11 @@ export const SHELLS = /** @type {const} */ ([
  * Shells that take an `onrun` prop, and so render a disabled primary action
  * when it is absent. `ToolWorkspace` is the only one: it disables its Run
  * button with `disabled={files.length === 0 || !onrun}` and `runTool()` returns
- * immediately when `onrun` is missing.
- *
- * `PhaseCTool` and `FeaturePage` are excluded deliberately — both own their
- * action handlers (`PhaseCTool` has its own `run` and `<Button onclick={run}>`;
- * `FeaturePage` wires `create`/`qr`/`scan`/`pack`/`batch` inline), so a missing
- * `onrun` on those routes says nothing about whether they work.
+ * immediately when `onrun` is missing. Three more shells are excluded deliberately
+ * because they each own their action handler (`PhaseCTool`, `FeaturePage`, and
+ * `SplitTool`), so a missing `onrun` on those routes says nothing about whether
+ * they work. `SplitTool` is wired in by the route's split function directly,
+ * rather than going through ToolWorkspace's shared `<Button onclick={runTool}/>`.
  */
 const ONRUN_SHELLS = new Set(['ToolWorkspace']);
 

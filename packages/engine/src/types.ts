@@ -152,6 +152,19 @@ export type SplitOptions = StepOptions & {
   pagesPerFile?: number;
   maxBytes?: number;
   bookmarkLevel?: number;
+  splitMethod?: 'pagesPerFile' | 'ranges' | 'everyPage' | 'bookmarks';
+  selectedPages?: readonly number[];
+  pdfaConformance?: 'none' | '1b' | '2b' | '3b';
+  onProgress?: (completed: number, total: number, message: string) => void;
+  /** Reported per generated part, in part order, so a caller can label each
+   *  output with the pages it holds without re-parsing the produced PDFs. */
+  onPart?: (part: { readonly index: number; readonly pages: readonly number[] }) => void;
+};
+
+export type BookmarkEntry = {
+  title: string;
+  page: number;
+  level: number;
 };
 
 export type PdfDocumentHandle = {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFString } from 'pdf-lib';
 import {
   addBatesNumbering,
   compile,
@@ -31,6 +31,99 @@ test('merge, split, and extract preserve deterministic page counts', async () =>
   const split = await splitPdf(merged, { pagesPerFile: 2 });
   assert.deepEqual(await Promise.all(split.map(pages)), [2, 2]);
   assert.equal(await pages(await extractPages(merged, '2-3')), 2);
+});
+
+test('split methods cover every-page, selected-page ranges, and explicit pagesPerFile', async () => {
+  const source = await bytes('two-page.pdf');
+  const merged = await mergePdfBuffers([source, source, source]);
+  assert.equal(await pages(merged), 6);
+
+  // Every page becomes its own one-page file.
+  const everyPage = await splitPdf(merged, { splitMethod: 'everyPage' });
+  assert.equal(everyPage.length, 6);
+  assert.deepEqual(await Promise.all(everyPage.map(pages)), [1, 1, 1, 1, 1, 1]);
+
+  // Selected pages group into runs: 1-3 and 5-6 become two parts of 3 and 2.
+  const parts = [];
+  const ranges = await splitPdf(merged, {
+    splitMethod: 'ranges',
+    selectedPages: [1, 2, 3, 5, 6],
+    onPart: (part) => parts.push([...part.pages]),
+  });
+  assert.deepEqual(await Promise.all(ranges.map(pages)), [3, 2]);
+  assert.deepEqual(parts, [
+    [1, 2, 3],
+    [5, 6],
+  ]);
+
+  // Each comma-separated token is its own file: "1-2, 3" is two parts, not one.
+  const explicitParts = [];
+  const explicit = await splitPdf(merged, {
+    splitMethod: 'ranges',
+    selectedPages: [1, 2, 3],
+    ranges: ['1-2', '3'],
+    onPart: (part) => explicitParts.push([...part.pages]),
+  });
+  assert.deepEqual(await Promise.all(explicit.map(pages)), [2, 1]);
+  assert.deepEqual(explicitParts, [[1, 2], [3]]);
+
+  // Out-of-range tokens clamp to the document instead of failing: a 6-page
+  // document asked for "1-9, 2, 5-6" yields the whole document, then 2, then
+  // 5-6 — three parts.
+  const clamped = await splitPdf(merged, {
+    splitMethod: 'ranges',
+    ranges: ['1-9', '2', '5-6'],
+  });
+  assert.deepEqual(await Promise.all(clamped.map(pages)), [6, 1, 2]);
+
+  // pagesPerFile leaves a final partial group: 6 pages at 4 per file -> [4, 2].
+  const chunked = await splitPdf(merged, { splitMethod: 'pagesPerFile', pagesPerFile: 4 });
+  assert.deepEqual(await Promise.all(chunked.map(pages)), [4, 2]);
+});
+
+test('split by bookmarks errors clearly when the document has no outline', async () => {
+  const source = await bytes('two-page.pdf');
+  const merged = await mergePdfBuffers([source, source]);
+  await assert.rejects(
+    () => splitPdf(merged, { splitMethod: 'bookmarks' }),
+    (error) => {
+      assert.equal(error.details?.kind, 'unsupported-feature');
+      assert.match(error.message, /bookmark\/outline/u);
+      return true;
+    },
+  );
+});
+
+test('split by bookmarks produces one part per outline entry', async () => {
+  // Bookmarks on pages 1 and 3: the first part holds pages 1-2 (pages before
+  // the second bookmark join it), the second holds pages 3-4.
+  const source = await bytes('two-page.pdf');
+  const merged = await mergePdfBuffers([source, source]);
+  const outlined = await PDFDocument.load(merged);
+  const context = outlined.context;
+  const pageRefs = outlined.getPages().map((page) => page.ref);
+  const first = context.obj({ Title: PDFString.of('Part one'), Dest: [pageRefs[0]] });
+  const second = context.obj({ Title: PDFString.of('Part two'), Dest: [pageRefs[2]] });
+  const outlines = context.obj({
+    Type: 'Outlines',
+    First: context.register(first),
+    Last: context.register(second),
+    Count: 2,
+  });
+  first.set(PDFName.of('Next'), context.register(second));
+  second.set(PDFName.of('Prev'), outlines.get(PDFName.of('First')));
+  outlined.catalog.set(PDFName.of('Outlines'), context.register(outlines));
+
+  const parts = [];
+  const outputs = await splitPdf(await outlined.save(), {
+    splitMethod: 'bookmarks',
+    onPart: (part) => parts.push([...part.pages]),
+  });
+  assert.deepEqual(await Promise.all(outputs.map(pages)), [2, 2]);
+  assert.deepEqual(parts, [
+    [1, 2],
+    [3, 4],
+  ]);
 });
 
 test('delete and reorder never mutate the input graph', async () => {
