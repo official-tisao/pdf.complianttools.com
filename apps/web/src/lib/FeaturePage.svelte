@@ -686,9 +686,7 @@
       <div class="qr-actions">
         <button onclick={downloadStyledSvg}>{t('feature.qr.downloadSvg', 'Download SVG')}</button>
         <button onclick={downloadStyledPng}>{t('feature.qr.downloadPng', 'Download PNG')}</button>
-        <button onclick={downloadStyledPdf}
-          >{t('feature.qr.downloadPdf', 'Export QR PDF')}</button
-        >
+        <button onclick={downloadStyledPdf}>{t('feature.qr.downloadPdf', 'Export QR PDF')}</button>
       </div>
     </div>
   {:else if kind === 'scan'}

@@ -44,7 +44,7 @@ setTimeout(() => {
   console.log(
     'VERDICT: downloadFile() still pending after 20 s against a stalled connection ' +
       '— no timeout exists, the promise never settles. In CI the postinstall waits ' +
-      'exactly like this until the 6-hour job timeout. Hang reproduced.'
+      'exactly like this until the 6-hour job timeout. Hang reproduced.',
   );
   server.close();
   process.exit(1);
