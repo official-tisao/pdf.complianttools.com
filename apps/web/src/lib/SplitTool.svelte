@@ -270,6 +270,7 @@
 
 <svelte:head>
   <meta name="description" content={description} />
+  <!-- safe-html-reviewed: JSON-LD needs a script element Svelte cannot emit; softwareApplicationLd returns JSON.stringify output with "<" escaped, tested in scripts/seo.test.mjs -->
   {@html JSONLD_OPEN + structuredData + JSONLD_CLOSE}
 </svelte:head>
 
