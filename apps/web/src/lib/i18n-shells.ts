@@ -68,7 +68,6 @@ export const shellArabic: Readonly<Record<string, string>> = {
   'feature.template.dot': 'نقاط',
   'feature.action.create': 'إنشاء PDF',
   'feature.qr.label': 'نص أو رابط',
-  'feature.qr.action': 'تصدير رمز QR إلى PDF',
   'feature.scan.label': 'صور المسح الضوئي',
   'feature.scan.drop': 'أفلت الصور هنا أو اختر ملفات',
   'feature.pack.drop': 'أفلت ملفات PDF هنا أو اختر ملفات',
