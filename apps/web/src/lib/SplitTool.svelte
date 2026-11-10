@@ -153,7 +153,9 @@
   }
 
   function downloadFile(bytes: Uint8Array, name: string) {
-    const url = globalThis.URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    const url = globalThis.URL.createObjectURL(
+      new Blob([bytes.slice().buffer as ArrayBuffer], { type: 'application/pdf' }),
+    );
     const anchor = globalThis.document.createElement('a');
     anchor.href = url;
     anchor.download = name;
@@ -252,7 +254,7 @@
         })),
       );
       const url = globalThis.URL.createObjectURL(
-        new globalThis.Blob([zipBytes], { type: 'application/zip' }),
+        new globalThis.Blob([zipBytes.slice().buffer as ArrayBuffer], { type: 'application/zip' }),
       );
       const anchor = globalThis.document.createElement('a');
       anchor.href = url;
@@ -333,27 +335,13 @@
             <span>{t('split.selected', 'Selected: {value}', selectedPageCount)}</span>
           </div>
           <div class="selection-controls">
-            <Button
-              variant="secondary"
-              onclick={selectAllPages}
-              disabled={allPagesSelected}
-              aria-label={t('split.selectAll', 'Select all pages')}
-            >
+            <Button variant="secondary" onclick={selectAllPages} disabled={allPagesSelected}>
               {t('split.selectAll', 'Select All')}
             </Button>
-            <Button
-              variant="secondary"
-              onclick={deselectAllPages}
-              disabled={noPagesSelected}
-              aria-label={t('split.deselectAll', 'Deselect all pages')}
-            >
+            <Button variant="secondary" onclick={deselectAllPages} disabled={noPagesSelected}>
               {t('split.deselectAll', 'Deselect All')}
             </Button>
-            <Button
-              variant="secondary"
-              onclick={invertSelection}
-              aria-label={t('split.invertSelection', 'Invert selection')}
-            >
+            <Button variant="secondary" onclick={invertSelection}>
               {t('split.invertSelection', 'Invert')}
             </Button>
           </div>
@@ -417,7 +405,7 @@
           </p>
         {/if}
 
-        <Button variant="secondary" onclick={resetTool} aria-label={t('split.reset', 'Reset tool')}>
+        <Button variant="secondary" onclick={resetTool}>
           {t('split.resetLabel', 'Reset')}
         </Button>
 

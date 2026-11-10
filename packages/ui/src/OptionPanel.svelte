@@ -4,6 +4,7 @@
     label: string;
     type: 'number' | 'text' | 'range' | 'select' | 'checkbox';
     value: string | number | boolean;
+    placeholder?: string;
     min?: number;
     max?: number;
     step?: number;
@@ -67,6 +68,7 @@
         <input
           type={field.type}
           value={field.value as string | number}
+          placeholder={field.placeholder}
           min={field.min}
           max={field.max}
           step={field.step}
