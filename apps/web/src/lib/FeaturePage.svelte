@@ -628,19 +628,22 @@
         </div>
         <div class="qr-section">
           <h3>{t('feature.qr.logoTitle', 'Logo')}</h3>
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/svg+xml"
-            onchange={(e) => {
-              const f = (e.currentTarget as HTMLInputElement).files?.[0];
-              if (f) {
-                logoFile = f;
-                const r = new FileReader();
-                r.onload = () => (logoUrl = r.result as string);
-                r.readAsDataURL(f);
-              }
-            }}
-          />
+          <label>
+            {t('feature.qr.logoTitle', 'Logo')}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml"
+              onchange={(e) => {
+                const f = (e.currentTarget as HTMLInputElement).files?.[0];
+                if (f) {
+                  logoFile = f;
+                  const r = new FileReader();
+                  r.onload = () => (logoUrl = r.result as string);
+                  r.readAsDataURL(f);
+                }
+              }}
+            />
+          </label>
           <label
             >{t('feature.qr.logoSize', 'Logo size %')}
             <input type="range" min="10" max="40" bind:value={logoSize} /></label
@@ -673,12 +676,14 @@
         </div>
         <button onclick={updatePreviewOnly}>{t('feature.qr.action', 'Update preview')}</button>
       </div>
-      <div class="qr-preview" role="img" aria-label="QR code preview">
-        {#if previewSvg}
-          {@html previewSvg}
-        {:else}
-          <p class="note">{t('feature.qr.enterTextHint', 'Enter text; preview updates live.')}</p>
-        {/if}
+      <div class="qr-preview">
+        <div role="img" aria-label="QR code preview">
+          {#if previewSvg}
+            {@html previewSvg}
+          {:else}
+            <p class="note">{t('feature.qr.enterTextHint', 'Enter text; preview updates live.')}</p>
+          {/if}
+        </div>
         <div class="qr-downloads">
           <button onclick={downloadStyledSvg}>{t('feature.qr.downloadSvg', 'Download SVG')}</button>
           <button onclick={downloadStyledPng}>{t('feature.qr.downloadPng', 'Download PNG')}</button>
