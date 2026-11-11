@@ -7,7 +7,13 @@ const fs = require('fs');
   for (let i = 0; i < angles.length; i++) {
     const p = doc.addPage([612, 792]);
     p.setRotation(angles[i]);
-    p.drawText('Rotation ' + angles[i] + '° text at (50,700)', { x: 50, y: 700, size: 14, font: helv, color: rgb(0, 0.2, 0.8) });
+    p.drawText('Rotation ' + angles[i] + '° text at (50,700)', {
+      x: 50,
+      y: 700,
+      size: 14,
+      font: helv,
+      color: rgb(0, 0.2, 0.8),
+    });
     fs.writeFileSync('fixtures/fidelity/rotation-' + angles[i] + '.pdf', await doc.save()); // wrong: saves full doc each time
   }
 })();

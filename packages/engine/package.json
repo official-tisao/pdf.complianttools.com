@@ -72,6 +72,10 @@
       "types": "./dist/conversion/legacy-decoders.d.ts",
       "import": "./dist/conversion/legacy-decoders.js",
       "development": "./src/conversion/legacy-decoders.ts"
+    },
+    "./pdfium": {
+      "types": "./dist/pdf/pdfium.d.ts",
+      "import": "./dist/pdf/pdfium.js"
     }
   },
   "scripts": {

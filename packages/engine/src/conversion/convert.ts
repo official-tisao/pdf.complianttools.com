@@ -2,6 +2,7 @@ import { PDFDocument, PDFPage, StandardFonts, rgb } from 'pdf-lib';
 import { unzipSync, zipSync, zlibSync } from 'fflate';
 import { PdfEngineError } from '../errors.js';
 import { mergePdfBuffers } from '../pdf/merge.js';
+import { loadPdfJs } from '../pdf/pdfjs.js';
 import type {
   ConversionDirection,
   ConversionOptions,
@@ -387,6 +388,29 @@ async function convertFromPdfRequest(
       mimeType = 'application/epub+zip';
       extension = '.epub';
       break;
+    case 'cbz': {
+      if (!isRenderer(options.renderer))
+        throw unavailable(
+          'cbz',
+          'from-pdf',
+          'CBZ export needs the local pdfium renderer supplied by the browser worker.',
+        );
+      const pdfjs = await loadPdfJs();
+      const loadingTask = pdfjs.getDocument({ data: bytes.slice() });
+      const document = await loadingTask.promise;
+      const pageCount = document.numPages;
+      await loadingTask.destroy();
+      const entries: Record<string, Uint8Array> = {};
+      for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+        const rendered = await renderPdfPageToPng(bytes, pageNumber, options.renderer);
+        const filename = `page_${String(pageNumber).padStart(3, '0')}.png`;
+        entries[filename] = rendered.bytes;
+      }
+      output = zipSync(entries, { level: 0 });
+      mimeType = 'application/vnd.comicbook+zip';
+      extension = '.cbz';
+      break;
+    }
     case 'png':
     case 'pdf-image':
       if (!isRenderer(options.renderer))
@@ -1373,6 +1397,8 @@ export function legacyCompoundToText(bytes: Uint8Array, format: 'doc' | 'xls' = 
 }
 
 export async function psdCompositeToPng(bytes: Uint8Array): Promise<Uint8Array> {
+  if (bytes.length < 26)
+    throw conversionFailure('psd', 'to-pdf', 'PSD file is truncated (missing header).');
   if (decoder.decode(bytes.slice(0, 4)) !== '8BPS')
     throw conversionFailure('psd', 'to-pdf', 'The file is not a Photoshop PSD document.');
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -1388,19 +1414,67 @@ export async function psdCompositeToPng(bytes: Uint8Array): Promise<Uint8Array> 
       'Only 8-bit RGB/CMYK flattened PSD composites are supported.',
     );
   let offset = 26;
-  offset += view.getUint32(offset) + 4; // Color Mode section
-  offset += view.getUint32(offset) + 4; // Image Resources section
-  offset += view.getUint32(offset) + 4; // Layer and Mask Information section
+
+  // Helper to safely read and skip a PSD section with full boundary validation
+  const skipSection = (sectionName: string): void => {
+    if (offset + 4 > bytes.length) {
+      throw conversionFailure(
+        'psd',
+        'to-pdf',
+        `PSD file is truncated (missing ${sectionName} section length).`,
+      );
+    }
+    const sectionLength = view.getUint32(offset);
+    if (offset + 4 + sectionLength > bytes.length) {
+      throw conversionFailure(
+        'psd',
+        'to-pdf',
+        `PSD file is truncated (${sectionName} section incomplete).`,
+      );
+    }
+    offset += 4 + sectionLength;
+  };
+
+  // Validate and skip Color Mode section
+  skipSection('Color Mode');
+
+  // Validate and skip Image Resources section
+  skipSection('Image Resources');
+
+  // Validate and skip Layer and Mask Information section
+  skipSection('Layer and Mask');
+
   // Image Data section: 2-byte compression method (0=Raw, 1=RLE, 2=ZIP, 3=ZIP+predict); no length prefix per PSD spec
+  if (offset + 2 > bytes.length)
+    throw conversionFailure(
+      'psd',
+      'to-pdf',
+      'PSD file is truncated (missing Image Data compression method).',
+    );
   const compression = view.getUint16(offset);
   offset += 2;
   const planeSize = width * height;
   const planes: Uint8Array[] = [];
   if (compression === 0) {
+    // Raw: channels * planeSize bytes
+    const expectedDataSize = Math.min(channels, 4) * planeSize;
+    if (offset + expectedDataSize > bytes.length)
+      throw conversionFailure(
+        'psd',
+        'to-pdf',
+        'PSD file is truncated (Raw image data incomplete).',
+      );
     for (let channel = 0; channel < Math.min(channels, 4); channel += 1)
       planes.push(bytes.slice(offset + channel * planeSize, offset + (channel + 1) * planeSize));
   } else if (compression === 1) {
+    // RLE: rowCount * 2 bytes for row lengths, then compressed data
     const rowCount = height * channels;
+    if (offset + rowCount * 2 > bytes.length)
+      throw conversionFailure(
+        'psd',
+        'to-pdf',
+        'PSD file is truncated (RLE row lengths incomplete).',
+      );
     const lengths: number[] = [];
     for (let index = 0; index < rowCount; index += 1)
       lengths.push(view.getUint16(offset + index * 2));
@@ -1410,7 +1484,15 @@ export async function psdCompositeToPng(bytes: Uint8Array): Promise<Uint8Array> 
       let planeOffset = 0;
       for (let row = 0; row < height; row += 1) {
         const length = lengths[channel * height + row] ?? 0;
+        if (offset + length > bytes.length)
+          throw conversionFailure(
+            'psd',
+            'to-pdf',
+            'PSD file is truncated (RLE row data incomplete).',
+          );
         const decoded = unpackBits(bytes.slice(offset, offset + length), width);
+        if (decoded.length !== width)
+          throw conversionFailure('psd', 'to-pdf', 'PSD RLE decode produced incorrect row width.');
         plane.set(decoded, planeOffset);
         planeOffset += width;
         offset += length;
@@ -1459,9 +1541,18 @@ function rgbaToPng(rgba: Uint8Array, width: number, height: number): Uint8Array 
     const typeBytes = encoder.encode(type);
     return concat(uint32(data.length), typeBytes, data, uint32(crc32(concat(typeBytes, data))));
   };
+  // IHDR: width(4) + height(4) + bitdepth(1) + colortype(1) + compression(1) + filter(1) + interlace(1) = 13 bytes
+  const ihdr = new Uint8Array(13);
+  ihdr.set(uint32(width), 0);
+  ihdr.set(uint32(height), 4);
+  ihdr[8] = 8; // bitdepth
+  ihdr[9] = 6; // colortype (6 = RGBA)
+  ihdr[10] = 0; // compression
+  ihdr[11] = 0; // filter
+  ihdr[12] = 0; // interlace
   return concat(
     new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
-    chunk('IHDR', uint32(width, height, 8, 6, 0, 0, 0)),
+    chunk('IHDR', ihdr),
     chunk('IDAT', deflate(raw)),
     chunk('IEND', new Uint8Array()),
   );

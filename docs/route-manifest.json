@@ -267,10 +267,10 @@
     },
     {
       "path": "/fill-form",
-      "shell": "PhaseCTool",
+      "shell": "bespoke",
       "localized": false,
       "opBinding": null,
-      "op": "fill-form"
+      "op": null
     },
     {
       "path": "/flatten-pdf",

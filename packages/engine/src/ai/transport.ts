@@ -14,6 +14,22 @@ export type ProviderResponse = Readonly<{
 
 export type ProviderTransport = (request: ProviderRequest) => Promise<ProviderResponse>;
 
+export async function requestBinaryAsset(
+  endpoint: string,
+): Promise<{ status: number; bytes: ArrayBuffer }> {
+  assertSafeAssetEndpoint(endpoint);
+  const response = await fetch(endpoint);
+  return { status: response.status, bytes: await response.arrayBuffer() };
+}
+
+export function assertSafeAssetEndpoint(endpoint: string): void {
+  if (endpoint.startsWith('/') && !endpoint.startsWith('//') && !endpoint.includes('\\')) {
+    const resolved = new URL(endpoint, 'https://asset.invalid');
+    if (resolved.origin === 'https://asset.invalid') return;
+  }
+  assertSafeEndpoint(endpoint);
+}
+
 /**
  * The sole browser network seam. Callers must provide a user-configured endpoint and
  * credentials are carried only in an Authorization header, never in a URL or JSON body.

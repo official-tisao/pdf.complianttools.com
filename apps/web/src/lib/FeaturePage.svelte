@@ -1,5 +1,5 @@
 <script lang="ts">
-  /* global HTMLSelectElement, location, navigator, clearTimeout, FileReader, HTMLInputElement */
+  /* global clearTimeout, FileReader */
   // Types are erased at build time, so the type-only import costs nothing. The
   // runtime imports use deep subpaths: the engine barrel re-exports every
   // module, so importing it eagerly would pull pdfjs, mammoth, exceljs and
@@ -676,17 +676,20 @@
         </div>
         <button onclick={updatePreviewOnly}>{t('feature.qr.action', 'Update preview')}</button>
       </div>
-      <div class="qr-preview" role="img" aria-label="QR code preview">
-        {#if previewSvg}
-          {@html previewSvg}
-        {:else}
-          <p class="note">{t('feature.qr.enterTextHint', 'Enter text; preview updates live.')}</p>
-        {/if}
-      </div>
-      <div class="qr-actions">
-        <button onclick={downloadStyledSvg}>{t('feature.qr.downloadSvg', 'Download SVG')}</button>
-        <button onclick={downloadStyledPng}>{t('feature.qr.downloadPng', 'Download PNG')}</button>
-        <button onclick={downloadStyledPdf}>{t('feature.qr.downloadPdf', 'Export QR PDF')}</button>
+      <div class="qr-preview">
+        <div role="img" aria-label="QR code preview">
+          {#if previewSvg}
+            {@html previewSvg}
+          {:else}
+            <p class="note">{t('feature.qr.enterTextHint', 'Enter text; preview updates live.')}</p>
+          {/if}
+        </div>
+        <div class="qr-downloads">
+          <button onclick={downloadStyledSvg}>{t('feature.qr.downloadSvg', 'Download SVG')}</button>
+          <button onclick={downloadStyledPng}>{t('feature.qr.downloadPng', 'Download PNG')}</button>
+          <button onclick={downloadStyledPdf}>{t('feature.qr.downloadPdf', 'Export QR PDF')}</button
+          >
+        </div>
       </div>
     </div>
   {:else if kind === 'scan'}
@@ -959,7 +962,7 @@
     color: var(--color-muted);
     line-height: 1.6;
   }
-  .qr-actions {
+  .qr-downloads {
     display: flex;
     flex-wrap: wrap;
   }

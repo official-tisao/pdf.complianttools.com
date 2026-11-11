@@ -18,6 +18,11 @@
     unavailableReason = '',
     note = '',
     locale: localeProp,
+    /**
+     * Optional renderer for from-pdf conversions that need page rasterization
+     * (e.g., cbz, pdf-image). When provided, it's passed to the engine.
+     */
+    renderer,
   }: {
     title: string;
     eyebrow?: string;
@@ -34,6 +39,11 @@
      * `en` source locale without changing.
      */
     locale?: Locale;
+    /**
+     * Optional renderer for from-pdf raster conversions.
+     * Created by the route using createPdfiumRenderer.
+     */
+    renderer?: unknown;
   } = $props();
 
   const locale = $derived(localeProp ?? getLocaleContext());
@@ -64,7 +74,9 @@
     try {
       const { convertFile } = await import('@pdf-complianttools/engine');
       const bytes = new Uint8Array(await file.arrayBuffer());
-      const result = await convertFile(direction, format as never, bytes, { fileName: file.name });
+      const options: Record<string, unknown> = { fileName: file.name };
+      if (renderer) options.renderer = renderer;
+      const result = await convertFile(direction, format as never, bytes, options);
       const url = URL.createObjectURL(
         new Blob([result.bytes.buffer as ArrayBuffer], { type: result.mimeType }),
       );

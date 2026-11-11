@@ -7,16 +7,26 @@
     disabled = false,
     onclick,
     children,
+    'aria-label': ariaLabel,
+    ...rest
   }: {
     variant?: Variant;
     type?: 'button' | 'submit' | 'reset';
     disabled?: boolean;
     onclick?: (event: MouseEvent) => void;
     children: import('svelte').Snippet;
-  } = $props();
+    'aria-label'?: string;
+  } & Record<string, unknown> = $props();
 </script>
 
-<button class={`button button-${variant}`} {type} {disabled} {onclick}>
+<button
+  class={`button button-${variant}`}
+  {type}
+  {disabled}
+  {onclick}
+  aria-label={ariaLabel}
+  {...rest}
+>
   {@render children()}
 </button>
 

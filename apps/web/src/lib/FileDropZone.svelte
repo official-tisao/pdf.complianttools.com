@@ -1,5 +1,4 @@
 <script lang="ts">
-  /* global ClipboardEvent, HTMLInputElement */
   /**
    * Wraps a real <input type="file"> and layers drag, drop, and paste on top of
    * it at hydration, per README §7.6. The native input is always rendered and
