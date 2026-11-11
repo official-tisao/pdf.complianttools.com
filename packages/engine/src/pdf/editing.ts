@@ -764,12 +764,10 @@ export async function inspectFormFields(bytes: Uint8Array): Promise<readonly For
     }
 
     const type = field.constructor.name;
-    // Read the field flags to determine if readonly
-    // Bit 1 (0x2) = ReadOnly flag
+    // Use the public AcroForm API to determine whether the field is read-only.
     let readonly: boolean;
     try {
-      const flags = field.getFlags ? field.getFlags() : 0;
-      readonly = Boolean(flags & 0x2);
+      readonly = field.isReadOnly();
     } catch {
       readonly = false;
     }

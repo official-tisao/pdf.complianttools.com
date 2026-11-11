@@ -284,36 +284,40 @@ test('Valid RGB PSD composite produces correct PNG', async () => {
   assert.strictEqual(raw[rowStart + 7], 255, 'Row 1 Col 1 A');
 });
 
-test('Large PSD with composite produces valid PNG with correct dimensions', async () => {
-  const bytes = fs.readFileSync(
-    'C:/Users/ayomide/Downloads/psd-compatibility-test-files/psd-compatibility-enabled.psd',
-  );
-  const png = await psdCompositeToPng(bytes);
+const psdFixturePath = process.env.PSD_COMPATIBILITY_FIXTURE;
 
-  const chunks = parsePngChunks(png);
-  const ihdr = chunks.find((c) => c.type === 'IHDR');
-  const data = ihdr.data;
+test(
+  'Large PSD with composite produces valid PNG with correct dimensions',
+  { skip: !psdFixturePath || !fs.existsSync(psdFixturePath) },
+  async () => {
+    const bytes = fs.readFileSync(psdFixturePath);
+    const png = await psdCompositeToPng(bytes);
 
-  // Verify dimensions match PSD
-  assert.strictEqual((data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3], 1200);
-  assert.strictEqual((data[4] << 24) | (data[5] << 16) | (data[6] << 8) | data[7], 800);
-  assert.strictEqual(data[8], 8); // bit depth
-  assert.strictEqual(data[9], 6); // RGBA
+    const chunks = parsePngChunks(png);
+    const ihdr = chunks.find((c) => c.type === 'IHDR');
+    const data = ihdr.data;
 
-  // Verify IDAT decompresses
-  const idat = chunks.find((c) => c.type === 'IDAT');
-  const raw = zlib.inflateSync(Buffer.from(idat.data));
-  const expectedSize = (1200 * 4 + 1) * 800;
-  assert.strictEqual(raw.length, expectedSize);
+    // Verify dimensions match PSD
+    assert.strictEqual((data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3], 1200);
+    assert.strictEqual((data[4] << 24) | (data[5] << 16) | (data[6] << 8) | data[7], 800);
+    assert.strictEqual(data[8], 8); // bit depth
+    assert.strictEqual(data[9], 6); // RGBA
 
-  // Verify non-zero pixel data exists (not blank)
-  let nonZero = 0;
-  for (let i = 1; i < raw.length; i++) {
-    // skip filter bytes
-    if (raw[i] !== 0) nonZero++;
-  }
-  assert.ok(nonZero > 0, 'PNG must contain non-zero pixel data');
-});
+    // Verify IDAT decompresses
+    const idat = chunks.find((c) => c.type === 'IDAT');
+    const raw = zlib.inflateSync(Buffer.from(idat.data));
+    const expectedSize = (1200 * 4 + 1) * 800;
+    assert.strictEqual(raw.length, expectedSize);
+
+    // Verify non-zero pixel data exists (not blank)
+    let nonZero = 0;
+    for (let i = 1; i < raw.length; i++) {
+      // skip filter bytes
+      if (raw[i] !== 0) nonZero++;
+    }
+    assert.ok(nonZero > 0, 'PNG must contain non-zero pixel data');
+  },
+);
 
 test('Legitimate completely white design produces valid PNG', async () => {
   // Create a PSD with all white pixels
