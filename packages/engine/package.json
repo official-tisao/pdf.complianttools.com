@@ -99,6 +99,7 @@
     "pptxgenjs": "4.0.1",
     "puppeteer": "21.11.0",
     "qrcode": "1.5.4",
+    "qr-code-styling": "1.9.2",
     "zod": "4.6.5"
   },
   "devDependencies": {

@@ -196,7 +196,9 @@ metadata, so it cannot be the source.
 - pump — MIT
 - puppeteer — Apache-2.0
 - puppeteer-core — Apache-2.0
+- qr-code-styling — MIT
 - qrcode — MIT
+- qrcode-generator — MIT
 - queue — MIT
 - readable-stream — MIT
 - readdir-glob — Apache-2.0
