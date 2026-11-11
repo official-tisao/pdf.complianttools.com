@@ -628,8 +628,8 @@
         </div>
         <div class="qr-section">
           <h3>{t('feature.qr.logoTitle', 'Logo')}</h3>
-          <label>
-            {t('feature.qr.logoTitle', 'Logo')}
+          <label class="file-upload-label">
+            {t('feature.qr.logoUpload', 'Upload logo')}
             <input
               type="file"
               accept="image/png,image/jpeg,image/svg+xml"
@@ -687,8 +687,7 @@
         <div class="qr-downloads">
           <button onclick={downloadStyledSvg}>{t('feature.qr.downloadSvg', 'Download SVG')}</button>
           <button onclick={downloadStyledPng}>{t('feature.qr.downloadPng', 'Download PNG')}</button>
-          <button onclick={downloadStyledPdf}
-            >{t('feature.qr.downloadPdf', 'Download print PDF')}</button
+          <button onclick={downloadStyledPdf}>{t('feature.qr.downloadPdf', 'Export QR PDF')}</button
           >
         </div>
       </div>
@@ -962,6 +961,10 @@
   .recipe-description {
     color: var(--color-muted);
     line-height: 1.6;
+  }
+  .qr-downloads {
+    display: flex;
+    flex-wrap: wrap;
   }
   .batch-rows {
     list-style: none;

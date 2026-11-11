@@ -218,7 +218,13 @@
   .visible {
     display: grid;
     gap: 12px;
-    grid-template-columns: repeat(4, minmax(72px, 1fr));
+    /* Auto-fill instead of a fixed column count: the track width — not the
+       number of columns — is what drives wrapping, so the grid reflows inside
+       any container width instead of overflowing it and forcing horizontal
+       scrolling. A side column, a narrow window, and a phone all get as many
+       columns as actually fit. The script still measures the rendered count
+       so the arrow keys agree with what is shown. */
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
     left: 0;
     padding: 4px;
     position: absolute;
@@ -227,12 +233,5 @@
   }
   .cell {
     min-width: 0;
-  }
-  /* The column count is also read by script so Alt+Arrow and the arrow keys
-     agree with what is rendered; both must change together. */
-  @media (max-width: 600px) {
-    .visible {
-      grid-template-columns: repeat(2, minmax(72px, 1fr));
-    }
   }
 </style>
