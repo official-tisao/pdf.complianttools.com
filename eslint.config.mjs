@@ -41,15 +41,21 @@ export default [
         FileList: 'readonly',
         MediaProvider: 'readonly',
         MouseEvent: 'readonly',
-        // PageGrid measures its rendered column count so the keyboard handlers
-        // agree with the stylesheet's responsive breakpoints.
+        KeyboardEvent: 'readonly',
+        HTMLElement: 'readonly',
+        HTMLCanvasElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        HTMLTextAreaElement: 'readonly',
+        HTMLSelectElement: 'readonly',
         HTMLDivElement: 'readonly',
+        ClipboardEvent: 'readonly',
+        CanvasRenderingContext2D: 'readonly',
+        PointerEvent: 'readonly',
+        Element: 'readonly',
+        location: 'readonly',
+        navigator: 'readonly',
         window: 'readonly',
         getComputedStyle: 'readonly',
-        // Ordinary browser globals used by client components (conversion-
-        // failure logging, deferred pipeline steps). DOM element *types* like
-        // HTMLCanvasElement stay per-file `/* global */` declarations, matching
-        // the existing convention in FileDropZone, PdfViewer, SignaturePad.
         console: 'readonly',
         setTimeout: 'readonly',
       },
@@ -111,6 +117,12 @@ export default [
         document: 'readonly',
         Event: 'readonly',
         requestAnimationFrame: 'readonly',
+        CanvasRenderingContext2D: 'readonly',
+        PointerEvent: 'readonly',
+        Element: 'readonly',
+        location: 'readonly',
+        navigator: 'readonly',
+        ClipboardEvent: 'readonly',
       },
     },
   },

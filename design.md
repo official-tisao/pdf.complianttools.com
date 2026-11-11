@@ -10,18 +10,18 @@ Minibox is a restrained, editorial SaaS/banking interface. It pairs a warm off-w
 
 ### Colour
 
-| Role | Value | Use |
-| --- | --- | --- |
-| Canvas / alabaster | `#F0EEEA` | Default page background |
-| Ink / eerie black | `#1C1A17` | Primary text, dark sections, primary CTA |
-| White | `#FFFFFF` | Cards, inverse surfaces, CTA text |
-| Secondary ink / outer space | `#464442` | Secondary text and light borders |
-| Platinum | `#EBE6DE` | Soft panels and swatches |
-| Dark raised surface | `#25221E` | Cards/inputs inside dark sections |
-| Dark surface variant | `#282420` | Dark feature-card background |
-| Muted text | `#5C5A56` / `70–80%` ink | Supporting copy and links |
-| Hairline | `#1C1A1712` / `#1C1A171A` | Dividers, chips, quiet structure |
-| Accent card washes | `#D6E0EA`, `#E3DED0`, `#D3E2CF` | Feature-card backgrounds |
+| Role                        | Value                           | Use                                      |
+| --------------------------- | ------------------------------- | ---------------------------------------- |
+| Canvas / alabaster          | `#F0EEEA`                       | Default page background                  |
+| Ink / eerie black           | `#1C1A17`                       | Primary text, dark sections, primary CTA |
+| White                       | `#FFFFFF`                       | Cards, inverse surfaces, CTA text        |
+| Secondary ink / outer space | `#464442`                       | Secondary text and light borders         |
+| Platinum                    | `#EBE6DE`                       | Soft panels and swatches                 |
+| Dark raised surface         | `#25221E`                       | Cards/inputs inside dark sections        |
+| Dark surface variant        | `#282420`                       | Dark feature-card background             |
+| Muted text                  | `#5C5A56` / `70–80%` ink        | Supporting copy and links                |
+| Hairline                    | `#1C1A1712` / `#1C1A171A`       | Dividers, chips, quiet structure         |
+| Accent card washes          | `#D6E0EA`, `#E3DED0`, `#D3E2CF` | Feature-card backgrounds                 |
 
 Do not introduce a saturated brand accent as a default UI colour. Colour is used structurally: pale neutral pages, near-black emphasis, white content cards, and occasional subdued pastel feature panels.
 
@@ -29,18 +29,18 @@ Do not introduce a saturated brand accent as a default UI colour. Colour is used
 
 Use **Geist, sans-serif** throughout. Headlines use weight 500 with negative tracking; body copy is regular 400. Use 600 only for modest emphasis and 700+ sparingly.
 
-| Token | Desktop | Tablet (≤991px) | Mobile (≤767px) | Small mobile (≤479px) |
-| --- | --- | --- | --- | --- |
-| H1 | 56 / 64, -2.8px | 44 / 52 | 38 / 46, -2px | 32 / 40, -2px |
-| H2 | 44 / 50, -2.2px | 36 / 44 | 32 / 40, -1.5px | 28 / 36, -0.15px |
-| H3 | 40 / 48, -1.2px | 32 / 40 | 28 / 36 | 24 / 32 |
-| H4 | 32 / 40, -0.64px | 26 / 36 | 24 / 30 | 22 / 28 |
-| H5 | 20 / 28, -1.08px | 18 / 26 | 16 / 24 | 15 / 22 |
-| H6 | 18 / 28, -0.72px | 16 / 26 | 15 / 24 | 14 / 22 |
-| Body large | 20 / 28, -0.36px | 18 / 26 | 16 / 24 | 15 / 22 |
-| Body | 18 / 28, -0.32px | 16 / 26 | 15 / 24 | 14 / 22 |
-| UI / body small | 16 / 24, -0.36px | 15 / 22 | 14 / 20 | 14 / 18 |
-| Caption | 14 / 20, +0.14px | 14 / 18 | 14 / 18, -0.4px | 14 / 18, -0.4px |
+| Token           | Desktop          | Tablet (≤991px) | Mobile (≤767px) | Small mobile (≤479px) |
+| --------------- | ---------------- | --------------- | --------------- | --------------------- |
+| H1              | 56 / 64, -2.8px  | 44 / 52         | 38 / 46, -2px   | 32 / 40, -2px         |
+| H2              | 44 / 50, -2.2px  | 36 / 44         | 32 / 40, -1.5px | 28 / 36, -0.15px      |
+| H3              | 40 / 48, -1.2px  | 32 / 40         | 28 / 36         | 24 / 32               |
+| H4              | 32 / 40, -0.64px | 26 / 36         | 24 / 30         | 22 / 28               |
+| H5              | 20 / 28, -1.08px | 18 / 26         | 16 / 24         | 15 / 22               |
+| H6              | 18 / 28, -0.72px | 16 / 26         | 15 / 24         | 14 / 22               |
+| Body large      | 20 / 28, -0.36px | 18 / 26         | 16 / 24         | 15 / 22               |
+| Body            | 18 / 28, -0.32px | 16 / 26         | 15 / 24         | 14 / 22               |
+| UI / body small | 16 / 24, -0.36px | 15 / 22         | 14 / 20         | 14 / 18               |
+| Caption         | 14 / 20, +0.14px | 14 / 18         | 14 / 18, -0.4px | 14 / 18, -0.4px       |
 
 Headlines should be compact, usually no wider than 630–800px when centred. Supporting copy normally sits at 70–80% opacity and is constrained to preserve a calm, readable measure.
 
@@ -49,11 +49,11 @@ Headlines should be compact, usually no wider than 630–800px when centred. Sup
 The main container is `max-width: 1280px`, centred, with horizontal inset that changes by breakpoint:
 
 | Breakpoint | Side padding | Hero top offset | Large section rhythm |
-| --- | ---: | ---: | ---: |
-| Desktop | 40px | 156px | 120–160px |
-| ≤991px | 32px | 140px | 100px |
-| ≤767px | 24px | 120px | 80px |
-| ≤479px | 16px | 110px | 60px |
+| ---------- | -----------: | --------------: | -------------------: |
+| Desktop    |         40px |           156px |            120–160px |
+| ≤991px     |         32px |           140px |                100px |
+| ≤767px     |         24px |           120px |                 80px |
+| ≤479px     |         16px |           110px |                 60px |
 
 Use an 4px-based scale. Frequent gaps are 8, 12, 16, 20, 24, 32, 40, 48, 60, 80, 100, 120, 140, and 160px. Major sections breathe; inside cards, use 20–32px; between heading and copy, use 10–12px.
 

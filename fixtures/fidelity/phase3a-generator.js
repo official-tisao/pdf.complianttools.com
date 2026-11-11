@@ -13,7 +13,14 @@ const fs = require('fs');
   const p2 = doc.addPage([612, 792]);
   // Page 2: rotated text (30 deg) at 12pt; missing-style line (default black)
   // pdf-lib rotation via rotate: { type: 'degrees', angle: 30 }
-  p2.drawText('Rotated text', { x: 100, y: 600, size: 12, font: helv, color: rgb(0, 0, 0.8), rotate: { type: 'degrees', angle: 30 } });
+  p2.drawText('Rotated text', {
+    x: 100,
+    y: 600,
+    size: 12,
+    font: helv,
+    color: rgb(0, 0, 0.8),
+    rotate: { type: 'degrees', angle: 30 },
+  });
   p2.drawText('Plain line', { x: 100, y: 500, size: 10, font: times }); // no explicit color
 
   fs.writeFileSync('fixtures/fidelity/phase3a.pdf', await doc.save());

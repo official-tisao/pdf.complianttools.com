@@ -26,5 +26,12 @@
     "licenseUrl": "https://creativecommons.org/public-domain/cc0/",
     "sha256": "48a98eced338f8b1535fbcf41f5e58177d78a69327b4437077adeb6df9da5f08",
     "checked": "2026-09-29"
+  },
+  "apps/web/static/pdfium.wasm": {
+    "source": "Embedded PDF rasterizer for browser-based PDF-to-image conversion",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/public-domain/cc0/",
+    "sha256": "5e4cd023c3dad4a895b3571ca573d3fc51bac6de48360d95283134385b954eaa",
+    "checked": "2026-11-10"
   }
 }

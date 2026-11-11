@@ -1,9 +1,9 @@
 <script lang="ts">
-  /* global HTMLElement */
   import '@pdf-complianttools/ui/tokens.css';
   import { page } from '$app/state';
   import { canonicalPath, canonicalUrl, hreflangLinks } from '$lib/seo';
   import '$lib/configure-pdfjs';
+  import '$lib/configure-pdfium';
   import ToolDirectory from '$lib/ToolDirectory.svelte';
 
   let { children } = $props();

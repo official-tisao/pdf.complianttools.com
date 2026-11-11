@@ -1,9 +1,5 @@
 <script lang="ts">
-  import PhaseCTool from '$lib/PhaseCTool.svelte';
+  import FillFormWorkspace from '$lib/FillFormWorkspace.svelte';
 </script>
 
-<PhaseCTool
-  title="Fill PDF Form"
-  operation="fill-form"
-  description="Detect and fill supported AcroForm fields locally, preserving the original bytes."
-/>
+<FillFormWorkspace />

@@ -744,45 +744,76 @@ export type FormFieldInfo = Readonly<{
   name: string;
   type: string;
   value?: string | boolean | readonly string[];
+  readonly?: boolean;
 }>;
 
 export async function inspectFormFields(bytes: Uint8Array): Promise<readonly FormFieldInfo[]> {
   const document = await load(bytes, 'inspect form fields');
-  return document
-    .getForm()
-    .getFields()
-    .flatMap((field): FormFieldInfo[] => {
-      const type = field.constructor.name;
+  const form = document.getForm();
+  const fields = form.getFields();
+
+  const results: FormFieldInfo[] = [];
+
+  for (const field of fields) {
+    let fieldName: string;
+    try {
+      fieldName = field.getName();
+    } catch {
+      // Skip fields with unreadable names (e.g., invalid T entry in field dictionary)
+      continue;
+    }
+
+    const type = field.constructor.name;
+    // Read the field flags to determine if readonly
+    // Bit 1 (0x2) = ReadOnly flag
+    let readonly: boolean;
+    try {
+      const flags = field.getFlags ? field.getFlags() : 0;
+      readonly = Boolean(flags & 0x2);
+    } catch {
+      readonly = false;
+    }
+
+    try {
       if (type === 'PDFTextField') {
-        const value = document.getForm().getTextField(field.getName()).getText();
-        return value === undefined
-          ? [{ name: field.getName(), type }]
-          : [{ name: field.getName(), type, value }];
+        const value = form.getTextField(fieldName).getText();
+        results.push(
+          value === undefined
+            ? { name: fieldName, type, readonly }
+            : { name: fieldName, type, value, readonly },
+        );
+      } else if (type === 'PDFCheckBox') {
+        results.push({
+          name: fieldName,
+          type,
+          value: form.getCheckBox(fieldName).isChecked(),
+          readonly,
+        });
+      } else if (type === 'PDFRadioGroup') {
+        const value = form.getRadioGroup(fieldName).getSelected();
+        results.push(
+          value === undefined
+            ? { name: fieldName, type, readonly }
+            : { name: fieldName, type, value, readonly },
+        );
+      } else if (type === 'PDFDropdown') {
+        results.push({
+          name: fieldName,
+          type,
+          value: form.getDropdown(fieldName).getSelected(),
+          readonly,
+        });
+      } else {
+        results.push({ name: fieldName, type, readonly });
       }
-      if (type === 'PDFCheckBox')
-        return [
-          {
-            name: field.getName(),
-            type,
-            value: document.getForm().getCheckBox(field.getName()).isChecked(),
-          },
-        ];
-      if (type === 'PDFRadioGroup') {
-        const value = document.getForm().getRadioGroup(field.getName()).getSelected();
-        return value === undefined
-          ? [{ name: field.getName(), type }]
-          : [{ name: field.getName(), type, value }];
-      }
-      if (type === 'PDFDropdown')
-        return [
-          {
-            name: field.getName(),
-            type,
-            value: document.getForm().getDropdown(field.getName()).getSelected(),
-          },
-        ];
-      return [{ name: field.getName(), type }];
-    });
+    } catch {
+      // Skip fields that throw when reading their value
+      // This can happen with malformed field dictionaries
+      continue;
+    }
+  }
+
+  return results;
 }
 
 export async function fillFormPdf(
