@@ -14,14 +14,14 @@
  * download megabytes it never uses. It is cached at runtime the first time
  * a tool actually renders a page.
  */
-import { createPdfiumRenderer, type PdfiumRenderer } from './read.js';
-import { requestProvider, assertSafeEndpoint } from '../ai/transport.js';
+import type { PdfiumRenderer } from './read.js';
+import { assertSafeAssetEndpoint, requestBinaryAsset } from '../ai/transport.js';
 
 let rendererPromise: Promise<PdfiumRenderer> | undefined;
 let wasmUrl: string | undefined;
 
 export function setPdfiumWasmUrl(url: string): void {
-  assertSafeEndpoint(url);
+  assertSafeAssetEndpoint(url);
   wasmUrl = url;
 }
 
@@ -32,16 +32,21 @@ export function getPdfiumRenderer(): Promise<PdfiumRenderer> {
       'PDFium WASM URL not configured. Import configure-pdfium.ts in the app root layout.',
     );
   rendererPromise = (async () => {
-    const response = await requestProvider({ endpoint: wasmUrl, headers: {}, body: {} });
+    const response = await requestBinaryAsset(wasmUrl);
     if (response.status < 200 || response.status >= 300) {
       throw new Error(
         `PDFium WASM could not be loaded (HTTP ${response.status}). Rebuild the app so the pdfium.wasm asset is served from the static folder as /pdfium.wasm.`,
       );
     }
-    const wasmBinary = await (response.body as ArrayBuffer);
-    return createPdfiumRenderer(wasmBinary);
+    return createPdfiumRenderer(response.bytes);
   })();
   return rendererPromise;
 }
 
-export { createPdfiumRenderer, type PdfiumRenderer };
+export async function createPdfiumRenderer(
+  wasmBinary: ArrayBuffer | Uint8Array,
+): Promise<PdfiumRenderer> {
+  return (await import('./read.js')).createPdfiumRenderer(wasmBinary);
+}
+
+export type { PdfiumRenderer };
