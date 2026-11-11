@@ -31,7 +31,6 @@
   })();
 
   type FlatOutline = PdfOutlineItem & { readonly level: number };
-  /* global HTMLCanvasElement */
   let canvas: HTMLCanvasElement;
   let bytes = $state<Uint8Array>();
   let pages = $state<PdfTextPage[]>([]);

@@ -14,10 +14,14 @@ const FIXTURE = 'fixtures/pdfs/two-page.pdf';
 test.describe.configure({ mode: 'serial', timeout: 180_000 });
 
 test.describe('crop-pdf browser interaction', () => {
-  test('upload, drag edges/corners, zoom, navigate pages, reset, and download', async ({ page }) => {
+  test('upload, drag edges/corners, zoom, navigate pages, reset, and download', async ({
+    page,
+  }) => {
     // 1. Open the crop-pdf page.
     await page.goto('/crop-pdf');
-    await expect(page.getByRole('heading', { level: 1, name: 'Crop PDF' })).toBeVisible({ timeout: 180_000 });
+    await expect(page.getByRole('heading', { level: 1, name: 'Crop PDF' })).toBeVisible({
+      timeout: 180_000,
+    });
 
     // 2. Upload a PDF.
     await page.locator('input[type="file"][accept*="pdf"]').setInputFiles(FIXTURE);
@@ -51,49 +55,37 @@ test.describe('crop-pdf browser interaction', () => {
 
     // 5. Drag each of the four edges.
     await page.getByRole('button', { name: 'Drag top edge' }).click();
-    await page
-      .locator('.crop-handle.crop-top')
-      .dragTo(page.locator('.crop-handle-layer'), {
-        sourcePosition: { x: 100, y: 100 },
-        targetPosition: { x: 100, y: 150 },
-      });
+    await page.locator('.crop-handle.crop-top').dragTo(page.locator('.crop-handle-layer'), {
+      sourcePosition: { x: 100, y: 100 },
+      targetPosition: { x: 100, y: 150 },
+    });
     await page.getByRole('button', { name: 'Drag right edge' }).click();
-    await page
-      .locator('.crop-handle.crop-right')
-      .dragTo(page.locator('.crop-handle-layer'), {
-        sourcePosition: { x: 400, y: 100 },
-        targetPosition: { x: 350, y: 100 },
-      });
+    await page.locator('.crop-handle.crop-right').dragTo(page.locator('.crop-handle-layer'), {
+      sourcePosition: { x: 400, y: 100 },
+      targetPosition: { x: 350, y: 100 },
+    });
     await page.getByRole('button', { name: 'Drag bottom edge' }).click();
-    await page
-      .locator('.crop-handle.crop-bottom')
-      .dragTo(page.locator('.crop-handle-layer'), {
-        sourcePosition: { x: 100, y: 400 },
-        targetPosition: { x: 100, y: 350 },
-      });
+    await page.locator('.crop-handle.crop-bottom').dragTo(page.locator('.crop-handle-layer'), {
+      sourcePosition: { x: 100, y: 400 },
+      targetPosition: { x: 100, y: 350 },
+    });
 
     // 6. Drag all four corner handles.
     await page.getByRole('button', { name: 'Drag top-left corner' }).click();
-    await page
-      .locator('.crop-handle.crop-top-left')
-      .dragTo(page.locator('.crop-handle-layer'), {
-        sourcePosition: { x: 100, y: 100 },
-        targetPosition: { x: 140, y: 140 },
-      });
+    await page.locator('.crop-handle.crop-top-left').dragTo(page.locator('.crop-handle-layer'), {
+      sourcePosition: { x: 100, y: 100 },
+      targetPosition: { x: 140, y: 140 },
+    });
     await page.getByRole('button', { name: 'Drag top-right corner' }).click();
-    await page
-      .locator('.crop-handle.crop-top-right')
-      .dragTo(page.locator('.crop-handle-layer'), {
-        sourcePosition: { x: 400, y: 100 },
-        targetPosition: { x: 360, y: 140 },
-      });
+    await page.locator('.crop-handle.crop-top-right').dragTo(page.locator('.crop-handle-layer'), {
+      sourcePosition: { x: 400, y: 100 },
+      targetPosition: { x: 360, y: 140 },
+    });
     await page.getByRole('button', { name: 'Drag bottom-left corner' }).click();
-    await page
-      .locator('.crop-handle.crop-bottom-left')
-      .dragTo(page.locator('.crop-handle-layer'), {
-        sourcePosition: { x: 100, y: 400 },
-        targetPosition: { x: 140, y: 360 },
-      });
+    await page.locator('.crop-handle.crop-bottom-left').dragTo(page.locator('.crop-handle-layer'), {
+      sourcePosition: { x: 100, y: 400 },
+      targetPosition: { x: 140, y: 360 },
+    });
     await page.getByRole('button', { name: 'Drag bottom-right corner' }).click();
     await page
       .locator('.crop-handle.crop-bottom-right')
@@ -117,9 +109,7 @@ test.describe('crop-pdf browser interaction', () => {
 
     // 9. Test page navigation and independent per-page crop state.
     await page.getByRole('button', { name: /Next page/ }).click();
-    const page2Preview = page
-      .locator('.selected-page img[alt*="Preview of page"]')
-      .last();
+    const page2Preview = page.locator('.selected-page img[alt*="Preview of page"]').last();
     await expect(page2Preview).toBeVisible();
     // Page 2 should start with full page (zero margins).
     await page.getByRole('button', { name: /Previous page/ }).click();
@@ -142,9 +132,7 @@ test.describe('crop-pdf browser interaction', () => {
     expect(downloadPath).toBeTruthy();
 
     const { PDFDocument } = await import('pdf-lib');
-    const croppedBytes = new Uint8Array(
-      readFileSync(downloadPath!),
-    );
+    const croppedBytes = new Uint8Array(readFileSync(downloadPath!));
     const doc = await PDFDocument.load(croppedBytes);
     expect(doc.getPageCount()).toBeGreaterThan(0);
     console.log('Exported pages:', doc.getPageCount());

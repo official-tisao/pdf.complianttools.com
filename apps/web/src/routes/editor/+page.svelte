@@ -1,5 +1,4 @@
 <script lang="ts">
-  /* global HTMLCanvasElement, HTMLInputElement, Element */
   import { onMount } from 'svelte';
   import '$lib/configure-pdfjs';
   import { loadPdfJs } from '@pdf-complianttools/engine/pdfjs';

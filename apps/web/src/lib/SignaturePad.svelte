@@ -1,6 +1,4 @@
 <script lang="ts">
-  /* global CanvasRenderingContext2D, HTMLCanvasElement, PointerEvent */
-
   let {
     label,
     clearLabel,

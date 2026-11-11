@@ -22,7 +22,9 @@ test('diagnose exact file-selection propagation failure point', async ({ page })
 
   // 1. Open the crop-pdf page.
   await page.goto('/crop-pdf');
-  await expect(page.getByRole('heading', { level: 1, name: 'Crop PDF' })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole('heading', { level: 1, name: 'Crop PDF' })).toBeVisible({
+    timeout: 60_000,
+  });
 
   // 2. Capture initial ToolWorkspace state.
   const initialState = await page.evaluate(() => {

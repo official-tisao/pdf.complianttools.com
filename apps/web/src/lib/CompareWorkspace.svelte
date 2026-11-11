@@ -1,5 +1,4 @@
 <script lang="ts">
-  /* global HTMLElement, KeyboardEvent */
   import FileDrop from '@pdf-complianttools/ui/FileDrop.svelte';
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import PdfPreview from '$lib/PdfPreview.svelte';

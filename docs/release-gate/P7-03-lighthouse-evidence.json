@@ -1,6 +1,6 @@
 {
   "task": "P7-03",
-  "date": "2026-10-12",
+  "date": "2026-11-11",
   "evidenceType": "Lighthouse mobile audit of the production build",
   "environment": {
     "lighthouse": "13.5.0",
@@ -36,29 +36,30 @@
           "id": "render-blocking-insight",
           "title": "Render-blocking requests",
           "score": 0.5,
+          "displayValue": "Est savings of 10 ms",
           "items": [
             {
-              "wastedMs": 314
+              "wastedMs": 302
             },
             {
-              "wastedMs": 164
+              "wastedMs": 302
             },
             {
-              "wastedMs": 314
+              "wastedMs": 152
             }
           ]
         },
         {
           "id": "first-contentful-paint",
           "title": "First Contentful Paint",
-          "score": 0.93,
+          "score": 0.94,
           "displayValue": "1.6 s"
         },
         {
           "id": "largest-contentful-paint",
           "title": "Largest Contentful Paint",
           "score": 0.99,
-          "displayValue": "1.6 s"
+          "displayValue": "1.7 s"
         }
       ]
     },
@@ -88,7 +89,7 @@
           "displayValue": "Est savings of 21 KiB",
           "items": [
             {
-              "wastedMs": 28612
+              "wastedMs": 29527
             }
           ]
         },
@@ -104,39 +105,39 @@
           "displayValue": "Est savings of 150 ms",
           "items": [
             {
-              "wastedMs": 302
+              "wastedMs": 303
             },
             {
-              "wastedMs": 302
+              "wastedMs": 303
             },
             {
-              "wastedMs": 152
+              "wastedMs": 303
             }
           ]
         },
         {
           "id": "first-contentful-paint",
           "title": "First Contentful Paint",
-          "score": 0.83,
-          "displayValue": "2.0 s"
+          "score": 0.8,
+          "displayValue": "2.1 s"
         },
         {
           "id": "largest-contentful-paint",
           "title": "Largest Contentful Paint",
-          "score": 0.97,
-          "displayValue": "2.0 s"
+          "score": 0.96,
+          "displayValue": "2.1 s"
         },
         {
           "id": "speed-index",
           "title": "Speed Index",
           "score": 0.99,
-          "displayValue": "2.0 s"
+          "displayValue": "2.1 s"
         },
         {
           "id": "interactive",
           "title": "Time to Interactive",
           "score": 0.99,
-          "displayValue": "2.0 s"
+          "displayValue": "2.1 s"
         }
       ]
     },
@@ -144,7 +145,7 @@
       "route": "/merge",
       "categories": {
         "performance": {
-          "score": 99
+          "score": 98
         },
         "accessibility": {
           "score": 100
@@ -156,9 +157,14 @@
           "score": 100
         }
       },
-      "worstCategory": 99,
+      "worstCategory": 98,
       "status": "PASS",
       "failing": [
+        {
+          "id": "forced-reflow-insight",
+          "title": "Forced reflow",
+          "score": 0
+        },
         {
           "id": "network-dependency-tree-insight",
           "title": "Network dependency tree",
@@ -168,30 +174,30 @@
           "id": "render-blocking-insight",
           "title": "Render-blocking requests",
           "score": 0,
-          "displayValue": "Est savings of 100 ms",
+          "displayValue": "Est savings of 150 ms",
           "items": [
             {
-              "wastedMs": 302
+              "wastedMs": 303
             },
             {
-              "wastedMs": 302
+              "wastedMs": 303
             },
             {
-              "wastedMs": 302
+              "wastedMs": 303
             }
           ]
         },
         {
           "id": "first-contentful-paint",
           "title": "First Contentful Paint",
-          "score": 0.92,
-          "displayValue": "1.7 s"
+          "score": 0.89,
+          "displayValue": "1.8 s"
         },
         {
           "id": "largest-contentful-paint",
           "title": "Largest Contentful Paint",
-          "score": 0.99,
-          "displayValue": "1.7 s"
+          "score": 0.98,
+          "displayValue": "1.8 s"
         }
       ]
     }

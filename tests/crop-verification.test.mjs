@@ -27,50 +27,107 @@ function dragInDirection(initial, direction, deltaX, deltaY, pageWidth, pageHeig
   const newCrop = { ...initial };
   switch (direction) {
     case 'left':
-      newCrop.left = clamp(initial.left + dX, 0, initial.left + (pageWidth - initial.right) - MIN_CROP_SIZE);
+      newCrop.left = clamp(
+        initial.left + dX,
+        0,
+        initial.left + (pageWidth - initial.right) - MIN_CROP_SIZE,
+      );
       break;
     case 'right':
-      newCrop.right = clamp(initial.right - dX, 0, initial.right + (pageWidth - initial.left) - MIN_CROP_SIZE);
+      newCrop.right = clamp(
+        initial.right - dX,
+        0,
+        initial.right + (pageWidth - initial.left) - MIN_CROP_SIZE,
+      );
       break;
     case 'top':
-      newCrop.top = clamp(initial.top - dY, 0, initial.top + (pageHeight - initial.bottom) - MIN_CROP_SIZE);
+      newCrop.top = clamp(
+        initial.top - dY,
+        0,
+        initial.top + (pageHeight - initial.bottom) - MIN_CROP_SIZE,
+      );
       break;
     case 'bottom':
-      newCrop.bottom = clamp(initial.bottom + dY, 0, initial.bottom + (pageHeight - initial.top) - MIN_CROP_SIZE);
+      newCrop.bottom = clamp(
+        initial.bottom + dY,
+        0,
+        initial.bottom + (pageHeight - initial.top) - MIN_CROP_SIZE,
+      );
       break;
     case 'top-left':
-      newCrop.left = clamp(initial.left + dX, 0, initial.left + (pageWidth - initial.right) - MIN_CROP_SIZE);
-      newCrop.top = clamp(initial.top - dY, 0, initial.top + (pageHeight - initial.bottom) - MIN_CROP_SIZE);
+      newCrop.left = clamp(
+        initial.left + dX,
+        0,
+        initial.left + (pageWidth - initial.right) - MIN_CROP_SIZE,
+      );
+      newCrop.top = clamp(
+        initial.top - dY,
+        0,
+        initial.top + (pageHeight - initial.bottom) - MIN_CROP_SIZE,
+      );
       break;
     case 'top-right':
-      newCrop.right = clamp(initial.right - dX, 0, initial.right + (pageWidth - initial.left) - MIN_CROP_SIZE);
-      newCrop.top = clamp(initial.top - dY, 0, initial.top + (pageHeight - initial.bottom) - MIN_CROP_SIZE);
+      newCrop.right = clamp(
+        initial.right - dX,
+        0,
+        initial.right + (pageWidth - initial.left) - MIN_CROP_SIZE,
+      );
+      newCrop.top = clamp(
+        initial.top - dY,
+        0,
+        initial.top + (pageHeight - initial.bottom) - MIN_CROP_SIZE,
+      );
       break;
     case 'bottom-left':
-      newCrop.left = clamp(initial.left + dX, 0, initial.left + (pageWidth - initial.right) - MIN_CROP_SIZE);
-      newCrop.bottom = clamp(initial.bottom + dY, 0, initial.bottom + (pageHeight - initial.top) - MIN_CROP_SIZE);
+      newCrop.left = clamp(
+        initial.left + dX,
+        0,
+        initial.left + (pageWidth - initial.right) - MIN_CROP_SIZE,
+      );
+      newCrop.bottom = clamp(
+        initial.bottom + dY,
+        0,
+        initial.bottom + (pageHeight - initial.top) - MIN_CROP_SIZE,
+      );
       break;
     case 'bottom-right':
-      newCrop.right = clamp(initial.right - dX, 0, initial.right + (pageWidth - initial.left) - MIN_CROP_SIZE);
-      newCrop.bottom = clamp(initial.bottom + dY, 0, initial.bottom + (pageHeight - initial.top) - MIN_CROP_SIZE);
+      newCrop.right = clamp(
+        initial.right - dX,
+        0,
+        initial.right + (pageWidth - initial.left) - MIN_CROP_SIZE,
+      );
+      newCrop.bottom = clamp(
+        initial.bottom + dY,
+        0,
+        initial.bottom + (pageHeight - initial.top) - MIN_CROP_SIZE,
+      );
       break;
   }
   return newCrop;
 }
 
 test('drag calculations in all eight directions', () => {
-  const pageW = 300, pageH = 300;
+  const pageW = 300,
+    pageH = 300;
   const initial = { left: 30, top: 40, right: 30, bottom: 20 };
 
   // All eight directions should produce a distinct new crop when moved 10pt
   const directions = [
-    'left', 'right', 'top', 'bottom',
-    'top-left', 'top-right', 'bottom-left', 'bottom-right',
+    'left',
+    'right',
+    'top',
+    'bottom',
+    'top-left',
+    'top-right',
+    'bottom-left',
+    'bottom-right',
   ];
   for (const d of directions) {
     const result = dragInDirection(initial, d, 10, 10, pageW, pageH);
-    assert.ok(result.left >= 0 && result.right >= 0 && result.top >= 0 && result.bottom >= 0,
-      `${d}: margins must stay non-negative`);
+    assert.ok(
+      result.left >= 0 && result.right >= 0 && result.top >= 0 && result.bottom >= 0,
+      `${d}: margins must stay non-negative`,
+    );
     assert.ok(result.left + result.right < pageW, `${d}: horizontal over-crop`);
     assert.ok(result.top + result.bottom < pageH, `${d}: vertical over-crop`);
   }
@@ -78,14 +135,13 @@ test('drag calculations in all eight directions', () => {
   // Verify direction-specific effects are not all identical (sanity)
   const leftOnly = dragInDirection(initial, 'left', 10, 0, pageW, pageH);
   const rightOnly = dragInDirection(initial, 'right', 10, 0, pageW, pageH);
-  assert.ok(leftOnly.left > initial.left,
-    'left drag (rightward) should increase left margin');
-  assert.ok(rightOnly.right < initial.right,
-    'right drag (leftward) should decrease right margin');
+  assert.ok(leftOnly.left > initial.left, 'left drag (rightward) should increase left margin');
+  assert.ok(rightOnly.right < initial.right, 'right drag (leftward) should decrease right margin');
 });
 
 test('boundary constraints prevent over-crop', () => {
-  const pageW = 300, pageH = 300;
+  const pageW = 300,
+    pageH = 300;
   // Start with margins that already reduce page to 20pt margin only
   const tight = { left: 130, top: 130, right: 130, bottom: 130 };
   // Dragging further left when already near edge should clamp
@@ -95,19 +151,18 @@ test('boundary constraints prevent over-crop', () => {
   const r2 = dragInDirection(tight, 'bottom', 0, -100, pageW, pageH);
   assert.ok(r2.bottom >= 0, 'bottom must not go negative');
   // Verify overall crop still has minimum size
-  assert.ok((pageW - r.left - r.right) >= 20, 'horizontal crop size >= MIN_CROP_SIZE');
-  assert.ok((pageH - r.top - r.bottom) >= 20, 'vertical crop size >= MIN_CROP_SIZE');
+  assert.ok(pageW - r.left - r.right >= 20, 'horizontal crop size >= MIN_CROP_SIZE');
+  assert.ok(pageH - r.top - r.bottom >= 20, 'vertical crop size >= MIN_CROP_SIZE');
 });
 
 test('minimum crop dimensions preserved', () => {
-  const pageW = 300, pageH = 300;
+  const pageW = 300,
+    pageH = 300;
   const nearMin = { left: 140, top: 140, right: 140, bottom: 140 };
   // Attempting to shrink crop below MIN_CROP_SIZE (20) should be blocked
   const r = dragInDirection(nearMin, 'left', -100, 0, pageW, pageH);
-  assert.ok((pageW - r.left - r.right) >= MIN_CROP_SIZE,
-    'crop width must stay >= MIN_CROP_SIZE');
-  assert.ok((pageH - r.top - r.bottom) >= MIN_CROP_SIZE,
-    'crop height must stay >= MIN_CROP_SIZE');
+  assert.ok(pageW - r.left - r.right >= MIN_CROP_SIZE, 'crop width must stay >= MIN_CROP_SIZE');
+  assert.ok(pageH - r.top - r.bottom >= MIN_CROP_SIZE, 'crop height must stay >= MIN_CROP_SIZE');
 });
 
 test('zoom and coordinate conversion', () => {
@@ -142,7 +197,8 @@ test('reset behaviour clears to full page', () => {
 });
 
 test('exported crop dimensions match preview convention', () => {
-  const pageW = 300, pageH = 300;
+  const pageW = 300,
+    pageH = 300;
   const crop = { left: 30, top: 40, right: 30, bottom: 20 };
   // Engine cropPages uses: cropBox(left, bottom, width, height)
   const width = Math.max(1, pageW - crop.left - crop.right);

@@ -1,5 +1,5 @@
 <script lang="ts">
-  /* global HTMLSelectElement, location, navigator, clearTimeout, FileReader, HTMLInputElement */
+  /* global clearTimeout, FileReader */
   // Types are erased at build time, so the type-only import costs nothing. The
   // runtime imports use deep subpaths: the engine barrel re-exports every
   // module, so importing it eagerly would pull pdfjs, mammoth, exceljs and

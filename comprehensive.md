@@ -318,24 +318,24 @@ This is a normalized, self-contained description of the tools shown in the suppl
 
 This index keeps the recognizable tool names while pointing to the merged capability above.
 
-| Normalized capability | Tool labels observed |
-|---|---|
-| Create and capture | Create PDF; Create PDF with a camera; Webpage to PDF; Images to PDF; PDF Scanner; Create PDF job application |
-| Invoicing | Create invoice; Create invoice visually; Create electronic invoice; PDF invoice to e-invoice; XML e-invoice to PDF; Bank Statement to Excel |
-| Office/text to PDF | Word/DOC/DOCX to PDF; RTF to PDF; TXT/Text to PDF; HTML to PDF; Markdown to PDF; ODT/ODS/ODP to PDF; Publisher/PUB to PDF |
-| Presentation/spreadsheet to PDF | PowerPoint/PPT/PPTX/PPSX to PDF; Excel/XLS/XLSX to PDF |
-| Image/ebook to PDF | JPG, PNG, WEBP, BMP, GIF, TIFF, HEIC, SVG, EPUB to PDF |
-| PDF to office/text | PDF to Word/DOCX, PowerPoint/PPTX, Excel/XLSX, ODT, ODS, ODP, RTF, TXT, HTML, Markdown, EPUB, CSV |
-| PDF to images | PDF to JPG, PNG, BMP, GIF, TIFF, SVG; PDF to Images; Extract PDF images |
-| Assembly and page selection | Merge; Split; Extract pages; Delete pages; Organize; Rearrange; Pages per sheet; Halve pages |
-| Page appearance | Rotate; Crop; Change page size; Add page numbers; Headers & footers; Watermark; Overlay |
-| Editing and forms | Edit PDF; Change text; Add text; Add image; Annotate; Fill out PDF; Create fillable form |
-| Optimization | Compress; Web optimize; Flatten; Rasterize; Repair; OCR; PDF/A |
-| Security | Protect; Unlock; Redact; Remove metadata; Generate password; Viewer preferences; Bookmarks |
-| Signing and sharing | Sign; Request signatures; Remove signature background; Share PDF |
-| Viewing and comparison | PDF Reader; View as PDF; View PDFs; Compare PDFs |
-| AI and language | Chat with PDF; AI Assistant; Summarizer; Translator; Question Generator; Flashcards; Quiz; Mind map; Presentation; Resume Builder |
-| Desktop and mobile | PDF Creator; PDF Printer; PDF Reader; camera/scanner/mobile and offline workflows |
+| Normalized capability           | Tool labels observed                                                                                                                        |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Create and capture              | Create PDF; Create PDF with a camera; Webpage to PDF; Images to PDF; PDF Scanner; Create PDF job application                                |
+| Invoicing                       | Create invoice; Create invoice visually; Create electronic invoice; PDF invoice to e-invoice; XML e-invoice to PDF; Bank Statement to Excel |
+| Office/text to PDF              | Word/DOC/DOCX to PDF; RTF to PDF; TXT/Text to PDF; HTML to PDF; Markdown to PDF; ODT/ODS/ODP to PDF; Publisher/PUB to PDF                   |
+| Presentation/spreadsheet to PDF | PowerPoint/PPT/PPTX/PPSX to PDF; Excel/XLS/XLSX to PDF                                                                                      |
+| Image/ebook to PDF              | JPG, PNG, WEBP, BMP, GIF, TIFF, HEIC, SVG, EPUB to PDF                                                                                      |
+| PDF to office/text              | PDF to Word/DOCX, PowerPoint/PPTX, Excel/XLSX, ODT, ODS, ODP, RTF, TXT, HTML, Markdown, EPUB, CSV                                           |
+| PDF to images                   | PDF to JPG, PNG, BMP, GIF, TIFF, SVG; PDF to Images; Extract PDF images                                                                     |
+| Assembly and page selection     | Merge; Split; Extract pages; Delete pages; Organize; Rearrange; Pages per sheet; Halve pages                                                |
+| Page appearance                 | Rotate; Crop; Change page size; Add page numbers; Headers & footers; Watermark; Overlay                                                     |
+| Editing and forms               | Edit PDF; Change text; Add text; Add image; Annotate; Fill out PDF; Create fillable form                                                    |
+| Optimization                    | Compress; Web optimize; Flatten; Rasterize; Repair; OCR; PDF/A                                                                              |
+| Security                        | Protect; Unlock; Redact; Remove metadata; Generate password; Viewer preferences; Bookmarks                                                  |
+| Signing and sharing             | Sign; Request signatures; Remove signature background; Share PDF                                                                            |
+| Viewing and comparison          | PDF Reader; View as PDF; View PDFs; Compare PDFs                                                                                            |
+| AI and language                 | Chat with PDF; AI Assistant; Summarizer; Translator; Question Generator; Flashcards; Quiz; Mind map; Presentation; Resume Builder           |
+| Desktop and mobile              | PDF Creator; PDF Printer; PDF Reader; camera/scanner/mobile and offline workflows                                                           |
 
 ## 16. Retry results and remaining limitations
 

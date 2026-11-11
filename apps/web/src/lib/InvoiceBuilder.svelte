@@ -1,5 +1,4 @@
 <script lang="ts">
-  /* global HTMLInputElement */
   /**
    * T38/T39 invoice builder. Owns its own state and calls the local engine only
    * on an explicit gesture — nothing is generated or transmitted on keystroke.

@@ -30,7 +30,9 @@ test('diagnose pdf.js document loading', async ({ page }) => {
 
   // 1. Open the crop-pdf page.
   await page.goto('/crop-pdf');
-  await expect(page.getByRole('heading', { level: 1, name: 'Crop PDF' })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole('heading', { level: 1, name: 'Crop PDF' })).toBeVisible({
+    timeout: 60_000,
+  });
 
   // 2. Upload the fixture.
   await page.locator('input[type="file"][accept*="pdf"]').setInputFiles(FIXTURE);

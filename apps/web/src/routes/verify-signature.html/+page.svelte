@@ -1,5 +1,4 @@
 <script lang="ts">
-  /* global HTMLInputElement */
   import PhaseCTool from '$lib/PhaseCTool.svelte';
 
   let referenceImageFile = $state<File | null>(null);
