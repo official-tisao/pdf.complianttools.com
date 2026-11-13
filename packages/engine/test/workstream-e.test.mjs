@@ -21,6 +21,7 @@ import {
   parsePageDelimitedTranslation,
   sanitizeAiDiagnostic,
 } from '../dist/index.js';
+import { setPdfiumWasmUrl } from '../dist/pdf/pdfium.js';
 
 const pages = Array.from({ length: 10 }, (_, index) => ({
   pageNumber: index + 1,
@@ -125,6 +126,14 @@ test('transport rejects credential-bearing URLs and diagnostics redact secret-sh
   });
   assert.doesNotMatch(JSON.stringify(diagnostic), /secret-value/u);
   assert.equal(diagnostic.apiKey, '[redacted]');
+});
+
+test('PDFium accepts a same-origin WASM path without allowing protocol-relative URLs', () => {
+  assert.doesNotThrow(() => setPdfiumWasmUrl('/pdfium.wasm'));
+  assert.throws(
+    () => setPdfiumWasmUrl('//attacker.example/pdfium.wasm'),
+    (error) => error.details.kind === 'ai-invalid-connection',
+  );
 });
 
 test('recipe serialization rejects credentials instead of putting them in a share link', () => {

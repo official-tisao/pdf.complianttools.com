@@ -64,7 +64,7 @@ test('with no Relay configured the app is fully usable and says so honestly', as
   await expect(page.getByRole('combobox', { name: /Template/i })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Create PDF' })).toBeEnabled();
   await page.goto('/qr-code');
-  await expect(page.getByRole('button', { name: /Export QR PDF/i })).toBeEnabled();
+  await expect(page.getByRole('button', { name: /Download print PDF/i })).toBeEnabled();
 });
 
 test("a Relay failure surfaces the Relay's own remedy rather than silence", async ({ page }) => {

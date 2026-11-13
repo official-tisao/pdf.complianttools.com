@@ -1,4 +1,5 @@
 <script lang="ts">
+  /* global clearTimeout, FileReader */
   // Types are erased at build time, so the type-only import costs nothing. The
   // runtime imports use deep subpaths: the engine barrel re-exports every
   // module, so importing it eagerly would pull pdfjs, mammoth, exceljs and
@@ -74,6 +75,19 @@
     'watch',
   ]);
   let text = $state('https://pdf.complianttools.com');
+  // QR customization state
+  let cornerSquare = $state<'square' | 'rounded' | 'circle'>('square');
+  let cornerDot = $state<'square' | 'rounded' | 'dot'>('square');
+  let dotsType = $state<'square' | 'rounded' | 'dots' | 'extra-rounded'>('rounded');
+  let foreground = $state('#181818');
+  let background = $state('#ffffff');
+  let logoFile = $state<File | null>(null);
+  let logoUrl = $state('');
+  let logoSize = $state(25);
+  let showFrame = $state(false);
+  let frameText = $state('SCAN ME');
+  let errorCorrection = $state<'L' | 'M' | 'Q' | 'H'>('H');
+  let previewSvg = $state('');
   let endpoint = $state('');
   let template = $state<'blank' | 'grid' | 'lined' | 'dot'>('blank');
   let files = $state<File[]>([]);
@@ -126,11 +140,116 @@
     download(bytes, 'created.pdf');
     status = t('feature.status.created', 'Created locally.');
   }
-  async function qr() {
-    const { generateQr } = await import('@pdf-complianttools/engine/qr');
-    const result = await generateQr({ kind: 'text', value: text });
-    download(result.pdf, 'qr-code.pdf');
-    status = t('feature.status.qr', 'Generated deterministic QR version {value}.', result.version);
+  async function downloadStyledSvg() {
+    if (!previewSvg) return;
+    const blob = new Blob([previewSvg], { type: 'image/svg+xml' });
+    downloadBytes(new Uint8Array(await blob.arrayBuffer()), 'qr-code.svg', 'image/svg+xml');
+    status = t('feature.status.svgDownloaded', 'SVG downloaded.');
+  }
+  async function downloadStyledPng() {
+    try {
+      const { generateStyledQrPng } = await import('@pdf-complianttools/engine/qr');
+      const png = await generateStyledQrPng(
+        text,
+        {
+          cornerSquare,
+          cornerDot,
+          dotsType,
+          foreground,
+          background,
+          logoUrl: logoUrl || '',
+          logoSize,
+          frame: showFrame && !!(logoFile || text),
+          frameText: frameText || '',
+          errorCorrection,
+        },
+        1024,
+      );
+      download(png, 'qr-code.png');
+      status = t('feature.status.pngDownloaded', 'High-res PNG downloaded.');
+    } catch (e) {
+      status = t(
+        'feature.status.pngFailed',
+        'PNG download failed.',
+        e instanceof Error ? e.message : String(e),
+      );
+    }
+  }
+  $effect(() => {
+    if (kind !== 'qr') return;
+    // True live preview: any customization change updates the preview immediately
+    // without requiring a button click. We only update when document exists.
+    const timer = setTimeout(() => {
+      updatePreviewOnly();
+    }, 150);
+    return () => clearTimeout(timer);
+  });
+  async function downloadStyledPdf() {
+    try {
+      const { generateStyledQrPng } = await import('@pdf-complianttools/engine/qr');
+      const png = await generateStyledQrPng(
+        text,
+        {
+          cornerSquare,
+          cornerDot,
+          dotsType,
+          foreground,
+          background,
+          logoUrl: logoUrl || '',
+          logoSize,
+          frame: showFrame && !!(logoFile || text),
+          frameText: frameText || '',
+          errorCorrection,
+        },
+        1024,
+      );
+      const pdfDoc = await (await import('pdf-lib')).PDFDocument.create({ updateMetadata: false });
+      const page = pdfDoc.addPage([612, 792]);
+      page.drawText(text.slice(0, 120), { x: 48, y: 720, size: 10 });
+      const img = await pdfDoc.embedPng(png);
+      page.drawImage(img, { x: 96, y: 350, width: 420, height: 420 });
+      download(await pdfDoc.save({ useObjectStreams: true, addDefaultPage: false }), 'qr-code.pdf');
+      status = t('feature.status.pdfDownloaded', 'PDF downloaded (styled, matches preview).');
+    } catch (e) {
+      status = t(
+        'feature.status.pdfFailed',
+        'PDF download failed.',
+        e instanceof Error ? e.message : String(e),
+      );
+    }
+  }
+  async function updatePreviewOnly() {
+    try {
+      if (!text.trim()) {
+        previewSvg = '';
+        status = t('feature.status.enterText', 'Enter text or a URL first.');
+        return;
+      }
+      const { generateStyledQrSvg } = await import('@pdf-complianttools/engine/qr');
+      if (typeof document !== 'undefined') {
+        const svgStr = await generateStyledQrSvg(text, {
+          cornerSquare,
+          cornerDot,
+          dotsType,
+          foreground,
+          background,
+          logoUrl: logoUrl || '',
+          logoSize,
+          frame: showFrame && !!(logoFile || text),
+          frameText: frameText || '',
+          errorCorrection,
+        });
+        previewSvg = svgStr;
+        status = t('feature.status.previewUpdated', 'Preview updated.');
+      }
+    } catch (caught) {
+      previewSvg = '';
+      status = t(
+        'feature.status.previewFailed',
+        'Preview update failed.',
+        caught instanceof Error ? caught.message : String(caught),
+      );
+    }
   }
   async function scan() {
     try {
@@ -472,9 +591,108 @@
       ></label
     ><button onclick={create}>{t('feature.action.create', 'Create PDF')}</button>
   {:else if kind === 'qr'}
-    <label>{t('feature.qr.label', 'Text or URL')} <input bind:value={text} /></label><button
-      onclick={qr}>{t('feature.qr.action', 'Export QR PDF')}</button
-    >
+    <div class="qr-layout">
+      <div class="qr-controls">
+        <label>{t('feature.qr.label', 'Text or URL')} <input bind:value={text} /></label>
+        <div class="qr-section">
+          <h3>{t('feature.qr.cornerTitle', 'Corner style')}</h3>
+          <label
+            >{t('feature.qr.cornerSquares', 'Corner squares')}
+            <select bind:value={cornerSquare}
+              ><option value="square">{t('feature.qr.square', 'Square')}</option><option
+                value="rounded">{t('feature.qr.rounded', 'Rounded')}</option
+              ><option value="circle">{t('feature.qr.circle', 'Circle')}</option></select
+            ></label
+          >
+          <label
+            >{t('feature.qr.cornerDots', 'Corner dots')}
+            <select bind:value={cornerDot}
+              ><option value="square">{t('feature.qr.square', 'Square')}</option><option
+                value="rounded">{t('feature.qr.rounded', 'Rounded')}</option
+              ><option value="dot">{t('feature.qr.dot', 'Dot')}</option></select
+            ></label
+          >
+        </div>
+        <div class="qr-section">
+          <h3>{t('feature.qr.moduleTitle', 'Module pattern')}</h3>
+          <label
+            >{t('feature.qr.dots', 'Dots')}
+            <select bind:value={dotsType}
+              ><option value="square">{t('feature.qr.square', 'Square')}</option><option
+                value="rounded">{t('feature.qr.rounded', 'Rounded')}</option
+              ><option value="dots">{t('feature.qr.dots', 'Dots')}</option><option
+                value="extra-rounded">{t('feature.qr.extraRounded', 'Extra rounded')}</option
+              ></select
+            ></label
+          >
+        </div>
+        <div class="qr-section">
+          <h3>{t('feature.qr.logoTitle', 'Logo')}</h3>
+          <label>
+            {t('feature.qr.logoTitle', 'Logo')}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml"
+              onchange={(e) => {
+                const f = (e.currentTarget as HTMLInputElement).files?.[0];
+                if (f) {
+                  logoFile = f;
+                  const r = new FileReader();
+                  r.onload = () => (logoUrl = r.result as string);
+                  r.readAsDataURL(f);
+                }
+              }}
+            />
+          </label>
+          <label
+            >{t('feature.qr.logoSize', 'Logo size %')}
+            <input type="range" min="10" max="40" bind:value={logoSize} /></label
+          >
+          <button
+            onclick={() => {
+              logoFile = null;
+              logoUrl = '';
+            }}>{t('feature.qr.removeLogo', 'Remove logo')}</button
+          >
+        </div>
+        <div class="qr-section">
+          <h3>{t('feature.qr.coloursTitle', 'Colours')}</h3>
+          <label
+            >{t('feature.qr.foreground', 'Foreground')}
+            <input type="color" bind:value={foreground} /></label
+          >
+          <label
+            >{t('feature.qr.background', 'Background')}
+            <input type="color" bind:value={background} /></label
+          >
+        </div>
+        <div class="qr-section">
+          <h3>{t('feature.qr.frameTitle', 'Frame & label')}</h3>
+          <label
+            ><input type="checkbox" bind:checked={showFrame} />
+            {t('feature.qr.showFrame', 'Show frame')}</label
+          >
+          <label>{t('feature.qr.labelText', 'Label text')} <input bind:value={frameText} /></label>
+        </div>
+        <button onclick={updatePreviewOnly}>{t('feature.qr.action', 'Update preview')}</button>
+      </div>
+      <div class="qr-preview">
+        <div role="img" aria-label="QR code preview">
+          {#if previewSvg}
+            {@html previewSvg}
+          {:else}
+            <p class="note">{t('feature.qr.enterTextHint', 'Enter text; preview updates live.')}</p>
+          {/if}
+        </div>
+        <div class="qr-downloads">
+          <button onclick={downloadStyledSvg}>{t('feature.qr.downloadSvg', 'Download SVG')}</button>
+          <button onclick={downloadStyledPng}>{t('feature.qr.downloadPng', 'Download PNG')}</button>
+          <button onclick={downloadStyledPdf}
+            >{t('feature.qr.downloadPdf', 'Download print PDF')}</button
+          >
+        </div>
+      </div>
+    </div>
   {:else if kind === 'scan'}
     <p class="field-label">{t('feature.scan.label', 'Scan images')}</p>
     <FileDrop

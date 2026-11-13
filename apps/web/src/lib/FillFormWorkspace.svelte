@@ -11,6 +11,7 @@
   import FileDropZone from '$lib/FileDropZone.svelte';
   import Button from '@pdf-complianttools/ui/Button.svelte';
   import PageGrid from '@pdf-complianttools/ui/PageGrid.svelte';
+  import type * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 
   interface PdfAnnotation {
     fieldName: string;
@@ -44,7 +45,7 @@
   let canvas = $state<HTMLCanvasElement | null>(null);
   let overlayContainer = $state<HTMLDivElement | null>(null);
   let thumbnailKey = $state('');
-  let loadingTask: unknown = undefined;
+  let loadingTask: ReturnType<typeof pdfjs.getDocument> | undefined;
   let hydrated = $derived(true);
   let hasFormFields = $state(false);
   let unsupportedFields = $state(false);

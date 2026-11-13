@@ -63,8 +63,8 @@
       "judgedBy": "scripts/measure-lighthouse.mjs"
     }
   ],
-  "pagesChecked": 457,
-  "pagesPassing": 457,
+  "pagesChecked": 489,
+  "pagesPassing": 489,
   "pagesFailing": 0,
   "outOfScope": [
     {
@@ -88,10 +88,6 @@
     {
       "path": "/ar/batch",
       "reason": "accepts several PDFs through its own picker, not a single input"
-    },
-    {
-      "path": "/ar/bookmarks",
-      "reason": "capability boundary — the page states that no file is read"
     },
     {
       "path": "/ar/create-pdf",
@@ -118,11 +114,19 @@
       "reason": "capability boundary — the page states that no file is read"
     },
     {
+      "path": "/ar/pdf-to-cbz",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
       "path": "/ar/pdf-to-image",
       "reason": "capability boundary — the page states that no file is read"
     },
     {
       "path": "/ar/pdf-to-pdfa",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/ar/pdf-to-png",
       "reason": "capability boundary — the page states that no file is read"
     },
     {
@@ -150,10 +154,6 @@
       "reason": "accepts several PDFs through its own picker, not a single input"
     },
     {
-      "path": "/bookmarks",
-      "reason": "capability boundary — the page states that no file is read"
-    },
-    {
       "path": "/connect-ai",
       "reason": "configures a provider connection; it takes no document"
     },
@@ -172,10 +172,6 @@
     {
       "path": "/en/batch",
       "reason": "accepts several PDFs through its own picker, not a single input"
-    },
-    {
-      "path": "/en/bookmarks",
-      "reason": "capability boundary — the page states that no file is read"
     },
     {
       "path": "/en/create-pdf",
@@ -202,11 +198,19 @@
       "reason": "capability boundary — the page states that no file is read"
     },
     {
+      "path": "/en/pdf-to-cbz",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
       "path": "/en/pdf-to-image",
       "reason": "capability boundary — the page states that no file is read"
     },
     {
       "path": "/en/pdf-to-pdfa",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en/pdf-to-png",
       "reason": "capability boundary — the page states that no file is read"
     },
     {
@@ -234,10 +238,6 @@
       "reason": "accepts several PDFs through its own picker, not a single input"
     },
     {
-      "path": "/en-XA/bookmarks",
-      "reason": "capability boundary — the page states that no file is read"
-    },
-    {
       "path": "/en-XA/create-pdf",
       "reason": "builds a PDF from a template; there is no document to pick"
     },
@@ -262,11 +262,19 @@
       "reason": "capability boundary — the page states that no file is read"
     },
     {
+      "path": "/en-XA/pdf-to-cbz",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
       "path": "/en-XA/pdf-to-image",
       "reason": "capability boundary — the page states that no file is read"
     },
     {
       "path": "/en-XA/pdf-to-pdfa",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/en-XA/pdf-to-png",
       "reason": "capability boundary — the page states that no file is read"
     },
     {
@@ -302,11 +310,19 @@
       "reason": "capability boundary — the page states that no file is read"
     },
     {
+      "path": "/pdf-to-cbz",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
       "path": "/pdf-to-image",
       "reason": "capability boundary — the page states that no file is read"
     },
     {
       "path": "/pdf-to-pdfa",
+      "reason": "capability boundary — the page states that no file is read"
+    },
+    {
+      "path": "/pdf-to-png",
       "reason": "capability boundary — the page states that no file is read"
     },
     {

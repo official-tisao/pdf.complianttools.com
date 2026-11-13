@@ -23,14 +23,6 @@
   The renderer is initialized using the shared getPdfiumRenderer() which handles
   WASM fetching, caching, and error handling.
 -->
-<svelte:head>
-  <title>PDF to Comic book archive locally</title>
-  <meta
-    name="description"
-    content="Turn PDF pages into Comic book archive locally, in your browser. Nothing is uploaded."
-  />
-</svelte:head>
-
 <ConversionTool
   title="PDF to Comic book archive"
   description="Turn PDF pages into Comic book archive locally, in your browser. Nothing is uploaded."
