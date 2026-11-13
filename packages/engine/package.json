@@ -104,6 +104,6 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
-    "@types/node": "22.15.30"
+    "@types/node": "24"
   }
 }

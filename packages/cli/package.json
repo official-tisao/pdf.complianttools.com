@@ -17,6 +17,6 @@
     "@pdf-complianttools/engine": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "22.15.30"
+    "@types/node": "24"
   }
 }

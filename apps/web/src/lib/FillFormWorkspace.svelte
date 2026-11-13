@@ -33,7 +33,7 @@
   let file = $state<File | null>(null);
   let bytes = $state<Uint8Array | null>(null);
   let exportBytes = $state<Uint8Array | null>(null);
-  let pdfDoc = $state<unknown>(null);
+  let pdfDoc = $state<import('pdfjs-dist/legacy/build/pdf.mjs').PDFDocumentProxy | null>(null);
   let pageCount = $state(0);
   let currentPage = $state(1);
   let scale = $state(1.0);
@@ -191,16 +191,28 @@
 
         // Field type and value are already resolved by inspectFormFields document-level detection.
         // Use annotation properties as fallback if type is somehow unknown.
-        let fieldType = annot.multiLine === true ? 'textarea' :
-                        annot.checkBox === true ? 'checkbox' :
-                        annot.radioButton === true ? 'radio' :
-                        annot.pushButton === true ? 'button' :
-                        annot.combo === true ? 'dropdown' :
-                        annot.multiSelect === true ? 'dropdown' :
-                        annot.fieldType === 'Tx' ? 'text' :
-                        annot.fieldType === 'Btn' ? 'checkbox' :
-                        annot.fieldType === 'Ch' ? 'dropdown' :
-                        annot.fieldType === 'Sig' ? 'button' : 'text';
+        let fieldType =
+          annot.multiLine === true
+            ? 'textarea'
+            : annot.checkBox === true
+              ? 'checkbox'
+              : annot.radioButton === true
+                ? 'radio'
+                : annot.pushButton === true
+                  ? 'button'
+                  : annot.combo === true
+                    ? 'dropdown'
+                    : annot.multiSelect === true
+                      ? 'dropdown'
+                      : annot.fieldType === 'Tx'
+                        ? 'text'
+                        : annot.fieldType === 'Btn'
+                          ? 'checkbox'
+                          : annot.fieldType === 'Ch'
+                            ? 'dropdown'
+                            : annot.fieldType === 'Sig'
+                              ? 'button'
+                              : 'text';
         let value: string | boolean | readonly string[] | undefined;
         let options: string[] | undefined;
         let readonly = Boolean(annot.readonly);
@@ -208,8 +220,9 @@
         // Populate options for dropdowns/list boxes from the annotation's
         // options array (each entry is {exportValue, displayValue}).
         if (annot.options && Array.isArray(annot.options)) {
-          options = annot.options.map((opt: { exportValue?: string; displayValue?: string }) =>
-            opt.displayValue ?? opt.exportValue ?? ''
+          options = annot.options.map(
+            (opt: { exportValue?: string; displayValue?: string }) =>
+              opt.displayValue ?? opt.exportValue ?? '',
           );
         }
 
@@ -779,8 +792,6 @@
     }
   });
 </script>
-
-
 
 <svelte:head>
   <title>{t('fillForm.title', 'Fill PDF Form')}</title>

@@ -845,7 +845,8 @@ export async function inspectFormFields(bytes: Uint8Array): Promise<readonly For
         // The last entry in the array is the actual field widget;
         // earlier entries are parent/container objects.
         const fieldWidget = arr[arr.length - 1] as Record<string, unknown>;
-        if (!fieldWidget.name) continue;
+        const fieldName = fieldWidget.name;
+        if (typeof fieldName !== 'string' || !fieldName) continue;
 
         // Use the 'type' property from pdf.js field objects which is reliable:
         // 'text', 'checkbox', 'radiobutton', 'combobox', 'listbox', 'button'
@@ -868,7 +869,7 @@ export async function inspectFormFields(bytes: Uint8Array): Promise<readonly For
           if (fieldWidget.subtype === 'Tx') {
             fieldType = fieldWidget.multiline === true ? 'textarea' : 'text';
           } else if (fieldWidget.subtype === 'Btn') {
-            const flags = fieldWidget.flags || 0;
+            const flags = typeof fieldWidget.flags === 'number' ? fieldWidget.flags : 0;
             const isRadio = Boolean(flags & 0x10000);
             fieldType = isRadio ? 'radio' : 'checkbox';
           } else if (fieldWidget.subtype === 'Ch') {
@@ -881,15 +882,16 @@ export async function inspectFormFields(bytes: Uint8Array): Promise<readonly For
         }
 
         // Read-only flag: bit 1 (0x2) = ReadOnly
-        const flags = fieldWidget.flags || 0;
+        const flags = typeof fieldWidget.flags === 'number' ? fieldWidget.flags : 0;
         const readonly = !!(flags & 0x2);
 
-        docFields.set(fieldWidget.name, {
-          name: fieldWidget.name,
-          type: fieldType,
-          value: fieldWidget.value,
-          readonly,
-        });
+        const base = { name: fieldName, type: fieldType, readonly };
+        docFields.set(
+          fieldName,
+          typeof fieldWidget.value !== 'undefined'
+            ? ({ ...base, value: fieldWidget.value } as FormFieldInfo)
+            : base,
+        );
       }
     }
 
@@ -968,9 +970,7 @@ export async function inspectFormFields(bytes: Uint8Array): Promise<readonly For
       }
     }
 
-    const results = Array.from(fieldMap.values()).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
+    const results = Array.from(fieldMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 
     if (results.length > 0) {
       return results;
@@ -1287,7 +1287,8 @@ export async function unlockPdf(
           throw new PdfEngineError({
             kind: 'corrupt-structure',
             repairable: false,
-            remedy: 'The selected file is not a readable PDF. It may be corrupted or not a PDF at all.',
+            remedy:
+              'The selected file is not a readable PDF. It may be corrupted or not a PDF at all.',
           });
         case 'TERMINATED':
         case 'FAILED':

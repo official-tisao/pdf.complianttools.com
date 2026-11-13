@@ -13,6 +13,7 @@ Generated from the locked dependency graph.
 - @eslint/js@10.0.1 — MIT — https://github.com/eslint/eslint
 - @eslint/object-schema@3.0.5 — Apache-2.0 — https://github.com/eslint/rewrite
 - @eslint/plugin-kit@0.7.3 — Apache-2.0 — https://github.com/eslint/rewrite
+- @mssio/qpdf-wasm@1.1.0 — Apache-2.0 — https://github.com/mssio/qpdf-wasm
 - @playwright/test@1.63.0 — Apache-2.0 — https://github.com/microsoft/playwright
 - @typescript-eslint/eslint-plugin@8.70.1 — MIT — https://github.com/typescript-eslint/typescript-eslint
 - @typescript-eslint/parser@8.70.1 — MIT — https://github.com/typescript-eslint/typescript-eslint

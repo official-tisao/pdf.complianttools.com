@@ -8,7 +8,16 @@ test('PDF.js fallback path detects form fields that pdf-lib would miss', async (
   const formPdf = await createFormPdf(source, [
     { name: 'fullName', type: 'text', page: 1, x: 72, y: 700, width: 200, height: 24 },
     { name: 'accepted', type: 'checkbox', page: 1, x: 72, y: 660, width: 18, height: 18 },
-    { name: 'choice', type: 'dropdown', page: 1, x: 72, y: 620, width: 120, height: 24, options: ['A', 'B'] },
+    {
+      name: 'choice',
+      type: 'dropdown',
+      page: 1,
+      x: 72,
+      y: 620,
+      width: 120,
+      height: 24,
+      options: ['A', 'B'],
+    },
   ]);
 
   // Normal detection via pdf-lib (should find fields)
@@ -29,7 +38,10 @@ test('PDF.js fallback path detects form fields that pdf-lib would miss', async (
     assert.ok(fieldObjects !== null, 'getFieldObjects should return a Map');
     const keys = [...fieldObjects.keys()];
     assert.ok(keys.length >= 3, 'getFieldObjects should have found at least 3 fields');
-    assert.ok(keys.some((k) => k.includes('fullName') || k.includes('Ada')), 'should find text field');
+    assert.ok(
+      keys.some((k) => k.includes('fullName') || k.includes('Ada')),
+      'should find text field',
+    );
   } finally {
     await loadingTask.destroy();
   }

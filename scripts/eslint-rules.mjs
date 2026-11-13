@@ -175,7 +175,8 @@ export const noEngineFetch = {
     const isTransport =
       filename.endsWith('/ai/transport.ts') || filename.endsWith('packages/engine/ai/transport.ts');
     // Allow pdfium.ts to fetch the local WASM asset (same-origin, not external AI)
-    const isPdfiumWasm = filename.endsWith('/pdf/pdfium.ts') || filename.endsWith('packages/engine/src/pdf/pdfium.ts');
+    const isPdfiumWasm =
+      filename.endsWith('/pdf/pdfium.ts') || filename.endsWith('packages/engine/src/pdf/pdfium.ts');
     return {
       CallExpression(node) {
         if (

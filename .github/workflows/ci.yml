@@ -27,7 +27,7 @@ jobs:
           version: 9.15.5
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.22.0
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # The Relay render tests self-skip when the chromium binary is absent, so without
@@ -63,7 +63,7 @@ jobs:
           version: 9.15.5
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.22.0
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -86,7 +86,7 @@ jobs:
           version: 9.15.5
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.22.0
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -110,7 +110,7 @@ jobs:
           version: 9.15.5
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.22.0
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -137,7 +137,7 @@ jobs:
           version: 9.15.5
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.22.0
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -161,7 +161,7 @@ jobs:
           version: 9.15.5
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.22.0
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -203,7 +203,7 @@ jobs:
           version: 9.15.5
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.22.0
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm verify:routes
@@ -227,7 +227,7 @@ jobs:
           version: 9.15.5
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.22.0
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -249,7 +249,7 @@ jobs:
           version: 9.15.5
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.22.0
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -268,7 +268,7 @@ jobs:
           version: 9.15.5
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.22.0
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
@@ -286,7 +286,7 @@ jobs:
           version: 9.15.5
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.22.0
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec node --test scripts/harnesses.test.mjs

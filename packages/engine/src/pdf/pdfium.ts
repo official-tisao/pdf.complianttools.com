@@ -15,14 +15,17 @@
  * a tool actually renders a page.
  */
 import { createPdfiumRenderer, type PdfiumRenderer } from './read.js';
+import { assertSafeAssetEndpoint } from '../ai/transport.js';
 
 let rendererPromise: Promise<PdfiumRenderer> | undefined;
 let wasmUrl: string | undefined;
 
 export function setPdfiumWasmUrl(url: string): void {
   // PDFium WASM is a same-origin browser asset served from /pdfium.wasm.
-  // Do not use AI transport's assertSafeEndpoint, which validates HTTPS endpoints
-  // for external AI services. A relative local asset path is correct here.
+  // Use assertSafeAssetEndpoint rather than assertSafeEndpoint: it accepts
+  // relative same-origin paths (which is the normal case) while still rejecting
+  // protocol-relative URLs and untrusted schemes.
+  assertSafeAssetEndpoint(url);
   wasmUrl = url;
 }
 

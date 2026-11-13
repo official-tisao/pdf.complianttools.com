@@ -135,7 +135,9 @@
     busy = true;
     error = '';
     // Derive status from actual password input state
-    status = unlockPassword ? 'Password entered' : t('phase.unlock.noPassword', 'No password given');
+    status = unlockPassword
+      ? 'Password entered'
+      : t('phase.unlock.noPassword', 'No password given');
     try {
       const engine = await import('@pdf-complianttools/engine');
       const bytes = file ? new Uint8Array(await file.arrayBuffer()) : undefined;
