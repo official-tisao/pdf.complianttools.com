@@ -10,6 +10,10 @@ overrides:
 importers:
 
   .:
+    dependencies:
+      '@mssio/qpdf-wasm':
+        specifier: 1.1.0
+        version: 1.1.0
     devDependencies:
       '@axe-core/playwright':
         specifier: 4.13.0
@@ -128,6 +132,9 @@ importers:
       '@embedpdf/pdfium':
         specifier: 2.15.1
         version: 2.15.1
+      '@mssio/qpdf-wasm':
+        specifier: 1.1.0
+        version: 1.1.0
       '@types/qrcode':
         specifier: 1.5.5
         version: 1.5.5
@@ -399,6 +406,10 @@ packages:
 
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
+
+  '@mssio/qpdf-wasm@1.1.0':
+    resolution: {integrity: sha512-lAvC7DQkf+Un7wlZbH7HBbfrcW13pP8t25TkAqWbglSehxX1cAz5gwVZE6PAW46/eXb7LA8mHQTaq1r5SKCeyA==}
+    engines: {node: '>=24'}
 
   '@napi-rs/canvas-android-arm64@1.0.9':
     resolution: {integrity: sha512-4LGXk2/0HVzE29K8SzML5WubgCp++B1FH3qgl35XmSZE+lLdr6P9VRQEnZ0MCLZMTSuJP41yyhtoiVNEuvrTIA==}
@@ -3225,6 +3236,8 @@ snapshots:
       keyv: 5.6.0
 
   '@keyv/serialize@1.1.1': {}
+
+  '@mssio/qpdf-wasm@1.1.0': {}
 
   '@napi-rs/canvas-android-arm64@1.0.9':
     optional: true

@@ -87,6 +87,7 @@
   },
   "dependencies": {
     "@embedpdf/pdfium": "2.15.1",
+    "@mssio/qpdf-wasm": "1.1.0",
     "@types/qrcode": "1.5.5",
     "docx": "9.5.1",
     "exceljs": "4.4.0",

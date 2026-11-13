@@ -15,13 +15,14 @@
  * a tool actually renders a page.
  */
 import { createPdfiumRenderer, type PdfiumRenderer } from './read.js';
-import { requestProvider, assertSafeEndpoint } from '../ai/transport.js';
 
 let rendererPromise: Promise<PdfiumRenderer> | undefined;
 let wasmUrl: string | undefined;
 
 export function setPdfiumWasmUrl(url: string): void {
-  assertSafeEndpoint(url);
+  // PDFium WASM is a same-origin browser asset served from /pdfium.wasm.
+  // Do not use AI transport's assertSafeEndpoint, which validates HTTPS endpoints
+  // for external AI services. A relative local asset path is correct here.
   wasmUrl = url;
 }
 
@@ -32,13 +33,25 @@ export function getPdfiumRenderer(): Promise<PdfiumRenderer> {
       'PDFium WASM URL not configured. Import configure-pdfium.ts in the app root layout.',
     );
   rendererPromise = (async () => {
-    const response = await requestProvider({ endpoint: wasmUrl, headers: {}, body: {} });
-    if (response.status < 200 || response.status >= 300) {
+    // Load the PDFium WASM binary directly via browser fetch.
+    // This is a same-origin asset, not an external AI endpoint, so no transport
+    // wrapper is needed. The fetch is lazy and only runs when a route actually
+    // needs pdfium (preserving the 4.4 MB WASM from loading on every route).
+    let response: Response;
+    try {
+      response = await fetch(wasmUrl);
+    } catch (error: unknown) {
+      throw new Error(
+        `PDFium WASM could not be loaded: ${error instanceof Error ? error.message : 'network error'}. Rebuild the app so the pdfium.wasm asset is served from the static folder as /pdfium.wasm.`,
+        { cause: error },
+      );
+    }
+    if (!response.ok) {
       throw new Error(
         `PDFium WASM could not be loaded (HTTP ${response.status}). Rebuild the app so the pdfium.wasm asset is served from the static folder as /pdfium.wasm.`,
       );
     }
-    const wasmBinary = await (response.body as ArrayBuffer);
+    const wasmBinary = await response.arrayBuffer();
     return createPdfiumRenderer(wasmBinary);
   })();
   return rendererPromise;

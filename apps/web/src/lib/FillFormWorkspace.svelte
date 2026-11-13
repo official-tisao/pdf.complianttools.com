@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import { SvelteMap } from 'svelte/reactivity';
   import { browser } from '$app/environment';
   import '$lib/configure-pdfjs';
   import { loadPdfJs } from '@pdf-complianttools/engine/pdfjs';
@@ -30,11 +31,12 @@
   // State
   let file = $state<File | null>(null);
   let bytes = $state<Uint8Array | null>(null);
+  let exportBytes = $state<Uint8Array | null>(null);
   let pdfDoc = $state<unknown>(null);
   let pageCount = $state(0);
   let currentPage = $state(1);
   let scale = $state(1.0);
-  let annotations = $state<PdfAnnotation[]>([]);
+  let annotations = $state<PdfAnnotation[]>([]); // Widget-level annotations for rendering
   let fieldValues = $state<Record<string, string | boolean | readonly string[]>>({});
   let status = $state(t('fillForm.status.idle', 'Drop a PDF with fillable form fields to begin.'));
   let error = $state('');
@@ -47,6 +49,40 @@
   let hasFormFields = $state(false);
   let unsupportedFields = $state(false);
   let dirty = $state(false);
+
+  // Logical fields derived from annotations (grouped by fieldName for radio buttons)
+  let logicalFields = $derived.by(() => {
+    if (!annotations.length) return [];
+    const groups = new SvelteMap<string, PdfAnnotation[]>();
+    for (const annot of annotations) {
+      const existing = groups.get(annot.fieldName);
+      if (existing) {
+        existing.push(annot);
+      } else {
+        groups.set(annot.fieldName, [annot]);
+      }
+    }
+    // For each fieldName group, create one logical field entry
+    const logical: PdfAnnotation[] = [];
+    for (const [, widgets] of groups.entries()) {
+      // Use the first widget as the representative, but merge radio options
+      const first = widgets[0];
+      if (first.fieldType.toLowerCase() === 'radio' && widgets.length > 1) {
+        // Collect all exportValues as options for radio group
+        const radioOptions = widgets
+          .map((w) => w.exportValue)
+          .filter((v): v is string => typeof v === 'string' && v.length > 0);
+        logical.push({
+          ...first,
+          fieldType: 'radio',
+          options: radioOptions.length > 0 ? radioOptions : first.options,
+        });
+      } else {
+        logical.push(first);
+      }
+    }
+    return logical;
+  });
 
   // Guard all PDF processing behind browser check. Returns false rather than
   // throwing so prerendering stays quiet — nothing here should run on the server.
@@ -61,6 +97,7 @@
     const newFile = files[0];
     file = newFile;
     bytes = null;
+    exportBytes = null;
     pdfDoc = null;
     pageCount = 0;
     currentPage = 1;
@@ -76,17 +113,25 @@
 
     try {
       const fileBytes = new Uint8Array(await newFile.arrayBuffer());
-      bytes = fileBytes;
+      // Create independent copies BEFORE pdf.js loads the document,
+      // because pdfjs.getDocument({ data }) transfers ownership of the buffer
+      // to its worker thread.
+      const renderBytes = fileBytes.slice();
+      const inspectBytes = fileBytes.slice();
+      const exportBuf = fileBytes.slice();
+      bytes = renderBytes; // keep for rendering
+      exportBytes = exportBuf; // keep for export (independent copy)
       thumbnailKey = `${newFile.name}:${newFile.size}:${newFile.lastModified}`;
 
       const pdfjs = await loadPdfJs();
       loadingTask?.destroy();
-      loadingTask = pdfjs.getDocument({ data: fileBytes });
+      loadingTask = pdfjs.getDocument({ data: renderBytes });
       pdfDoc = await loadingTask.promise;
       pageCount = pdfDoc.numPages;
 
-      // Inspect form fields
-      const fields = await inspectFormFields(fileBytes);
+      // Inspect form fields using pdf.js document-level + page-level detection.
+      // Use the independent inspectBytes copy which was never transferred.
+      const fields = await inspectFormFields(inspectBytes);
       if (fields.length === 0) {
         hasFormFields = false;
         status = t(
@@ -95,9 +140,15 @@
         );
       } else {
         hasFormFields = true;
-        // Get annotations from pdf.js to get coordinates
+        // Store field values from detected fields for use in overlays
+        for (const field of fields) {
+          if (field.value !== undefined) {
+            fieldValues = { ...fieldValues, [field.name]: field.value };
+          }
+        }
+        // Get annotations from pdf.js to get widget coordinates
         await loadAnnotations();
-        status = t('fillForm.status.ready', '{count} fillable fields ready.', annotations.length);
+        status = t('fillForm.status.ready', '{count} fillable fields ready.', logicalFields.length);
       }
     } catch (err) {
       error = err instanceof Error ? err.message : t('fillForm.error.load', 'Could not load PDF.');
@@ -119,7 +170,7 @@
       const viewport = page.getViewport({ scale: 1.0 });
 
       // Get annotations for this page
-      const annotationsData = await page.getAnnotations();
+      const annotationsData = await page.getAnnotations({ intent: 'any' });
       if (!annotationsData) continue;
 
       for (const annot of annotationsData) {
@@ -137,50 +188,33 @@
         const viewportX = x1;
         const viewportY = viewport.height - y2;
 
-        // Get field info from pdf-lib inspection
-        const fieldInfo = (await inspectFormFields(bytes!)).find((f) => f.name === annot.fieldName);
-        let fieldType = 'text';
+        // Field type and value are already resolved by inspectFormFields document-level detection.
+        // Use annotation properties as fallback if type is somehow unknown.
+        let fieldType = annot.multiLine === true ? 'textarea' :
+                        annot.checkBox === true ? 'checkbox' :
+                        annot.radioButton === true ? 'radio' :
+                        annot.pushButton === true ? 'button' :
+                        annot.combo === true ? 'dropdown' :
+                        annot.multiSelect === true ? 'dropdown' :
+                        annot.fieldType === 'Tx' ? 'text' :
+                        annot.fieldType === 'Btn' ? 'checkbox' :
+                        annot.fieldType === 'Ch' ? 'dropdown' :
+                        annot.fieldType === 'Sig' ? 'button' : 'text';
         let value: string | boolean | readonly string[] | undefined;
-        const options: string[] | undefined = undefined;
-        let readonly = false;
+        let options: string[] | undefined;
+        let readonly = Boolean(annot.readonly);
 
-        if (fieldInfo) {
-          // Map pdf-lib field types to our internal field types
-          // pdf-lib types: 'PDFTextField', 'PDFCheckBox', 'PDFRadioGroup', 'PDFDropdown', 'PDFSignature'
-          // Our internal types: 'text', 'textarea', 'checkbox', 'radio', 'dropdown', 'button'
-          const pdfLibType = fieldInfo.type;
-          if (pdfLibType === 'PDFTextField') {
-            // Could be text or textarea - for now default to text
-            // TODO: Check if field is multiline via field flags
-            fieldType = 'text';
-          } else if (pdfLibType === 'PDFCheckBox') {
-            fieldType = 'checkbox';
-          } else if (pdfLibType === 'PDFRadioGroup') {
-            fieldType = 'radio';
-          } else if (pdfLibType === 'PDFDropdown') {
-            fieldType = 'dropdown';
-          } else if (pdfLibType === 'PDFSignature') {
-            fieldType = 'button';
-          } else {
-            // Unknown type, try to use the pdf.js widget subtype as fallback
-            const subtype = annot.constructor?.name?.toLowerCase() || '';
-            if (subtype.includes('checkbox')) {
-              fieldType = 'checkbox';
-            } else if (subtype.includes('radio')) {
-              fieldType = 'radio';
-            } else if (subtype.includes('pushbutton') || subtype.includes('button')) {
-              fieldType = 'button';
-            }
-          }
-          value = fieldInfo.value;
-          readonly = fieldInfo.readonly ?? false;
+        // Populate options for dropdowns/list boxes from the annotation's
+        // options array (each entry is {exportValue, displayValue}).
+        if (annot.options && Array.isArray(annot.options)) {
+          options = annot.options.map((opt: { exportValue?: string; displayValue?: string }) =>
+            opt.displayValue ?? opt.exportValue ?? ''
+          );
         }
 
-        // Try to get options for dropdown
-        if (fieldType === 'dropdown' || fieldType === 'combobox') {
-          // We'd need to get this from the pdf document
-          // For now, just show the current value if any
-        }
+        // Use the field value from fieldValues (initialized by inspectFormFields)
+        // so overlays show the actual field content instead of empty inputs.
+        value = fieldValues[annot.fieldName] !== undefined ? fieldValues[annot.fieldName] : value;
 
         newAnnotations.push({
           fieldName: annot.fieldName,
@@ -192,18 +226,14 @@
           readonly,
           exportValue: annot.exportValue ?? annot.buttonValue ?? undefined,
         });
-
-        // Initialize field value if not already set
-        if (value !== undefined && !(annot.fieldName in fieldValues)) {
-          fieldValues = { ...fieldValues, [annot.fieldName]: value };
-        }
       }
     }
 
     annotations = newAnnotations;
-    unsupportedFields = newAnnotations.some(
+    // Use logical fields for unsupported check to avoid false positives from radio button widgets
+    unsupportedFields = logicalFields.some(
       (a) =>
-        !['text', 'textarea', 'checkbox', 'radio', 'dropdown', 'button'].includes(
+        !['text', 'checkbox', 'radio', 'dropdown', 'button', 'textarea'].includes(
           a.fieldType.toLowerCase(),
         ),
     );
@@ -257,13 +287,18 @@
 
   function createFieldOverlay(annot: PdfAnnotation): HTMLElement | null {
     if (!browser) return null;
-    const { rect, fieldName, fieldType, value, readonly } = annot;
+    const { rect, fieldName, fieldType, value, readonly, options } = annot;
 
     // Scale rect to current viewport
     const left = rect.x * scale;
     const top = rect.y * scale;
     const width = Math.max(rect.width * scale, 60);
     const height = Math.max(rect.height * scale, 24);
+
+    // Consistent font size matching PDF export (12pt = 16px at default scale)
+    // Use 12px as base, scales with viewport scale factor
+    const baseFontSize = 12;
+    const fontSize = Math.max(10, baseFontSize * scale);
 
     const wrapper = document.createElement('div');
     wrapper.className = 'field-overlay';
@@ -295,9 +330,10 @@
           border: 1px solid #3b82f6;
           border-radius: 3px;
           background: ${readonly ? '#f3f4f6' : '#eff6ff'};
-          padding: 2px 6px;
+          padding: 0 6px;
           font: inherit;
-          font-size: ${Math.max(10, height * 0.7)}px;
+          font-size: ${fontSize}px;
+          line-height: ${height}px;
           outline: none;
           cursor: ${readonly ? 'not-allowed' : 'text'};
         `;
@@ -323,12 +359,12 @@
           border: 1px solid #3b82f6;
           border-radius: 3px;
           background: ${readonly ? '#f3f4f6' : '#eff6ff'};
-          padding: 2px 6px;
+          padding: 4px 6px;
           font: inherit;
-          font-size: ${Math.max(10, height * 0.6)}px;
+          font-size: ${fontSize}px;
+          line-height: 1.4;
           outline: none;
           resize: none;
-          line-height: 1.3;
           cursor: ${readonly ? 'not-allowed' : 'text'};
         `;
         input.addEventListener('input', (e) => {
@@ -403,9 +439,20 @@
         placeholder.selected = !value;
         input.appendChild(placeholder);
 
-        // In a real implementation, we'd get options from the PDF
-        // For now, just show the current value if any
-        if (value) {
+        // Populate options from annotation options if available
+        if (options && Array.isArray(options) && options.length > 0) {
+          for (const opt of options) {
+            const optElement = document.createElement('option');
+            optElement.value = String(opt ?? '');
+            optElement.textContent = String(opt ?? '');
+            // Select the current value if it matches
+            if (value !== undefined && String(value) === String(opt)) {
+              optElement.selected = true;
+            }
+            input.appendChild(optElement);
+          }
+        } else if (value) {
+          // Fallback: just show the current value
           const opt = document.createElement('option');
           opt.value = String(value);
           opt.textContent = String(value);
@@ -419,9 +466,10 @@
           border: 1px solid #3b82f6;
           border-radius: 3px;
           background: #eff6ff;
-          padding: 2px 6px;
+          padding: 0 6px;
           font: inherit;
-          font-size: ${Math.max(10, height * 0.7)}px;
+          font-size: ${fontSize}px;
+          line-height: ${height}px;
           outline: none;
           cursor: ${readonly ? 'not-allowed' : 'pointer'};
         `;
@@ -463,10 +511,16 @@
 
   function updateStatus() {
     if (!hasFormFields) return;
-    const total = annotations.length;
-    const filled = Object.keys(fieldValues).filter((k) => {
-      const v = fieldValues[k];
-      return v !== '' && v !== false && !(Array.isArray(v) && v.length === 0);
+    const total = logicalFields.length;
+    const filled = logicalFields.filter((field) => {
+      const v = fieldValues[field.fieldName];
+      if (v === undefined) return false;
+      // Checkbox is always considered filled since it has a boolean value (checked/unchecked)
+      if (field.fieldType.toLowerCase() === 'checkbox') return true;
+      // Radio group is filled if a value is selected
+      if (field.fieldType.toLowerCase() === 'radio') return v !== undefined && v !== '';
+      // Text, textarea, dropdown: filled if non-empty
+      return v !== '' && !(Array.isArray(v) && v.length === 0);
     }).length;
     if (dirty) {
       status = t(
@@ -679,14 +733,14 @@
 
   async function downloadFilled() {
     ensureBrowser();
-    if (!bytes || !hasFormFields) return;
+    if (!exportBytes || !hasFormFields) return;
 
     error = '';
     status = t('fillForm.status.generating', 'Generating filled PDF…');
     loading = true;
 
     try {
-      const filledBytes = await fillFormPdf(bytes, fieldValues);
+      const filledBytes = await fillFormPdf(exportBytes!, fieldValues);
       const name = file?.name?.replace(/\.pdf$/i, '') || 'filled-form';
       downloadBytes(filledBytes, `${name}-filled.pdf`);
       status = t('fillForm.status.downloaded', 'Filled PDF downloaded successfully.');
@@ -725,8 +779,7 @@
   });
 </script>
 
-/* global document, HTMLCanvasElement, HTMLDivElement, HTMLInputElement, HTMLTextAreaElement,
-HTMLSelectElement, HTMLElement, KeyboardEvent */
+
 
 <svelte:head>
   <title>{t('fillForm.title', 'Fill PDF Form')}</title>
@@ -776,7 +829,7 @@ HTMLSelectElement, HTMLElement, KeyboardEvent */
           <span class="filename" title={file?.name}>{file?.name}</span>
           {#if hasFormFields}
             <span class="field-count" aria-live="polite">
-              {annotations.length}
+              {logicalFields.length}
               {t('fillForm.fields.count', 'fields')}
             </span>
             {#if unsupportedFields}

@@ -85,12 +85,15 @@
   let recipients = $state('recipient@example.test');
   let threshold = $state(32);
   let page = $state(1);
-  let password = $state('');
+  // --- protect-operation state ---
   let userPassword = $state('');
   let ownerPassword = $state('');
   let restrictPrinting = $state(false);
   let restrictCopying = $state(false);
   let restrictEditing = $state(false);
+  // --- unlock-specific state ---
+  let unlockPassword = $state('');
+  let unlockPasswordVisible = $state(false);
   // Derived: these come from $props(), and a caller can change them after mount.
   const structuredData = $derived(
     softwareApplicationLd({ name: title, description, path: route.url.pathname }),
@@ -119,6 +122,10 @@
     downloadName = name;
   }
 
+  function toggleUnlockPasswordVisibility() {
+    unlockPasswordVisible = !unlockPasswordVisible;
+  }
+
   async function run() {
     const file = files[0];
     if (!file && operation !== 'password-generator') {
@@ -127,7 +134,8 @@
     }
     busy = true;
     error = '';
-    status = t('shell.status.working', 'Working locally…');
+    // Derive status from actual password input state
+    status = unlockPassword ? 'Password entered' : t('phase.unlock.noPassword', 'No password given');
     try {
       const engine = await import('@pdf-complianttools/engine');
       const bytes = file ? new Uint8Array(await file.arrayBuffer()) : undefined;
@@ -334,7 +342,10 @@
           );
         }
       } else if (operation === 'unlock') {
-        await engine.unlockPdf();
+        status = t('phase.unlock.status.decrypting', 'Decrypting PDF…');
+        const output = await engine.unlockPdf(bytes!, { password: unlockPassword });
+        save(output, 'unlocked.pdf', 'application/pdf');
+        status = t('phase.unlock.status.done', 'Decryption successful.');
       } else if (operation === 'redact') {
         const result = await engine.redactPdf(bytes!, {
           method: 'text-search-match',
@@ -467,12 +478,27 @@
         )}
       </p>
     {:else if operation === 'unlock'}
-      <label
-        >{t('phase.unlock.password', 'Enter Document Password')}<input
-          type="password"
-          bind:value={password}
-        /></label
-      >
+      <div class="password-field">
+        <label
+          >{t('phase.unlock.password', 'Enter Document Password')}<input
+            type={unlockPasswordVisible ? 'text' : 'password'}
+            bind:value={unlockPassword}
+            autocomplete="current-password"
+          /></label
+        >
+        <button
+          type="button"
+          class="toggle-visibility"
+          aria-label={unlockPasswordVisible
+            ? t('phase.unlock.hide', 'Hide password')
+            : t('phase.unlock.show', 'Show password')}
+          onclick={toggleUnlockPasswordVisibility}
+        >
+          {unlockPasswordVisible
+            ? t('phase.unlock.hide', 'Hide password')
+            : t('phase.unlock.show', 'Show password')}
+        </button>
+      </div>
     {:else if operation === 'protect'}
       <div class="security-panel">
         <h3>{t('phase.protect.heading', 'Security Configuration')}</h3>
@@ -659,6 +685,27 @@
     border-radius: 8px;
     padding: 12px 14px;
     margin-top: 8px;
+  }
+  .password-field {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .toggle-visibility {
+    border: 1px solid var(--color-hairline);
+    border-radius: 8px;
+    background: var(--color-white);
+    color: var(--color-ink);
+    font: inherit;
+    font-size: 0.875rem;
+    padding: 8px 12px;
+    cursor: pointer;
+    min-width: 96px;
+    white-space: nowrap;
+  }
+  .toggle-visibility:hover {
+    background: var(--color-platinum);
   }
   .permissions legend {
     font-weight: 600;
