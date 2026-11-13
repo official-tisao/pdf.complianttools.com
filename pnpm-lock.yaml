@@ -10,6 +10,10 @@ overrides:
 importers:
 
   .:
+    dependencies:
+      '@mssio/qpdf-wasm':
+        specifier: 1.1.0
+        version: 1.1.0
     devDependencies:
       '@axe-core/playwright':
         specifier: 4.13.0
@@ -79,8 +83,8 @@ importers:
         version: 1.63.0
     devDependencies:
       '@types/node':
-        specifier: 22.15.30
-        version: 22.15.30
+        specifier: '24'
+        version: 24.13.6
 
   apps/web:
     dependencies:
@@ -120,14 +124,17 @@ importers:
         version: link:../engine
     devDependencies:
       '@types/node':
-        specifier: 22.15.30
-        version: 22.15.30
+        specifier: '24'
+        version: 24.13.6
 
   packages/engine:
     dependencies:
       '@embedpdf/pdfium':
         specifier: 2.15.1
         version: 2.15.1
+      '@mssio/qpdf-wasm':
+        specifier: 1.1.0
+        version: 1.1.0
       '@types/qrcode':
         specifier: 1.5.5
         version: 1.5.5
@@ -172,8 +179,8 @@ importers:
         version: 4.6.5
     devDependencies:
       '@types/node':
-        specifier: 22.15.30
-        version: 22.15.30
+        specifier: '24'
+        version: 24.13.6
 
   packages/ui:
     devDependencies:
@@ -402,6 +409,10 @@ packages:
 
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
+
+  '@mssio/qpdf-wasm@1.1.0':
+    resolution: {integrity: sha512-lAvC7DQkf+Un7wlZbH7HBbfrcW13pP8t25TkAqWbglSehxX1cAz5gwVZE6PAW46/eXb7LA8mHQTaq1r5SKCeyA==}
+    engines: {node: '>=24'}
 
   '@napi-rs/canvas-android-arm64@1.0.9':
     resolution: {integrity: sha512-4LGXk2/0HVzE29K8SzML5WubgCp++B1FH3qgl35XmSZE+lLdr6P9VRQEnZ0MCLZMTSuJP41yyhtoiVNEuvrTIA==}
@@ -3236,6 +3247,8 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
+  '@mssio/qpdf-wasm@1.1.0': {}
+
   '@napi-rs/canvas-android-arm64@1.0.9':
     optional: true
 
@@ -3561,7 +3574,7 @@ snapshots:
 
   '@types/qrcode@1.5.5':
     dependencies:
-      '@types/node': 22.15.30
+      '@types/node': 24.13.6
 
   '@types/raf@3.4.3':
     optional: true
@@ -3571,7 +3584,7 @@ snapshots:
 
   '@types/yauzl@2.10.3':
     dependencies:
-      '@types/node': 22.15.30
+      '@types/node': 24.13.6
     optional: true
 
   '@typescript-eslint/eslint-plugin@8.70.1(@typescript-eslint/parser@8.70.1(eslint@10.11.0(jiti@2.6.1))(typescript@5.9.3))(eslint@10.11.0(jiti@2.6.1))(typescript@5.9.3)':
@@ -3885,7 +3898,7 @@ snapshots:
 
   chrome-launcher@1.2.1:
     dependencies:
-      '@types/node': 22.15.30
+      '@types/node': 24.13.6
       escape-string-regexp: 4.0.0
       is-wsl: 2.2.0
       lighthouse-logger: 2.0.2
@@ -5364,7 +5377,7 @@ snapshots:
 
   speedline-core@1.4.3:
     dependencies:
-      '@types/node': 22.15.30
+      '@types/node': 24.13.6
       image-ssim: 0.2.0
       jpeg-js: 0.4.4
 

@@ -2,6 +2,7 @@ import { PDFArray, PDFDocument, PDFDict, PDFName, StandardFonts, degrees, rgb } 
 import { unzlibSync, zlibSync } from 'fflate';
 import { PdfEngineError } from '../errors.js';
 import { extractPdfTextPages } from '../conversion/pdf-text.js';
+import { loadPdfJs } from './pdfjs.js';
 import type {
   AnnotationKind,
   AnnotationOptions,
@@ -17,6 +18,8 @@ import type {
   TextEditCapability,
   TextRun,
 } from './editing-types.js';
+import { createQpdf } from '@mssio/qpdf-wasm';
+import { QpdfError } from '@mssio/qpdf-wasm';
 
 function loadError(operation: string, error: unknown): never {
   if (error instanceof PdfEngineError) throw error;
@@ -748,77 +751,280 @@ export type FormFieldInfo = Readonly<{
 }>;
 
 export async function inspectFormFields(bytes: Uint8Array): Promise<readonly FormFieldInfo[]> {
-  const document = await load(bytes, 'inspect form fields');
-  const form = document.getForm();
-  const fields = form.getFields();
+  // Try pdf-lib first — it understands the AcroForm dictionary semantics and is fast
+  try {
+    const document = await load(bytes, 'inspect form fields');
+    const form = document.getForm();
+    const fields = form.getFields();
 
-  const results: FormFieldInfo[] = [];
+    if (fields.length > 0) {
+      const results: FormFieldInfo[] = [];
 
-  for (const field of fields) {
-    let fieldName: string;
-    try {
-      fieldName = field.getName();
-    } catch {
-      // Skip fields with unreadable names (e.g., invalid T entry in field dictionary)
-      continue;
-    }
+      for (const field of fields) {
+        let fieldName: string;
+        try {
+          fieldName = field.getName();
+        } catch {
+          continue;
+        }
 
-    const type = field.constructor.name;
-    // Use the public AcroForm API to determine whether the field is read-only.
-    let readonly: boolean;
-    try {
-      readonly = field.isReadOnly();
-    } catch {
-      readonly = false;
-    }
+        const type = field.constructor.name;
+        const readonly = field.isReadOnly?.();
 
-    try {
-      if (type === 'PDFTextField') {
-        const value = form.getTextField(fieldName).getText();
-        results.push(
-          value === undefined
-            ? { name: fieldName, type, readonly }
-            : { name: fieldName, type, value, readonly },
-        );
-      } else if (type === 'PDFCheckBox') {
-        results.push({
-          name: fieldName,
-          type,
-          value: form.getCheckBox(fieldName).isChecked(),
-          readonly,
-        });
-      } else if (type === 'PDFRadioGroup') {
-        const value = form.getRadioGroup(fieldName).getSelected();
-        results.push(
-          value === undefined
-            ? { name: fieldName, type, readonly }
-            : { name: fieldName, type, value, readonly },
-        );
-      } else if (type === 'PDFDropdown') {
-        results.push({
-          name: fieldName,
-          type,
-          value: form.getDropdown(fieldName).getSelected(),
-          readonly,
-        });
-      } else {
-        results.push({ name: fieldName, type, readonly });
+        try {
+          if (type === 'PDFTextField') {
+            const value = form.getTextField(fieldName).getText();
+            results.push(
+              value === undefined
+                ? { name: fieldName, type, readonly }
+                : { name: fieldName, type, value, readonly },
+            );
+          } else if (type === 'PDFCheckBox') {
+            results.push({
+              name: fieldName,
+              type,
+              value: form.getCheckBox(fieldName).isChecked(),
+              readonly,
+            });
+          } else if (type === 'PDFRadioGroup') {
+            const value = form.getRadioGroup(fieldName).getSelected();
+            results.push(
+              value === undefined
+                ? { name: fieldName, type, readonly }
+                : { name: fieldName, type, value, readonly },
+            );
+          } else if (type === 'PDFDropdown') {
+            results.push({
+              name: fieldName,
+              type,
+              value: form.getDropdown(fieldName).getSelected(),
+              readonly,
+            });
+          } else if (type === 'PDFOptionList') {
+            results.push({
+              name: fieldName,
+              type,
+              value: form.getOptionList(fieldName).getSelected(),
+              readonly,
+            });
+          } else {
+            results.push({ name: fieldName, type, readonly });
+          }
+        } catch {
+          // Skip fields that throw when reading their value
+          continue;
+        }
       }
-    } catch {
-      // Skip fields that throw when reading their value
-      // This can happen with malformed field dictionaries
-      continue;
+
+      return results;
     }
+  } catch {
+    // pdf-lib inspection returned no fields or failed — fall through to pdf.js
   }
 
-  return results;
+  // Fallback: use pdf.js for form field detection.
+  // pdf.js can detect fields that pdf-lib misses in some valid interactive PDFs,
+  // because it scans page /Annots for Widget subtype annotations rather than
+  // relying on the /AcroForm /Fields entry.
+  // Use both: getFieldObjects() for document-level + getAnnotations() for page-level.
+  const pdfjs = await loadPdfJs();
+  const loadingTask = pdfjs.getDocument({ data: bytes.slice() });
+  const document = await loadingTask.promise;
+
+  try {
+    // Distinguish XFA from AcroForm. A pure-XFA document has no AcroForm fields
+    // and must be reported as unsupported rather than as a flat (fieldless) PDF.
+    const isPureXfa = document.isPureXfa === true;
+
+    // === Document-level field objects ===
+    const fieldObjects = await document.getFieldObjects?.();
+    const docFields = new Map<string, FormFieldInfo>();
+
+    if (fieldObjects) {
+      for (const [, arr] of fieldObjects.entries()) {
+        // The last entry in the array is the actual field widget;
+        // earlier entries are parent/container objects.
+        const fieldWidget = arr[arr.length - 1] as Record<string, unknown>;
+        const fieldName = fieldWidget.name;
+        if (typeof fieldName !== 'string' || !fieldName) continue;
+
+        // Use the 'type' property from pdf.js field objects which is reliable:
+        // 'text', 'checkbox', 'radiobutton', 'combobox', 'listbox', 'button'
+        let fieldType: string;
+        const widgetType = fieldWidget.type;
+        if (widgetType === 'text') {
+          fieldType = fieldWidget.multiline === true ? 'textarea' : 'text';
+        } else if (widgetType === 'checkbox') {
+          fieldType = 'checkbox';
+        } else if (widgetType === 'radiobutton') {
+          fieldType = 'radio';
+        } else if (widgetType === 'combobox') {
+          fieldType = 'dropdown';
+        } else if (widgetType === 'listbox') {
+          fieldType = 'dropdown'; // list boxes are dropdown-like
+        } else if (widgetType === 'button' || widgetType === 'pushbutton') {
+          fieldType = 'button';
+        } else {
+          // Fallback to subtype for any unrecognized types
+          if (fieldWidget.subtype === 'Tx') {
+            fieldType = fieldWidget.multiline === true ? 'textarea' : 'text';
+          } else if (fieldWidget.subtype === 'Btn') {
+            const flags = typeof fieldWidget.flags === 'number' ? fieldWidget.flags : 0;
+            const isRadio = Boolean(flags & 0x10000);
+            fieldType = isRadio ? 'radio' : 'checkbox';
+          } else if (fieldWidget.subtype === 'Ch') {
+            fieldType = 'dropdown';
+          } else if (fieldWidget.subtype === 'Sig') {
+            fieldType = 'button';
+          } else {
+            fieldType = 'text';
+          }
+        }
+
+        // Read-only flag: bit 1 (0x2) = ReadOnly
+        const flags = typeof fieldWidget.flags === 'number' ? fieldWidget.flags : 0;
+        const readonly = !!(flags & 0x2);
+
+        const base = { name: fieldName, type: fieldType, readonly };
+        docFields.set(
+          fieldName,
+          typeof fieldWidget.value !== 'undefined'
+            ? ({ ...base, value: fieldWidget.value } as FormFieldInfo)
+            : base,
+        );
+      }
+    }
+
+    // === Page-level widget annotations ===
+    const fieldMap = new Map<string, FormFieldInfo>();
+
+    for (let pageNum = 1; pageNum <= document.numPages; pageNum++) {
+      const page = await document.getPage(pageNum);
+
+      // Get annotations for this page
+      const annotationsData = await page.getAnnotations({ intent: 'any' });
+      if (!annotationsData) continue;
+
+      for (const annot of annotationsData) {
+        // Only process Widget annotations (form fields)
+        if (annot.subtype !== 'Widget') continue;
+        if (!annot.fieldName) continue;
+
+        // Determine field type from annotation properties (more reliable than constructor name)
+        let fieldType: string;
+        if (annot.multiLine === true) {
+          fieldType = 'textarea';
+        } else if (annot.checkBox === true) {
+          fieldType = 'checkbox';
+        } else if (annot.radioButton === true) {
+          fieldType = 'radio';
+        } else if (annot.pushButton === true) {
+          fieldType = 'button';
+        } else if (annot.combo === true) {
+          fieldType = 'dropdown';
+        } else if (annot.multiSelect === true) {
+          fieldType = 'dropdown'; // list box
+        } else if (annot.fieldType === 'Tx') {
+          fieldType = 'text';
+        } else if (annot.fieldType === 'Btn') {
+          // Fallback: Btn without specific boolean flags
+          fieldType = 'checkbox';
+        } else if (annot.fieldType === 'Ch') {
+          fieldType = 'dropdown';
+        } else if (annot.fieldType === 'Sig') {
+          fieldType = 'button';
+        } else {
+          fieldType = 'text';
+        }
+
+        // Read current field value from annotation properties
+        let value: string | boolean | readonly string[] | undefined;
+        if (annot.fieldValue !== undefined) {
+          value = annot.fieldValue;
+        } else if (annot.exportValue) {
+          value = String(annot.exportValue);
+        }
+
+        const fieldName = annot.fieldName;
+
+        // Deduplicate by field name: document-level fields take priority,
+        // but page-level annotations give us coordinates and handle fields
+        // that pdf-lib misses. If docFields already has this name, keep it
+        // (docFields has better type info). Otherwise, add from annotations.
+        if (!fieldMap.has(fieldName) && !docFields.has(fieldName)) {
+          const base = {
+            name: fieldName,
+            type: fieldType,
+            readonly: Boolean(annot.readonly),
+          };
+          const info: FormFieldInfo = value !== undefined ? { ...base, value } : base;
+          fieldMap.set(fieldName, info);
+        }
+      }
+    }
+
+    // Merge document-level fields into the map
+    for (const [name, info] of docFields.entries()) {
+      if (!fieldMap.has(name)) {
+        fieldMap.set(name, info);
+      }
+    }
+
+    const results = Array.from(fieldMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+    if (results.length > 0) {
+      return results;
+    }
+
+    // No interactive fields found. Report appropriately:
+    // - Pure-XFA documents are unsupported, not flat.
+    // - Everything else is a genuinely flat/scanned PDF with no AcroForm fields.
+    if (isPureXfa) {
+      throw new PdfEngineError({
+        kind: 'unsupported-feature',
+        feature: 'pure XFA form',
+        remedy:
+          'This document uses XFA forms, which are not supported by this viewer. Use a PDF reader with XFA support.',
+      });
+    }
+
+    return [];
+  } finally {
+    await loadingTask.destroy();
+  }
+}
+
+async function normalizePdfInput(bytes: Uint8Array): Promise<Uint8Array> {
+  // Use qpdf --linearize to normalize the input PDF, handling incremental updates
+  // (e.g., C2PA/Content Credentials) that pdf-lib cannot process correctly.
+  // This runs in a Web Worker and is fast for typical PDFs.
+  try {
+    const qpdf = await createQpdf();
+    try {
+      const result = await qpdf.run(['--linearize', 'input.pdf', 'output.pdf'], {
+        files: { 'input.pdf': bytes },
+      });
+      if (result.exitCode === 0 && result.files['output.pdf']) {
+        return result.files['output.pdf'];
+      }
+      return bytes;
+    } finally {
+      qpdf.terminate();
+    }
+  } catch {
+    return bytes;
+  }
 }
 
 export async function fillFormPdf(
   bytes: Uint8Array,
   values: Readonly<Record<string, string | boolean | readonly string[]>>,
 ): Promise<Uint8Array> {
-  const document = await load(bytes, 'fill form fields');
+  // Normalize the input first to handle incremental updates (C2PA/Content Credentials)
+  // that cause pdf-lib to produce corrupt output with duplicate object generations.
+  const normalizedBytes = await normalizePdfInput(bytes);
+
+  const document = await load(normalizedBytes, 'fill form fields');
   const form = document.getForm();
   for (const [name, value] of Object.entries(values)) {
     const field = form.getFieldMaybe(name);
@@ -838,6 +1044,11 @@ export async function fillFormPdf(
       case 'PDFDropdown':
         form.getDropdown(name).select(Array.isArray(value) ? [...value] : String(value));
         break;
+      case 'PDFOptionList': {
+        const optionList = form.getOptionList(name);
+        optionList.select(Array.isArray(value) ? [...value] : [String(value)]);
+        break;
+      }
       case 'PDFSignature':
         throw new PdfEngineError({
           kind: 'unsupported-feature',
@@ -854,7 +1065,9 @@ export async function fillFormPdf(
     }
   }
   form.updateFieldAppearances();
-  return document.save();
+
+  // Use classic xref for broad compatibility
+  return document.save({ useObjectStreams: false });
 }
 
 function pageHasRedactionTarget(text: string, options: RedactionOptions): boolean {
@@ -1023,12 +1236,77 @@ export async function protectPdf(bytes?: Uint8Array): Promise<Uint8Array> {
   return bytes;
 }
 
-export async function unlockPdf(): Promise<never> {
-  throw new PdfEngineError({
-    kind: 'encrypted-unknown-password',
-    remedy:
-      'Known-password decryption is not available in the current permissive browser stack. Do not brute-force; decrypt with a trusted local PDF reader and retry.',
-  });
+/**
+ * Decrypt a PDF with a known password entirely in the browser via qpdf-wasm Web Workers.
+ * This is a real decryption, not a dictionary strip — qpdf re-reads the encrypted object streams
+ * and writes a fresh document with the encryption removed.
+ */
+function qpdfErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return 'Unknown decryption error.';
+}
+
+export async function unlockPdf(
+  bytes?: Uint8Array,
+  options?: { password?: string; onProgress?: (percent: number) => void },
+): Promise<Uint8Array> {
+  if (!bytes) {
+    throw new PdfEngineError({
+      kind: 'corrupt-structure',
+      repairable: false,
+      remedy: 'No PDF bytes were supplied for decryption.',
+    });
+  }
+
+  const password = options?.password ?? '';
+
+  try {
+    const qpdf = await createQpdf();
+    try {
+      const decryptOptions: { password: string; onProgress?: (percent: number) => void } = {
+        password,
+      };
+      if (options?.onProgress) {
+        decryptOptions.onProgress = options.onProgress;
+      }
+      const { output } = await qpdf.decrypt(bytes, decryptOptions);
+      return output;
+    } finally {
+      qpdf.terminate();
+    }
+  } catch (error) {
+    const qerror = error as QpdfError | Error;
+    if (qerror && 'code' in qerror) {
+      switch (qerror.code) {
+        case 'INVALID_PASSWORD':
+          throw new PdfEngineError({
+            kind: 'encrypted-unknown-password',
+            remedy: 'Incorrect password. Please check your password and try again.',
+          });
+        case 'INVALID_PDF':
+          throw new PdfEngineError({
+            kind: 'corrupt-structure',
+            repairable: false,
+            remedy:
+              'The selected file is not a readable PDF. It may be corrupted or not a PDF at all.',
+          });
+        case 'TERMINATED':
+        case 'FAILED':
+        default:
+          throw new PdfEngineError({
+            kind: 'corrupt-structure',
+            repairable: false,
+            remedy: `The PDF could not be decrypted: ${qpdfErrorMessage(qerror)}`,
+          });
+      }
+    }
+    // Non-qpdf error: wasm load failure, worker failure, etc.
+    throw new PdfEngineError({
+      kind: 'unsupported-feature',
+      feature: 'PDF decryption engine',
+      remedy: `The local decryption engine could not be started: ${qpdfErrorMessage(error)}`,
+    });
+  }
 }
 
 export async function verifyDigitalSignatures(bytes: Uint8Array): Promise<SignatureVerification> {

@@ -18,6 +18,7 @@ metadata, so it cannot be the source.
 - @jridgewell/resolve-uri — MIT
 - @jridgewell/sourcemap-codec — MIT
 - @jridgewell/trace-mapping — MIT
+- @mssio/qpdf-wasm — Apache-2.0
 - @pdf-complianttools/engine — UNLICENSED (workspace package)
 - @pdf-complianttools/ui — UNLICENSED (workspace package)
 - @pdf-lib/standard-fonts — MIT

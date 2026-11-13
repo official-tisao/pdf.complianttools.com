@@ -14,13 +14,17 @@
  * download megabytes it never uses. It is cached at runtime the first time
  * a tool actually renders a page.
  */
-import type { PdfiumRenderer } from './read.js';
-import { assertSafeAssetEndpoint, requestBinaryAsset } from '../ai/transport.js';
+import { createPdfiumRenderer, type PdfiumRenderer } from './read.js';
+import { assertSafeAssetEndpoint } from '../ai/transport.js';
 
 let rendererPromise: Promise<PdfiumRenderer> | undefined;
 let wasmUrl: string | undefined;
 
 export function setPdfiumWasmUrl(url: string): void {
+  // PDFium WASM is a same-origin browser asset served from /pdfium.wasm.
+  // Use assertSafeAssetEndpoint rather than assertSafeEndpoint: it accepts
+  // relative same-origin paths (which is the normal case) while still rejecting
+  // protocol-relative URLs and untrusted schemes.
   assertSafeAssetEndpoint(url);
   wasmUrl = url;
 }
@@ -32,21 +36,28 @@ export function getPdfiumRenderer(): Promise<PdfiumRenderer> {
       'PDFium WASM URL not configured. Import configure-pdfium.ts in the app root layout.',
     );
   rendererPromise = (async () => {
-    const response = await requestBinaryAsset(wasmUrl);
-    if (response.status < 200 || response.status >= 300) {
+    // Load the PDFium WASM binary directly via browser fetch.
+    // This is a same-origin asset, not an external AI endpoint, so no transport
+    // wrapper is needed. The fetch is lazy and only runs when a route actually
+    // needs pdfium (preserving the 4.4 MB WASM from loading on every route).
+    let response: Response;
+    try {
+      response = await fetch(wasmUrl);
+    } catch (error: unknown) {
+      throw new Error(
+        `PDFium WASM could not be loaded: ${error instanceof Error ? error.message : 'network error'}. Rebuild the app so the pdfium.wasm asset is served from the static folder as /pdfium.wasm.`,
+        { cause: error },
+      );
+    }
+    if (!response.ok) {
       throw new Error(
         `PDFium WASM could not be loaded (HTTP ${response.status}). Rebuild the app so the pdfium.wasm asset is served from the static folder as /pdfium.wasm.`,
       );
     }
-    return createPdfiumRenderer(response.bytes);
+    const wasmBinary = await response.arrayBuffer();
+    return createPdfiumRenderer(wasmBinary);
   })();
   return rendererPromise;
 }
 
-export async function createPdfiumRenderer(
-  wasmBinary: ArrayBuffer | Uint8Array,
-): Promise<PdfiumRenderer> {
-  return (await import('./read.js')).createPdfiumRenderer(wasmBinary);
-}
-
-export type { PdfiumRenderer };
+export { createPdfiumRenderer, type PdfiumRenderer };

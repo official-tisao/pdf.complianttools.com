@@ -5,5 +5,5 @@
 <PhaseCTool
   title="Unlock PDF"
   operation="unlock"
-  description="Known-password decryption is not guessed or brute-forced; the current clean browser stack reports its limitation."
+  description="Remove password protection from your PDF locally in your browser. Your file and password never leave your device."
 />
